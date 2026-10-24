@@ -26,6 +26,7 @@ import {
   Clock,
   Printer,
   Copy,
+  Wrench,
 } from "lucide-react";
 
 interface ReturnWizardModalProps {
@@ -48,6 +49,18 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
     Math.max(car.currentMileage, initialMileage + Math.round(Math.random() * 300 + 150))
   );
   const tripDistance = Math.max(0, returnMileage - initialMileage);
+
+  // Контроль межсервисного интервала замены масла (СТОП по ТО)
+  const lastOilMileage = car.lastOilChangeMileage || 0;
+  const oilChangeInterval = car.oilChangeIntervalKm || 8000;
+  const nextOilMileage = lastOilMileage + oilChangeInterval;
+  const kmRemainingToOilChange = nextOilMileage - returnMileage;
+  const isOilOverdue = kmRemainingToOilChange <= 0;
+  const oilOverdueKm = Math.abs(kmRemainingToOilChange);
+
+  // Чистота авто и необходимость мойки: "Не всегда авто возвращается грязным, поэтому мойка тоже не всегда нужна"
+  const [needsWash, setNeedsWash] = useState<boolean>(false);
+  const [cleanlinessState, setCleanlinessState] = useState<string>("CLEAN"); // "CLEAN" | "DIRTY_BODY" | "DIRTY_INTERIOR"
 
   // 2. Уровень топлива
   const fuelAtHandover = handoverReport?.fuelLevelPercent ?? 100;
@@ -186,7 +199,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
   const finalBalanceAmount = Math.abs(rawBalance);
 
-  // Проверка окончания техосмотра, страховки или утери техпаспорта (Авто-СТОП)
+  // Проверка окончания техосмотра, страховки, утери техпаспорта или просрочки ТО по маслу (Авто-СТОП)
   const now = new Date();
   const isInspectionExpired = car.inspectionExpiryDate
     ? new Date(car.inspectionExpiryDate) <= now
@@ -194,7 +207,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const isInsuranceExpired = car.insuranceExpiryDate
     ? new Date(car.insuranceExpiryDate) <= now
     : false;
-  const willStopBlock = isInspectionExpired || isInsuranceExpired || !techPassportReturned;
+  const willStopBlock = isInspectionExpired || isInsuranceExpired || !techPassportReturned || isOilOverdue;
 
   const handleSubmitReturn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,6 +230,8 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
           damagePhotosJson: damagePhotoUrl ? JSON.stringify([damagePhotoUrl]) : null,
           techPassportReturned,
           lostTechPassportCharge: lostPassportFee,
+          needsWash,
+          cleanlinessState,
           finesChecked: true,
           finesDetectedCount: trafficFines.length,
           finesTotalAmountGEL: selectedFinesTotalGEL,
@@ -299,9 +314,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 <div className="text-[11px] text-slate-300 bg-black/60 p-3.5 rounded-xl border border-red-500/30 text-left space-y-1">
                   <div>🚗 Автомобиль: <strong>{car.brand} {car.model} ({car.plateNumber})</strong></div>
                   <div>⛔ Статус в системе: <span className="text-red-400 font-bold">СТОП (Блокировка выдачи)</span></div>
-                  <div>🧼 Подготовка: <span className="text-amber-400 font-bold">Отправлен на мойку</span></div>
+                  <div>🧼 Подготовка: <span className={needsWash ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
+                    {needsWash ? "Направлен на мойку" : "Чистый (мойка не требуется)"}
+                  </span></div>
                   <div>📢 Уведомление разослано руководству и отображается в колокольчике.</div>
-                  <div>💡 Новые бронирования заблокированы до прохождения техосмотра или продления страховки.</div>
+                  <div>💡 Новые бронирования заблокированы до устранения причины блокировки (ТО, страховка, техпаспорт).</div>
                 </div>
               </div>
             ) : (
@@ -313,7 +330,9 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   Автомобиль успешно принят из аренды!
                 </h3>
                 <p className="text-xs text-slate-300">
-                  Техосмотр и страховка действительны. Машина переведена в статус «Свободен» и поставлена в очередь на мойку.
+                  {!needsWash
+                    ? "Автомобиль чистый, масло и документы в полном порядке. Машина сразу переведена в статус «Свободен» без задержки на мойку!"
+                    : "Техосмотр, страховка и масло в порядке. Машина переведена в очередь на мойку."}
                 </p>
               </div>
             )}
@@ -715,6 +734,31 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 <span className="text-[10px] text-emerald-400 block font-mono">
                   + Пробег за аренду: {tripDistance.toLocaleString()} км
                 </span>
+
+                {/* Межсервисный интервал ТО (масло) */}
+                <div className={`mt-2 p-2 rounded-xl border text-[11px] flex items-center justify-between ${
+                  isOilOverdue
+                    ? "bg-red-950/80 border-red-500 text-red-200"
+                    : kmRemainingToOilChange < 1000
+                    ? "bg-amber-950/50 border-amber-500/50 text-amber-200"
+                    : "bg-slate-900 border-slate-800 text-slate-300"
+                }`}>
+                  <div className="flex items-center space-x-1.5">
+                    <Wrench className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Интервал ТО (масло):</span>
+                  </div>
+                  <span className={`font-mono font-bold ${
+                    isOilOverdue
+                      ? "text-red-400 animate-pulse"
+                      : kmRemainingToOilChange < 1000
+                      ? "text-amber-400"
+                      : "text-emerald-400"
+                  }`}>
+                    {isOilOverdue
+                      ? `⛔ Просрочено на +${oilOverdueKm.toLocaleString()} км!`
+                      : `Осталось: ${kmRemainingToOilChange.toLocaleString()} км (лимит ${nextOilMileage.toLocaleString()})`}
+                  </span>
+                </div>
               </div>
 
               {/* Уровень топлива */}
@@ -756,6 +800,112 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* 4.5. Чистота автомобиля и мойка */}
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-200 flex items-center space-x-1.5 text-xs">
+                  <Sparkles className="w-4 h-4 text-cyan-400" />
+                  <span>Состояние чистоты и необходимость мойки:</span>
+                </span>
+
+                <div className="flex space-x-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNeedsWash(false);
+                      setCleanlinessState("CLEAN");
+                      setExtraWashFee(0);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                      !needsWash
+                        ? "bg-emerald-600 text-white border-emerald-500 shadow"
+                        : "bg-slate-900 text-slate-400 border-slate-700"
+                    }`}
+                  >
+                    ✨ Чистый (Мойка не нужна)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNeedsWash(true);
+                      setCleanlinessState("DIRTY_BODY");
+                      setExtraWashFee(0);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                      needsWash && cleanlinessState === "DIRTY_BODY"
+                        ? "bg-cyan-600 text-white border-cyan-500 shadow"
+                        : "bg-slate-900 text-slate-400 border-slate-700"
+                    }`}
+                  >
+                    🧼 Грязный кузов
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNeedsWash(true);
+                      setCleanlinessState("DIRTY_INTERIOR");
+                      setExtraWashFee(25);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                      needsWash && cleanlinessState === "DIRTY_INTERIOR"
+                        ? "bg-amber-600 text-white border-amber-500 shadow"
+                        : "bg-slate-900 text-slate-400 border-slate-700"
+                    }`}
+                  >
+                    🫧 Химчистка салона
+                  </button>
+                </div>
+              </div>
+
+              {!needsWash ? (
+                <div className="p-2.5 bg-emerald-950/20 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-300">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Автомобиль чистый внутри и снаружи. Мойка не требуется — машина сразу готова к выдаче!</span>
+                  </div>
+                  <span className="font-mono text-[11px] text-emerald-400 font-black">Готов к сдаче ✓</span>
+                </div>
+              ) : cleanlinessState === "DIRTY_BODY" ? (
+                <div className="p-2.5 bg-cyan-950/20 border border-cyan-500/30 rounded-xl flex items-center justify-between text-xs text-cyan-300">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>Обычная эксплуатационная пыль/грязь. Автомобиль после возврата будет направлен на мойку кузова.</span>
+                  </div>
+                  <span className="font-mono text-[11px] text-cyan-400 font-bold">Очередь на мойку</span>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-950/40 border border-amber-500/50 rounded-xl space-y-2 text-xs text-amber-200">
+                  <div className="flex items-center justify-between font-bold text-amber-300">
+                    <span className="flex items-center space-x-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>Сильное загрязнение салона / пятна на сиденьях (требуется химчистка):</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-300/90 leading-relaxed">
+                    Требуется глубокая химчистка и сушка салона. Сумма списывается с клиента в счет затрат на клининг.
+                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-amber-500/30">
+                    <span className="text-amber-200 font-semibold text-[11px]">
+                      Стоимость химчистки к удержанию:
+                    </span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-mono font-bold text-white">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={extraWashFee}
+                        onChange={(e) => setExtraWashFee(Number(e.target.value))}
+                        className="w-20 bg-slate-900 border border-amber-500 rounded-lg p-1 text-right text-white font-mono font-black"
+                      />
+                      <span className="text-slate-400 text-[10px]">USD</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 5. Проверка штрафов (protocol.ge) */}
@@ -879,6 +1029,12 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                       Внимание: Автомобиль встанет на СТОП при возврате!
                     </h4>
                     <p className="text-xs text-red-200 mt-0.5 leading-relaxed">
+                      {isOilOverdue && (
+                        <span>• 🛢️ <strong>Просрочен интервал замены масла:</strong> пробег {returnMileage.toLocaleString()} км превысил лимит ТО ({nextOilMileage.toLocaleString()} км) на +{oilOverdueKm.toLocaleString()} км. Требуется замена масла на СТО! </span>
+                      )}
+                      {!techPassportReturned && (
+                        <span>• 📑 <strong>Не сдан техпаспорт:</strong> эксплуатация авто запрещена до восстановления дубликата в МВД. </span>
+                      )}
                       {isInspectionExpired && (
                         <span>• Истек срок техосмотра (PTI): {new Date(car.inspectionExpiryDate).toLocaleDateString("ru-RU")}. </span>
                       )}
@@ -887,15 +1043,27 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                       )}
                     </p>
                     <p className="text-[10px] text-red-300/80 font-medium italic">
-                      Система автоматически заблокирует авто для новых броней до продления документов.
+                      Система автоматически заблокирует авто для новых броней до прохождения ТО или продления документов.
                     </p>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-emerald-950/20 border border-emerald-500/30 p-2.5 rounded-xl flex items-center space-x-2 text-xs text-emerald-300">
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span>Техосмотр и страховка действуют. После мойки авто станет свободно для выдачи.</span>
+              <div className="bg-emerald-950/20 border border-emerald-500/30 p-2.5 rounded-xl flex items-center justify-between text-xs text-emerald-300">
+                <div className="flex items-center space-x-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>
+                    Техосмотр, страховка, техпаспорт и интервал ТО в норме.{" "}
+                    {!needsWash
+                      ? "Автомобиль чистый — готов к следующей сдаче без мойки!"
+                      : "После мойки авто станет свободно для выдачи."}
+                  </span>
+                </div>
+                {!needsWash && (
+                  <span className="font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/40 text-[10px] shrink-0">
+                    Сразу свободен ✓
+                  </span>
+                )}
               </div>
             )}
 

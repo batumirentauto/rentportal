@@ -267,6 +267,14 @@ model ReturnReport {
   techPassportReturned       Boolean   @default(true) // Оригинал свидетельства о регистрации (техпаспорта) в наличии
   lostTechPassportCharge     Float     @default(0) // Удержание при утере техпаспорта клиентом (USD)
 
+  // Чистота и мойка автомобиля
+  needsWash                  Boolean   @default(true) // Требуется ли мойка после сдачи
+  cleanlinessState           String    @default("CLEAN") // "CLEAN" (чистый, готов к сдаче), "DIRTY_BODY" (мойка кузова), "DIRTY_INTERIOR" (химчистка салона)
+
+  // Контроль межсервисного интервала замены масла (СТОП по ТО)
+  oilOverdue                 Boolean   @default(false) // Просрочена ли замена масла при данном пробеге
+  kmUntilOilChange           Int?      // Оставшийся пробег до ТО (или отрицательный при перепробеге)
+
   // Штрафы
   finesChecked               Boolean   @default(true) // Проверено на protocol.ge
   finesDetectedCount         Int       @default(0) // Количество штрафов

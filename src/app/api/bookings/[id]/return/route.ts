@@ -22,6 +22,8 @@ export async function POST(
       damagePhotosJson = null,
       techPassportReturned = true,
       lostTechPassportCharge = 0,
+      needsWash = true,
+      cleanlinessState = "CLEAN", // "CLEAN" | "DIRTY_BODY" | "DIRTY_INTERIOR"
       finesChecked = true,
       finesDetectedCount = 0,
       finesTotalAmountGEL = 0,
@@ -60,11 +62,20 @@ export async function POST(
     }
 
     const now = new Date();
-    const handoverMileage = booking.handoverReport?.mileageAtHandover || booking.car.currentMileage;
-    const finalMileage = Number(returnMileage) || booking.car.currentMileage;
+    const car = booking.car;
+    const handoverMileage = booking.handoverReport?.mileageAtHandover || car.currentMileage;
+    const finalMileage = Number(returnMileage) || car.currentMileage;
     const tripMileage = Math.max(0, finalMileage - handoverMileage);
     const finalFuel = Number(returnFuelLevel) || 100;
     const fuelAtHandover = booking.handoverReport?.fuelLevelPercent || 100;
+
+    // Контроль межсервисного интервала замены масла
+    const lastOil = car.lastOilChangeMileage || 0;
+    const oilInterval = car.oilChangeIntervalKm || 8000;
+    const nextOilMileage = lastOil + oilInterval;
+    const kmUntilOilChange = nextOilMileage - finalMileage;
+    const isOilOverdue = kmUntilOilChange <= 0;
+    const overdueKm = Math.abs(kmUntilOilChange);
 
     // 1. Создаем или обновляем детальный ReturnReport
     const returnReport = await prisma.returnReport.upsert({
@@ -86,6 +97,10 @@ export async function POST(
         damagePhotosJson: damagePhotosJson || null,
         techPassportReturned: Boolean(techPassportReturned),
         lostTechPassportCharge: Number(lostTechPassportCharge) || 0,
+        needsWash: Boolean(needsWash),
+        cleanlinessState,
+        oilOverdue: isOilOverdue,
+        kmUntilOilChange,
         finesChecked: Boolean(finesChecked),
         finesDetectedCount: Number(finesDetectedCount) || 0,
         finesTotalAmountGEL: Number(finesTotalAmountGEL) || 0,
@@ -115,6 +130,10 @@ export async function POST(
         damagePhotosJson: damagePhotosJson || null,
         techPassportReturned: Boolean(techPassportReturned),
         lostTechPassportCharge: Number(lostTechPassportCharge) || 0,
+        needsWash: Boolean(needsWash),
+        cleanlinessState,
+        oilOverdue: isOilOverdue,
+        kmUntilOilChange,
         finesChecked: Boolean(finesChecked),
         finesDetectedCount: Number(finesDetectedCount) || 0,
         finesTotalAmountGEL: Number(finesTotalAmountGEL) || 0,
@@ -209,54 +228,61 @@ export async function POST(
     });
 
     // 6. 🚨 КРИТИЧЕСКАЯ БИЗНЕС-ЛОГИКА: АВТОМАТИЧЕСКАЯ ПОСТАНОВКА НА СТОП
-    // Проверяем: закончился ли техосмотр, страховка или утерян техпаспорт?
-    const car = booking.car;
+    // Проверяем: закончился ли техосмотр, страховка, утерян ли техпаспорт или просрочена замена масла?
     const isInspectionExpired = car.inspectionExpiryDate ? new Date(car.inspectionExpiryDate) <= now : false;
     const isInsuranceExpired = car.insuranceExpiryDate ? new Date(car.insuranceExpiryDate) <= now : false;
     const isTechPassportLost = !techPassportReturned;
 
     let isStopBlocked = false;
-    let stopReason: string | null = null;
+    const stopReasons: string[] = [];
     let newCarStatus = "AVAILABLE";
 
-    if (isInspectionExpired || isInsuranceExpired || isTechPassportLost) {
+    if (isOilOverdue) {
+      stopReasons.push(`Просрочена замена масла! Текущий пробег: ${finalMileage.toLocaleString()} км (лимит ТО: ${nextOilMileage.toLocaleString()} км, перепробег: +${overdueKm.toLocaleString()} км). Автомобиль требует замену масла на СТО`);
+    }
+    if (isTechPassportLost) {
+      stopReasons.push("Утерян оригинал техпаспорта автомобиля. Требуется получение дубликата в Сервисном Агентстве МВД Грузии");
+    }
+    if (isInspectionExpired) {
+      const expDateFormatted = new Date(car.inspectionExpiryDate!).toLocaleDateString("ru-RU");
+      stopReasons.push(`Истек государственный техосмотр (PTI) от ${expDateFormatted}`);
+    }
+    if (isInsuranceExpired) {
+      const expDateFormatted = new Date(car.insuranceExpiryDate!).toLocaleDateString("ru-RU");
+      stopReasons.push(`Истек страховой полис КАСКО от ${expDateFormatted}`);
+    }
+
+    if (stopReasons.length > 0) {
       isStopBlocked = true;
       newCarStatus = "MAINTENANCE_BLOCKED";
+    }
 
-      if (isTechPassportLost) {
-        stopReason = "Утерян оригинал техпаспорта автомобиля. Требуется получение дубликата в Сервисном Агентстве МВД Грузии.";
-      } else if (isInspectionExpired && isInsuranceExpired) {
-        stopReason = "Истекли государственный техосмотр (PTI) и полис страховки КАСКО";
-      } else if (isInspectionExpired) {
-        const expDateFormatted = new Date(car.inspectionExpiryDate!).toLocaleDateString("ru-RU");
-        stopReason = `Истек государственный техосмотр (PTI) от ${expDateFormatted}`;
-      } else {
-        const expDateFormatted = new Date(car.insuranceExpiryDate!).toLocaleDateString("ru-RU");
-        stopReason = `Истек страховой полис КАСКО от ${expDateFormatted}`;
-      }
+    const stopReason = stopReasons.join(". ");
+    const finalWashStatus = needsWash ? "NEEDS_WASH" : "CLEAN";
 
+    if (isStopBlocked) {
       await prisma.car.update({
         where: { id: car.id },
         data: {
           currentMileage: finalMileage,
           currentFuelPerc: finalFuel,
           status: "MAINTENANCE_BLOCKED",
-          washStatus: "NEEDS_WASH",
+          washStatus: finalWashStatus,
           isStopBlocked: true,
           stopReason,
           stopBlockedAt: now,
-          stopNotes: `Автоматическая блокировка после возврата от клиента ${booking.customer.fullName}. ${stopReason}. Новые бронирования заблокированы до продления документов.`,
+          stopNotes: `Автоматическая блокировка после возврата от клиента ${booking.customer.fullName}. ${stopReason}. Новые бронирования заблокированы.`,
         },
       });
     } else {
-      // Автомобиль в порядке по документам — переводим в статус AVAILABLE и на мойку
+      // Автомобиль в полном порядке — переводим в статус AVAILABLE
       await prisma.car.update({
         where: { id: car.id },
         data: {
           currentMileage: finalMileage,
           currentFuelPerc: finalFuel,
           status: "AVAILABLE",
-          washStatus: "NEEDS_WASH",
+          washStatus: finalWashStatus,
           isStopBlocked: false,
           stopReason: null,
         },
@@ -267,7 +293,9 @@ export async function POST(
       success: true,
       message: isStopBlocked
         ? `Автомобиль успешно принят, но АВТОМАТИЧЕСКИ ПОСТАВЛЕН НА СТОП! Причина: ${stopReason}`
-        : "Автомобиль успешно принят из аренды, взаиморасчет произведен и авто направлено на мойку!",
+        : needsWash
+        ? "Автомобиль успешно принят из аренды, взаиморасчет произведен и авто направлено на мойку!"
+        : "Автомобиль принят чистым (мойка не требуется), взаиморасчет закрыт, авто готово к выдаче!",
       isStopBlocked,
       stopReason,
       returnReport,
