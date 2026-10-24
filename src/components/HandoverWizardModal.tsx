@@ -1,0 +1,872 @@
+import React, { useState, useMemo } from "react";
+import {
+  X,
+  Camera,
+  Video,
+  CheckCircle2,
+  FileCheck,
+  Fuel,
+  Gauge,
+  FileText,
+  DollarSign,
+  Package,
+  AlertTriangle,
+  ArrowRight,
+  ArrowLeft,
+  UploadCloud,
+  Check,
+  Clock,
+  Calendar,
+} from "lucide-react";
+
+interface HandoverWizardModalProps {
+  booking: any;
+  onClose: () => void;
+  onComplete: () => void;
+}
+
+export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
+  booking,
+  onClose,
+  onComplete,
+}) => {
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Step 1: Vehicle & Checklist
+  const [mileage, setMileage] = useState<number>(booking.car.currentMileage);
+  const [fuelPercent, setFuelPercent] = useState<number>(booking.car.currentFuelPerc);
+  const [techPassportVerified, setTechPassportVerified] = useState<boolean>(true);
+  const [clientBriefed, setClientBriefed] = useState<boolean>(true);
+
+  // Time & Date of Handover & Return (опциональные поля с умными значениями по умолчанию)
+  const bookingReturnDate = useMemo(() => {
+    return booking?.endDate ? new Date(booking.endDate) : null;
+  }, [booking]);
+
+  const defaultHandoverTime = useMemo(() => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  }, []);
+
+  const defaultHandoverDate = useMemo(() => {
+    return new Date().toISOString().split("T")[0];
+  }, []);
+
+  const defaultReturnTime = useMemo(() => {
+    if (!bookingReturnDate) return "12:00";
+    return `${String(bookingReturnDate.getHours()).padStart(2, "0")}:${String(bookingReturnDate.getMinutes()).padStart(2, "0")}`;
+  }, [bookingReturnDate]);
+
+  const defaultReturnDate = useMemo(() => {
+    if (!bookingReturnDate) return "";
+    return bookingReturnDate.toISOString().split("T")[0];
+  }, [bookingReturnDate]);
+
+  const [actualHandoverTime, setActualHandoverTime] = useState<string>(defaultHandoverTime);
+  const [actualHandoverDate, setActualHandoverDate] = useState<string>(defaultHandoverDate);
+  const [expectedReturnTime, setExpectedReturnTime] = useState<string>(defaultReturnTime);
+  const [expectedReturnDate, setExpectedReturnDate] = useState<string>(defaultReturnDate);
+
+  const [dashboardPhoto, setDashboardPhoto] = useState<string | null>(
+    "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80"
+  );
+  const [techPassportPhoto, setTechPassportPhoto] = useState<string | null>(
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80"
+  );
+  const [carBodyVideo, setCarBodyVideo] = useState<string | null>(
+    "inspection_video_walkaround_geo.mp4"
+  );
+
+  // Step 2: Extras
+  const [issuedExtras, setIssuedExtras] = useState<string[]>(
+    booking.extras.map((e: any) => e.id)
+  );
+
+  // Step 3: Contract Photo
+  const [contractPhoto, setContractPhoto] = useState<string | null>(
+    "https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=600&q=80"
+  );
+
+  // Step 4: Payments
+  const [rentalAmount, setRentalAmount] = useState<number>(booking.totalAmount);
+  const [rentalCurrency, setRentalCurrency] = useState<string>(booking.currency || "USD");
+  const [paymentMethod, setPaymentMethod] = useState<string>("CASH"); // "CASH", "CARD_POS", "TBC_BANK", "BOG_BANK", "CREDO_BANK", "CRYPTO"
+  const [depositAmount, setDepositAmount] = useState<number>(booking.depositAmount || 300);
+  const [depositCurrency, setDepositCurrency] = useState<string>("USD");
+  const [depositMethod, setDepositMethod] = useState<string>("CASH");
+  
+  // Change calculation
+  const [amountReceived, setAmountReceived] = useState<number>(booking.totalAmount);
+  const [changeOnReturn, setChangeOnReturn] = useState<number>(0);
+  const [notes, setNotes] = useState<string>("");
+
+  const toggleExtra = (id: string) => {
+    if (issuedExtras.includes(id)) {
+      setIssuedExtras(issuedExtras.filter((item) => item !== id));
+    } else {
+      setIssuedExtras([...issuedExtras, id]);
+    }
+  };
+
+  const handleAmountReceivedChange = (val: number) => {
+    setAmountReceived(val);
+    const diff = val - rentalAmount;
+    if (diff > 0) {
+      setChangeOnReturn(diff);
+    } else {
+      setChangeOnReturn(0);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}/handover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerName: "Менеджер смены (Грузия)",
+          mileageAtHandover: mileage,
+          fuelLevelPercent: fuelPercent,
+          techPassportVerified,
+          clientBriefed,
+          issuedExtras,
+          dashboardPhotoUrl: dashboardPhoto,
+          techPassportPhotoUrl: techPassportPhoto,
+          contractPhotoUrl: contractPhoto,
+          carBodyVideoUrl: carBodyVideo,
+          notes,
+          // Фиксация времени выдачи и возврата (необязательно)
+          actualHandoverTime,
+          actualHandoverDate,
+          expectedReturnTime,
+          expectedReturnDate,
+          rentalAmount,
+          rentalCurrency,
+          paymentMethod,
+          depositAmount,
+          depositCurrency,
+          depositMethod,
+          amountExpected: rentalAmount,
+          amountReceived,
+          changeOnReturn,
+          paymentNotes: `Оплата выдачи ${booking.bookingNumber}. Способ: ${paymentMethod}`,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        onComplete();
+      } else {
+        alert("Ошибка при сохранении: " + data.error);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Ошибка сети при оформлении выдачи");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+      <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[94vh]">
+        {/* Header */}
+        <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold px-2 py-0.5 rounded">
+                АКТ ПРИЁМА-ПЕРЕДАЧИ
+              </span>
+              <span className="font-mono text-sm text-slate-300">
+                {booking.bookingNumber}
+              </span>
+            </div>
+            <h2 className="text-lg font-bold text-white mt-1">
+              Выдача: {booking.car.brand} {booking.car.model} ({booking.car.plateNumber})
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Step Indicator */}
+        <div className="grid grid-cols-4 border-b border-slate-800 text-center text-xs font-medium bg-slate-950/60">
+          <div
+            className={`py-2.5 px-1 border-b-2 transition-all ${
+              currentStep === 1
+                ? "border-amber-500 text-amber-400 font-bold"
+                : currentStep > 1
+                ? "border-emerald-500 text-emerald-400"
+                : "border-transparent text-slate-500"
+            }`}
+          >
+            1. Авто & Медиа
+          </div>
+          <div
+            className={`py-2.5 px-1 border-b-2 transition-all ${
+              currentStep === 2
+                ? "border-amber-500 text-amber-400 font-bold"
+                : currentStep > 2
+                ? "border-emerald-500 text-emerald-400"
+                : "border-transparent text-slate-500"
+            }`}
+          >
+            2. Доп. оборудование
+          </div>
+          <div
+            className={`py-2.5 px-1 border-b-2 transition-all ${
+              currentStep === 3
+                ? "border-amber-500 text-amber-400 font-bold"
+                : currentStep > 3
+                ? "border-emerald-500 text-emerald-400"
+                : "border-transparent text-slate-500"
+            }`}
+          >
+            3. Договор & Доки
+          </div>
+          <div
+            className={`py-2.5 px-1 border-b-2 transition-all ${
+              currentStep === 4
+                ? "border-amber-500 text-amber-400 font-bold"
+                : "border-transparent text-slate-500"
+            }`}
+          >
+            4. Оплата & Касса
+          </div>
+        </div>
+
+        {/* Wizard Content */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
+          {/* STEP 1: VEHICLE & MEDIA */}
+          {currentStep === 1 && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/60 flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-400">Клиент:</span>
+                  <p className="font-semibold text-white">{booking.customer.fullName}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400">Место встречи:</span>
+                  <p className="font-semibold text-amber-400">{booking.pickupLocation.name}</p>
+                </div>
+              </div>
+
+              {/* Odometer & Fuel */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700">
+                  <label className="flex items-center space-x-2 text-xs font-semibold text-slate-300 mb-2">
+                    <Gauge className="w-4 h-4 text-amber-400" />
+                    <span>Пробег при выдаче (км):</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={mileage}
+                    onChange={(e) => setMileage(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-amber-500"
+                  />
+                  <span className="text-[11px] text-slate-500 mt-1 block">
+                    По базе: {booking.car.currentMileage.toLocaleString()} км
+                  </span>
+                </div>
+
+                <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="flex items-center space-x-2 text-xs font-semibold text-slate-300">
+                      <Fuel className="w-4 h-4 text-emerald-400" />
+                      <span>Уровень топлива: {fuelPercent}%</span>
+                    </label>
+                    <span className="text-xs font-mono font-bold text-emerald-400">
+                      {fuelPercent === 100 ? "Полный бак (1/1)" : `${fuelPercent}%`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    step="5"
+                    value={fuelPercent}
+                    onChange={(e) => setFuelPercent(Number(e.target.value))}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                    <span>1/4</span>
+                    <span>1/2</span>
+                    <span>3/4</span>
+                    <span>Полный</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Optional Handover & Return Time Capture */}
+              <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Clock className="w-4 h-4 text-amber-400" />
+                    <span className="font-bold text-white text-xs uppercase tracking-wider">
+                      Фиксация времени выдачи и возврата (Необязательно)
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-slate-900 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">
+                    по умолчанию текущее
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {/* Actual Handover Time */}
+                  <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300 font-semibold flex items-center space-x-1">
+                        <span>🚗 Автомобиль выдан в:</span>
+                      </span>
+                      <span className="text-[10px] text-amber-400 font-medium">факт</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        type="date"
+                        value={actualHandoverDate}
+                        onChange={(e) => setActualHandoverDate(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                      />
+                      <input
+                        type="time"
+                        value={actualHandoverTime}
+                        onChange={(e) => setActualHandoverTime(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-400 block">
+                      Точное время передачи ключей клиенту
+                    </span>
+                  </div>
+
+                  {/* Agreed Return Time */}
+                  <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300 font-semibold flex items-center space-x-1">
+                        <span>🏁 Время возврата:</span>
+                      </span>
+                      <span className="text-[10px] text-emerald-400 font-medium">план сдачи</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        type="date"
+                        value={expectedReturnDate}
+                        onChange={(e) => setExpectedReturnDate(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                      />
+                      <input
+                        type="time"
+                        value={expectedReturnTime}
+                        onChange={(e) => setExpectedReturnTime(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-400 block">
+                      Согласованное время сдачи авто при завершении
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Checks */}
+              <div className="space-y-2 bg-slate-800/30 p-4 rounded-xl border border-slate-700/50">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={techPassportVerified}
+                    onChange={(e) => setTechPassportVerified(e.target.checked)}
+                    className="w-5 h-5 rounded accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-slate-200">
+                    <strong>Оригинал техпаспорта</strong> проверен и находится в автомобиле (бардачок)
+                  </span>
+                </label>
+
+                <label className="flex items-center space-x-3 cursor-pointer pt-2 border-t border-slate-700/50">
+                  <input
+                    type="checkbox"
+                    checked={clientBriefed}
+                    onChange={(e) => setClientBriefed(e.target.checked)}
+                    className="w-5 h-5 rounded accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-slate-200">
+                    <strong>Инструктаж клиента проведен</strong> (правила парковки в Тбилиси/Батуми, штрафы видеофиксации, контакты помощи)
+                  </span>
+                </label>
+
+                {/* Quick Client Memo Actions from vslrentcar.com */}
+                <div className="pt-2.5 mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-700/60 bg-slate-900/50 p-2.5 rounded-xl">
+                  <span className="text-[11px] text-slate-300 font-semibold flex items-center space-x-1">
+                    <span>📚 Памятка водителя VSL Rent (vslrentcar.com):</span>
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const memoText = `🇬🇪 ПАМЯТКА КЛИЕНТУ АВТОПРОКАТА VSL RENT (vslrentcar.com)\n\n1. 🪪 ДОКУМЕНТЫ: Только физический оригинал прав (фото в телефоне не принимаются полицией, штраф 1500 GEL) и загранпаспорт.\n2. 💰 ЗАЛОГ 0 GEL: Никаких блокировок на карте. Безлимитный пробег 100%.\n3. ⏰ ВРЕМЯ: Счёт 24ч с момента выдачи, 1-й час задержки — бесплатно.\n4. 🧼 МОЙКА: Мыть машину перед сдачей НЕ ТРЕБУЕТСЯ.\n5. 🚫 ЗАПРЕТ: Выезд за границу Грузии, Абхазия, Южная Осетия, перевал Тушетия (Омало).\n6. 📹 ШТРАФЫ: Камеры средней скорости на трассах. Проверка на protocol.ge.\n7. 🚨 SOS (24/7): +995 591 181 430 (линия ДТП), +995 591 050 752 (WhatsApp), 112 (полиция). Не двигать авто до фиксации!\n\nСчастливого пути по Грузии! 🏔️🌊`;
+                        navigator.clipboard.writeText(memoText);
+                        alert("Памятка клиенту скопирована в буфер обмена!");
+                      }}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-lg text-xs flex items-center space-x-1 transition"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Скопировать памятку</span>
+                    </button>
+                    {booking.customer?.whatsapp && (
+                      <a
+                        href={`https://wa.me/${booking.customer.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
+                          `🇬🇪 ПАМЯТКА КЛИЕНТУ АВТОПРОКАТА VSL RENT (vslrentcar.com)\n\nЗдравствуйте, ${booking.customer.fullName}!\n\n1. 🪪 ДОКУМЕНТЫ: При себе всегда держите физический оригинал прав и паспорт (электронные права полицией Грузии не принимаются).\n2. 💰 УСЛОВИЯ: Залог 0 ₾, пробег безлимитный, 1-й час опоздания — бесплатно.\n3. 🧼 МОЙКА: Мыть машину перед сдачей НЕ НУЖНО.\n4. 🚫 ЗАПРЕТ: Выезд за пределы Грузии, въезд в Абхазию, Юж. Осетию и перевал Тушетия (Омало).\n5. 📹 КАМЕРЫ: Контроль средней скорости на трассах. Проверка штрафов на protocol.ge.\n6. 🚨 SOS 24/7: +995 591 181 430 (ДТП), +995 591 050 752 (WhatsApp), 112 (экстренная служба).\n\nЖелаем приятной дороги!`
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs flex items-center space-x-1 shadow transition"
+                      >
+                        <span>Отправить в WhatsApp</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Media capture / Upload Simulation */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Обязательная фото/видео фиксация (на телефон):
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Photo 1: Dashboard */}
+                  <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700 flex flex-col items-center text-center">
+                    <Camera className="w-5 h-5 text-amber-400 mb-1" />
+                    <span className="text-xs font-semibold text-slate-200">Фото панели приборов</span>
+                    <span className="text-[10px] text-slate-400 mb-2">(одометр + уровень топлива)</span>
+                    <div className="w-full bg-emerald-950/40 border border-emerald-500/40 rounded px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-medium">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Приборка зафиксирована</span>
+                    </div>
+                  </div>
+
+                  {/* Photo 2: Tech passport */}
+                  <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700 flex flex-col items-center text-center">
+                    <FileCheck className="w-5 h-5 text-blue-400 mb-1" />
+                    <span className="text-xs font-semibold text-slate-200">Фото техпаспорта</span>
+                    <span className="text-[10px] text-slate-400 mb-2">(свидетельство о регистрации)</span>
+                    <div className="w-full bg-emerald-950/40 border border-emerald-500/40 rounded px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-medium">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Техпаспорт зафиксирован</span>
+                    </div>
+                  </div>
+
+                  {/* Video: Walkaround */}
+                  <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700 flex flex-col items-center text-center">
+                    <Video className="w-5 h-5 text-red-400 mb-1" />
+                    <span className="text-xs font-semibold text-slate-200">Круговое видео кузова</span>
+                    <span className="text-[10px] text-slate-400 mb-2">(фиксация царапин и сколов)</span>
+                    <div className="w-full bg-emerald-950/40 border border-emerald-500/40 rounded px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-medium">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Видео 360° загружено</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: EXTRAS */}
+          {currentStep === 2 && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60">
+                <h3 className="font-bold text-white text-base flex items-center space-x-2 mb-1">
+                  <Package className="w-5 h-5 text-amber-400" />
+                  <span>Чек-лист выдачи дополнительного оборудования</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Отметьте аксессуары, которые передаются клиенту в салон автомобиля:
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {booking.extras && booking.extras.length > 0 ? (
+                  booking.extras.map((extra: any) => {
+                    const isChecked = issuedExtras.includes(extra.id);
+                    return (
+                      <div
+                        key={extra.id}
+                        onClick={() => toggleExtra(extra.id)}
+                        className={`p-3.5 rounded-xl border cursor-pointer flex items-center justify-between transition-all ${
+                          isChecked
+                            ? "bg-amber-950/30 border-amber-500/60 text-white"
+                            : "bg-slate-800/40 border-slate-700 text-slate-400 hover:border-slate-600"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}} // handled by div
+                            className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+                          />
+                          <div>
+                            <span className="font-semibold block">{extra.name}</span>
+                            <span className="text-xs text-slate-400">
+                              Кол-во: {extra.quantity} шт. | Стоимость в брони: ${extra.price}
+                            </span>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                            isChecked
+                              ? "bg-amber-500 text-slate-950"
+                              : "bg-slate-700 text-slate-300"
+                          }`}
+                        >
+                          {isChecked ? "Выдано ✓" : "Не выдано"}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-6 text-slate-400 bg-slate-800/20 rounded-xl border border-slate-800">
+                    В заявке нет заказанных дополнительных опций.
+                  </div>
+                )}
+              </div>
+
+              {/* Standard complimentary items */}
+              <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700/40 space-y-2">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Стандартный комплект автомобиля в Грузии:
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                  <div className="flex items-center space-x-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Аптечка и огнетушитель</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Знак аварийной остановки</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Домкрат и запасное колесо</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Светоотражающий жилет</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: CONTRACT & DOCS PHOTO */}
+          {currentStep === 3 && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60">
+                <h3 className="font-bold text-white text-base flex items-center space-x-2 mb-1">
+                  <FileText className="w-5 h-5 text-amber-400" />
+                  <span>Фото подписанного контракта и документов</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Сделайте совместное фото подписанного контракта вместе с оригиналом водительского удостоверения и паспорта клиента:
+                </p>
+              </div>
+
+              {/* Upload preview card */}
+              <div className="border-2 border-dashed border-amber-500/50 bg-amber-950/10 rounded-2xl p-6 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center">
+                  <Camera className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">
+                    Фото подписанного договора + паспорт + права
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Снимок подтверждает физическое присутствие клиента и юридическую силу договора
+                  </p>
+                </div>
+                <div className="bg-emerald-950/50 border border-emerald-500/50 text-emerald-400 text-xs px-3 py-1.5 rounded-lg inline-flex items-center space-x-1.5 font-medium">
+                  <Check className="w-4 h-4" />
+                  <span>Фото успешно сделано и прикреплено к отчёту</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-800/40 p-3.5 rounded-xl border border-slate-700/50 text-xs text-slate-300 space-y-1">
+                <p><strong>Клиент:</strong> {booking.customer.fullName}</p>
+                <p><strong>Паспорт:</strong> {booking.customer.passportNumber}</p>
+                <p><strong>Водительское удостоверение:</strong> {booking.customer.driverLicenseNumber}</p>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: PAYMENT & CASH REGISTER */}
+          {currentStep === 4 && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              <div className="bg-gradient-to-r from-amber-950/40 to-slate-800/60 p-4 rounded-xl border border-amber-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                      Сумма к оплате (Аренда + Допы + Доставка):
+                    </span>
+                    <div className="text-2xl font-extrabold text-amber-400 font-mono mt-0.5">
+                      ${rentalAmount} <span className="text-sm font-normal text-slate-400">USD</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                      Депозит (Залог):
+                    </span>
+                    <div className="text-lg font-bold text-emerald-400 font-mono mt-0.5">
+                      ${depositAmount} <span className="text-sm font-normal text-slate-400">USD</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-300 block">
+                  Способ приёма оплаты за аренду:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("CASH")}
+                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                      paymentMethod === "CASH"
+                        ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
+                        : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
+                    }`}
+                  >
+                    💵 Наличные
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">GEL, USD, EUR</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("CARD_POS")}
+                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                      paymentMethod === "CARD_POS"
+                        ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
+                        : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
+                    }`}
+                  >
+                    💳 Терминал / Карта
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">POS-терминал</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("BOG_BANK")}
+                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                      paymentMethod === "BOG_BANK"
+                        ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
+                        : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
+                    }`}
+                  >
+                    🏦 Bank of Georgia
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">BOG перевод</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("TBC_BANK")}
+                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                      paymentMethod === "TBC_BANK"
+                        ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
+                        : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
+                    }`}
+                  >
+                    🏦 TBC Bank
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">TBC перевод</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("CREDO_BANK")}
+                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                      paymentMethod === "CREDO_BANK"
+                        ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
+                        : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
+                    }`}
+                  >
+                    🏦 Credo Bank
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">Credo перевод</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("CRYPTO")}
+                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                      paymentMethod === "CRYPTO"
+                        ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
+                        : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
+                    }`}
+                  >
+                    💎 Криптовалюта
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">USDT TRC20</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Deposit Method */}
+              <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Способ приёма залога (депозита):
+                  </label>
+                  <span className="text-xs text-amber-400 font-semibold">${depositAmount} USD</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDepositMethod("CASH")}
+                    className={`py-2 px-3 rounded-lg border text-xs font-medium text-center transition ${
+                      depositMethod === "CASH"
+                        ? "bg-emerald-500 text-slate-950 border-emerald-400 font-bold"
+                        : "bg-slate-900 border-slate-700 text-slate-300"
+                    }`}
+                  >
+                    Наличные
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDepositMethod("CARD_HOLD")}
+                    className={`py-2 px-3 rounded-lg border text-xs font-medium text-center transition ${
+                      depositMethod === "CARD_HOLD"
+                        ? "bg-emerald-500 text-slate-950 border-emerald-400 font-bold"
+                        : "bg-slate-900 border-slate-700 text-slate-300"
+                    }`}
+                  >
+                    Холдирование карты
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDepositMethod("TRANSFER")}
+                    className={`py-2 px-3 rounded-lg border text-xs font-medium text-center transition ${
+                      depositMethod === "TRANSFER"
+                        ? "bg-emerald-500 text-slate-950 border-emerald-400 font-bold"
+                        : "bg-slate-900 border-slate-700 text-slate-300"
+                    }`}
+                  >
+                    Банк перевод
+                  </button>
+                </div>
+              </div>
+
+              {/* Change calculator (Сдача при возврате) */}
+              <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Калькулятор сдачи:
+                  </span>
+                  {changeOnReturn > 0 && (
+                    <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded font-bold">
+                      Сдача при возврате: ${changeOnReturn} USD
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1">
+                      Получено фактически от клиента ($):
+                    </label>
+                    <input
+                      type="number"
+                      value={amountReceived}
+                      onChange={(e) => handleAmountReceivedChange(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono font-bold focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1">
+                      Сдача к возврату клиенту ($):
+                    </label>
+                    <input
+                      type="number"
+                      value={changeOnReturn}
+                      onChange={(e) => setChangeOnReturn(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono font-bold focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-400">
+                  💡 Если клиент дал крупную купюру (например \$400 вместо \$375) и у менеджера нет сдачи, сумма сдачи \$25 фиксируется в системе и автоматически будет выдана клиенту при возврате автомобиля.
+                </p>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Заметки менеджера / примечание к выдаче:
+                </label>
+                <textarea
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Любые особенности выдачи (например: клиент попросил продление, мелкая царапина на заднем бампере согласована)..."
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-xs focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Navigation Buttons */}
+        <div className="px-6 py-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
+          {currentStep > 1 ? (
+            <button
+              onClick={() => setCurrentStep(currentStep - 1)}
+              disabled={isSubmitting}
+              className="flex items-center space-x-1.5 px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Назад</span>
+            </button>
+          ) : (
+            <button
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition"
+            >
+              Отмена
+            </button>
+          )}
+
+          {currentStep < 4 ? (
+            <button
+              onClick={() => setCurrentStep(currentStep + 1)}
+              className="flex items-center space-x-1.5 px-5 py-2.5 text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl shadow-lg transition active:scale-95"
+            >
+              <span>Далее</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="flex items-center space-x-2 px-6 py-2.5 text-xs font-extrabold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 rounded-xl shadow-lg transition active:scale-95 disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <span>Сохранение в базу...</span>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Выдать авто и закрыть акт</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

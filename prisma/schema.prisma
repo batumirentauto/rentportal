@@ -1,0 +1,519 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model City {
+  id        String     @id @default(cuid())
+  name      String     // "Tbilisi", "Batumi", "Kutaisi"
+  nameRu    String     // "Тбилиси", "Батуми", "Кутаиси"
+  nameKa    String?    // ქართული
+  code      String     @unique // "TBS", "BUS", "KUT"
+  locations Location[]
+  cars      Car[]
+  financialAccounts FinancialAccount[]
+  expenses  Expense[]
+  managerTasks ManagerTask[]
+  createdAt DateTime   @default(now())
+}
+
+model Location {
+  id             String    @id @default(cuid())
+  cityId         String
+  city           City      @relation(fields: [cityId], references: [id])
+  name           String    // "Офис Центр", "Аэропорт TBS (Шота Руставели)", etc.
+  type           String    // "OFFICE", "AIRPORT", "CUSTOM"
+  address        String?
+  pickupBookings Booking[] @relation("PickupLocation")
+  returnBookings Booking[] @relation("ReturnLocation")
+  createdAt      DateTime  @default(now())
+}
+
+model Car {
+  id              String           @id @default(cuid())
+  plateNumber     String           @unique // e.g. "AA-123-BB"
+  vin             String?          @unique
+  brand           String           // e.g. "Toyota"
+  model           String           // e.g. "RAV4"
+  year            Int              // 2022
+  color           String?          // "Белый"
+  transmission    String           @default("AUTOMATIC") // "AUTOMATIC", "MANUAL"
+  fuelType        String           @default("PETROL") // "PETROL", "HYBRID", "DIESEL", "ELECTRIC"
+  engineVolume    String?          // "2.5L"
+  currentMileage  Int              @default(50000)
+  currentFuelPerc Int              @default(100) // 0-100%
+  imageUrl        String?          // Основное фото автомобиля
+  cardBannerUrl   String?          // Маркетинговая товарная карточка автомобиля (изображение)
+  status          String           @default("AVAILABLE") // "AVAILABLE", "RENTED", "WASHING", "MAINTENANCE"
+  washStatus      String           @default("CLEAN") // "CLEAN", "NEEDS_WASH", "WASHING"
+  hasTechPassport Boolean          @default(true)
+  techPassportNumber   String?          // Номер техпаспорта Грузии (например: "AA1298412")
+  techPassportFrontUrl String?          // Фото лицевой стороны техпаспорта
+  techPassportBackUrl  String?          // Фото оборотной стороны техпаспорта
+  lastFineCheckAt      DateTime?        // Время последней проверки штрафов
+  fineStatus           String           @default("CLEAN") // "CLEAN", "FINE_DETECTED", "PENDING_CHECK"
+  trafficFines         TrafficFine[]
+  ownerId              String?
+  owner                CarOwner?        @relation(fields: [ownerId], references: [id])
+  defaultOwnerDailyRate Float           @default(25) // Фиксированная ставка владельцу за день (USD)
+  
+  // База цен и тарифная сетка автопарка
+  carClass             String           @default("COMFORT") // "ECONOMY", "COMFORT", "CROSSOVER", "SUV", "PREMIUM", "CABRIO", "MINIVAN"
+  clientMinDailyRate   Float            @default(35) // Вилка цен клиенту: минимум (длинная аренда 15-30+ дней / несезон)
+  clientStandardDailyRate Float         @default(50) // Вилка цен клиенту: стандартная (рекомендуемая на 4-14 дней)
+  clientMaxDailyRate   Float            @default(75) // Вилка цен клиенту: максимум (короткая аренда 1-3 дня / пиковый сезон)
+  pricingNotes         String?          // Примечания и комментарии по торгу / условиям аренды
+  
+  // Техническое обслуживание, масло и пробеги
+  lastOilChangeMileage  Int             @default(45000) // Пробег при последней замене масла
+  lastOilChangeDate     DateTime?       // Дата последней замены масла
+  oilChangeIntervalKm   Int             @default(8000)  // Интервал замены масла (обычно 8,000–10,000 км в Грузии)
+  oilType               String?         @default("5W-30 Synthetic") // Тип/вязкость масла
+  
+  // Государственный техосмотр Грузии (PTI)
+  inspectionDate        DateTime?       // Дата последнего прохождения техосмотра
+  inspectionExpiryDate  DateTime?       // Дата окончания техосмотра (на 1 год)
+  inspectionNumber      String?         // Номер диагностической карты
+  inspectionStatus      String          @default("VALID") // "VALID", "EXPIRING_SOON", "EXPIRED"
+  
+  // Страхование (КАСКО, ОСАГО, CDW)
+  insuranceCompany      String?         @default("Aldagi") // Aldagi, TBC Insurance, GPI Holding, Ardi, Irao
+  insurancePolicyNumber String?         // Номер полиса
+  insuranceType         String?         @default("CASCO_CDW") // "CASCO_CDW", "TPL_OSAGO"
+  insuranceExpiryDate   DateTime?       // Дата окончания полиса
+  insuranceDeductible   Float?          @default(300) // Франшиза по КАСКО (соответствует депозиту)
+  insuranceStatus       String          @default("ACTIVE") // "ACTIVE", "EXPIRING_SOON", "EXPIRED"
+  
+  // Автоматическая блокировка (Постановка на СТОП после возврата из аренды)
+  isStopBlocked         Boolean         @default(false) // Автомобиль на СТОПе (блокировка выдачи)
+  stopReason            String?         // Причина постановки на СТОП (техосмотр, страховка, критический дефект)
+  stopBlockedAt         DateTime?       // Время автоматической блокировки
+  stopNotes             String?         // Примечания и инструкции для менеджера
+  
+  cityId          String
+  city            City             @relation(fields: [cityId], references: [id])
+  bookings        Booking[]
+  washTasks       CarWashTask[]
+  handoverReports HandoverReport[]
+  returnReports   ReturnReport[]
+  expenses        Expense[]
+  mileageLogs     MileageLog[]
+  issues          CarIssue[]
+  checklists      CarTechnicalChecklist[]
+  managerTasks    ManagerTask[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Customer {
+  id                 String    @id @default(cuid())
+  fullName           String
+  phone              String
+  whatsapp           String?
+  telegram           String?
+  email              String?
+  passportNumber     String
+  passportCountry    String?
+  passportPhotoUrl   String?
+  driverLicenseNumber String
+  driverLicensePhotoUrl String?
+  isLoyalClient      Boolean   @default(true) // Постоянный клиент (VIP)
+  discountPercent    Int       @default(10)   // Персональная скидка постоянного клиента (%)
+  loyaltyTier        String    @default("GOLD_VIP") // "GOLD_VIP", "PLATINUM_VIP"
+  city               String?
+  notes              String?
+  tags               String?
+  isBlacklisted      Boolean   @default(false)
+  blacklistReason    String?
+  trustRating        Int       @default(100)
+  bookings           Booking[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Booking {
+  id                  String          @id @default(cuid())
+  bookingNumber       String          @unique // e.g. "GEO-2026-001"
+  carId               String
+  car                 Car             @relation(fields: [carId], references: [id])
+  customerId          String
+  customer            Customer        @relation(fields: [customerId], references: [id])
+  
+  // Даты и время
+  startDate           DateTime        // Дата и время выдачи
+  endDate             DateTime        // Дата и время возврата
+  rentalDays          Int
+  
+  // Локации
+  pickupLocationId    String
+  pickupLocation      Location        @relation("PickupLocation", fields: [pickupLocationId], references: [id])
+  pickupType          String          @default("OFFICE") // "OFFICE", "AIRPORT", "DELIVERY"
+  pickupAddress       String?
+  
+  returnLocationId    String
+  returnLocation      Location        @relation("ReturnLocation", fields: [returnLocationId], references: [id])
+  returnType          String          @default("OFFICE") // "OFFICE", "AIRPORT", "DELIVERY"
+  returnAddress       String?
+  
+  // Финансы плана
+  dailyRate           Float           // Суточный тариф (GEL)
+  rentalTotal         Float           // Стоимость аренды
+  deliveryFee         Float           @default(0) // Стоимость доставки
+  extrasTotal         Float           @default(0) // Доп. оборудование
+  totalAmount         Float           // Общая сумма к оплате
+  depositAmount       Float           @default(300) // Залог/депозит
+  currency            String          @default("USD") // Базовая валюта расчёта: GEL / USD / EUR
+  ownerDailyRate      Float?          // Фиксированная/скорректированная ставка владельца за день
+  ownerTotalPayout    Float?          // Итоговая сумма к выплате владельцу за аренду
+  
+  // Статус
+  status              String          @default("CONFIRMED") // "PENDING", "CONFIRMED", "PREPARING", "ACTIVE", "COMPLETED", "CANCELLED"
+  
+  // Оповещения и операционный учет
+  notifiedManager     Boolean         @default(false)
+  isAddedDuringDay    Boolean         @default(false) // Создано в течение дня после 09:00
+  actualHandoverAt    DateTime?       // Фактическое время выдачи авто клиенту
+  isSelfServiceBooking Boolean        @default(false) // Создано через клиентское мобильное приложение
+  overdueDecision     String?         // "KEPT", "CANCELLED" - решение менеджера при неявке >3 часов
+  overdueDecisionAt   DateTime?       // Время принятия решения
+  overdueDecisionNotes String?        // Примечание: "Клиент задерживается в аэропорту" или "Не явился"
+  
+  // Связанные сущности
+  handoverReport      HandoverReport?
+  returnReport        ReturnReport?
+  pendingChangeAmount Float?          @default(0) // Зафиксированная сдача к возврату клиенту при сдаче авто
+  payments            Payment[]
+  extras              BookingExtra[]
+  washTasks           CarWashTask[]
+  trafficFines        TrafficFine[]
+  
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+}
+
+model BookingExtra {
+  id          String   @id @default(cuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  type        String   // "CHILD_SEAT", "BOOSTER", "PHONE_HOLDER", "CHARGER_TYPE_C", "CHARGER_LIGHTNING", "ROUTER"
+  name        String   // "Детское кресло", "Держатель смартфона", etc.
+  quantity    Int      @default(1)
+  price       Float    @default(0)
+  isIssued    Boolean  @default(false) // Отметка выдачи менеджером
+}
+
+model HandoverReport {
+  id                      String    @id @default(cuid())
+  bookingId               String    @unique
+  booking                 Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  carId                   String
+  car                     Car       @relation(fields: [carId], references: [id])
+  managerName             String    // Имя менеджера, выдавшего авто
+  
+  // Чек-лист осмотра
+  mileageAtHandover       Int       // Пробег при выдаче
+  fuelLevelPercent        Int       // Уровень топлива %
+  techPassportVerified    Boolean   @default(true) // Наличие техпаспорта в бардачке
+  clientBriefed           Boolean   @default(true) // Инструктаж проведен
+  
+  // Дополнительное оборудование (список выданного)
+  issuedExtrasSummary     String?   // JSON или текст выданных аксессуаров
+  
+  // Фото и видео фиксация
+  dashboardPhotoUrl       String?   // Фото панели приборов (топливо + пробег)
+  techPassportPhotoUrl    String?   // Фото техпаспорта
+  contractPhotoUrl        String?   // Фото подписанного договора с документами клиента
+  carBodyVideoUrl         String?   // Видео кругового осмотра
+  extraPhotosJson         String?   // Дополнительные фото царапин/кузова в формате JSON
+  
+  // Заметки
+  notes                   String?
+  
+  // Время фактической выдачи и согласованного возврата
+  handedOverAt            DateTime  @default(now())
+  actualHandoverTime      String?   // Фактическое время выдачи авто (например: "11:45")
+  expectedReturnTime      String?   // Согласованное время возврата (например: "15:00")
+  expectedReturnDate      DateTime? // Дата и время возврата авто
+  createdAt               DateTime  @default(now())
+}
+
+model ReturnReport {
+  id                         String    @id @default(cuid())
+  bookingId                  String    @unique
+  booking                    Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  carId                      String
+  car                        Car       @relation(fields: [carId], references: [id])
+  managerName                String    // Имя менеджера, принявшего авто
+
+  // Пробег и топливо
+  mileageAtReturn            Int       // Пробег при сдаче (км)
+  tripMileage                Int       // Фактический пробег за поездку (км)
+  fuelLevelPercent           Int       // Уровень топлива при возврате (%)
+  fuelLevelAtHandover        Int       @default(100) // Уровень топлива при выдаче (%)
+  fuelDiscrepancyPerc        Int       @default(0) // Нехватка бензина (в %)
+  fuelChargeAmount           Float     @default(0) // Начислено за нехватку топлива (USD)
+
+  // Осмотр кузова и сверка с видео выдачи
+  videoVerified              Boolean   @default(true) // Сверено с видео выдачи
+  hasNewDamages              Boolean   @default(false) // Обнаружены ли новые дефекты
+  damagesDescription         String?   // Описание дефектов/царапин
+  damageChargeAmount         Float     @default(0) // Сумма удержания/доплаты за ущерб (USD)
+  damagePhotosJson           String?   // JSON со ссылками на фото дефектов
+
+  // Штрафы
+  finesChecked               Boolean   @default(true) // Проверено на protocol.ge
+  finesDetectedCount         Int       @default(0) // Количество штрафов
+  finesTotalAmountGEL        Float     @default(0) // Сумма штрафов (GEL)
+  finesTotalAmountUSD        Float     @default(0) // Сумма штрафов (USD)
+  finesPaidByClientToCompany Boolean   @default(false) // Клиент оплатил штрафы компании на месте
+
+  // Залог и взаиморасчет
+  depositAmount              Float     @default(0) // Залог по бронированию (0 если без залога)
+  changeReturnedToClient     Float     @default(0) // Выданная сдача клиенту (USD)
+  deductionsTotal            Float     @default(0) // Сумма всех удержаний/начислений (топливо + штрафы + повреждения)
+  finalBalanceType           String    @default("ZERO_SETTLED") // "REFUND_TO_CLIENT", "PAYMENT_BY_CLIENT", "ZERO_SETTLED"
+  finalBalanceAmount         Float     @default(0) // Итоговая сумма к возврату клиенту или к доплате клиентом
+  settlementMethod           String    @default("CASH") // "CASH", "CARD_POS", "TBC_BANK", "BOG_BANK"
+
+  notes                      String?
+  returnedAt                 DateTime  @default(now())
+  createdAt                  DateTime  @default(now())
+}
+
+// Банковские счета и кассы компании (Тбилиси нал, Батуми нал, BOG, TBC, Credo, Крипта)
+model FinancialAccount {
+  id                 String     @id @default(cuid())
+  name               String     // "Касса Офис Тбилиси", "TBC Bank GEL", "Bank of Georgia USD", "USDT TRC20"
+  type               String     // "CASH", "BANK_ACCOUNT", "CARD_ACQUIRING", "CRYPTO_WALLET"
+  bankName           String?    // "TBC", "BOG", "CREDO", "NONE"
+  accountNumber      String?    // IBAN или номер кошелька
+  currency           String     @default("USD") // "USD", "GEL", "EUR"
+  cityId             String?    // Привязка к городу для физических касс
+  city               City?      @relation(fields: [cityId], references: [id])
+  initialBalance     Float      @default(0)
+  currentBalance     Float      @default(0)
+  managerResponsible String?   // Ответственный менеджер
+  payments           Payment[]
+  expenses           Expense[]
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+}
+
+model Payment {
+  id               String            @id @default(cuid())
+  bookingId        String
+  booking          Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  type             String            // "RENTAL", "DEPOSIT", "DELIVERY", "EXTRA"
+  amount           Float
+  currency         String            // "GEL", "USD", "EUR"
+  method           String            // "CASH", "CARD_POS", "TBC_BANK", "BOG_BANK", "CREDO_BANK", "CRYPTO"
+  status           String            @default("PAID") // "PAID", "PENDING", "REFUNDED"
+  
+  // Привязка к конкретной кассе или счету
+  accountId        String?
+  account          FinancialAccount? @relation(fields: [accountId], references: [id])
+  
+  // Фиксация сдачи при возврате
+  amountExpected   Float?   // Сколько должен был оплатить
+  amountReceived   Float?   // Сколько фактически передал
+  changeOnReturn   Float?   // Сдача к возврату (если клиент переплатил или депозит)
+  
+  managerName      String?
+  notes            String?
+  createdAt        DateTime @default(now())
+}
+
+// Расходы компании (мойка, бензин, ТО, зарплаты, аренда офиса, штрафы)
+model Expense {
+  id             String            @id @default(cuid())
+  accountId      String
+  account        FinancialAccount  @relation(fields: [accountId], references: [id])
+  category       String            // "WASHING", "FUEL", "MAINTENANCE", "SALARY", "OFFICE_RENT", "PARKING_FINES", "MARKETING", "OTHER"
+  amount         Float
+  currency       String            @default("GEL") // GEL или USD
+  description    String            // "Мойка 2 авто в Батуми", "Заправка RAV4 перед выдачей", "Аренда офиса Руставели"
+  cityId         String?
+  city           City?             @relation(fields: [cityId], references: [id])
+  carId          String?
+  car            Car?              @relation(fields: [carId], references: [id])
+  managerName    String?           // Кто потратил / провел расход
+  date           DateTime          @default(now())
+  receiptPhotoUrl String?
+  createdAt      DateTime          @default(now())
+}
+
+model CarWashTask {
+  id          String   @id @default(cuid())
+  carId       String
+  car         Car      @relation(fields: [carId], references: [id])
+  bookingId   String?
+  booking     Booking? @relation(fields: [bookingId], references: [id])
+  status      String   @default("PENDING") // "PENDING", "IN_PROGRESS", "COMPLETED", "SKIPPED"
+  priority    String   @default("NORMAL") // "NORMAL", "URGENT"
+  deadline    DateTime?
+  washType    String   @default("FULL") // "BODY", "INTERIOR", "FULL"
+  cost        Float?   @default(0) // Затраты на мойку (GEL)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Реестр штрафов патрульной полиции и видеофиксации (police.ge/protocol, videos.police.ge)
+model TrafficFine {
+  id                  String    @id @default(cuid())
+  carId               String
+  car                 Car       @relation(fields: [carId], references: [id], onDelete: Cascade)
+  bookingId           String?
+  booking             Booking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  protocolNumber      String    // Номер постановления/квитанции (например: "VID-2026-89412")
+  violationDate       DateTime  // Дата и время нарушения
+  amountGEL           Float     // Сумма штрафа в GEL
+  discountAmountGEL   Float?    // Сумма со скидкой 20%
+  articleName         String?   // Статья/нарушение (например: "Превышение скорости", "Неправильная парковка")
+  sourcePortal        String    @default("POLICE_GE") // "POLICE_GE", "VIDEOS_POLICE_GE", "TBC_PAY"
+  status              String    @default("UNPAID") // "UNPAID", "PAID", "DEDUCTED_FROM_DEPOSIT"
+  deductedFromDeposit Boolean   @default(false)
+  checkedByManager    String?   // Имя менеджера
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+// Владельцы (инвесторы) автомобилей
+model CarOwner {
+  id              String        @id @default(cuid())
+  fullName        String        // "Ираклий Беридзе"
+  phone           String        // "+995 599 334 455"
+  email           String?
+  whatsapp        String?
+  passportNumber  String?
+  bankName        String?       // "Bank of Georgia", "TBC Bank"
+  bankIban        String?       // "GE29BG0000000123456789"
+  payoutCurrency  String        @default("USD") // "USD" или "GEL"
+  cars            Car[]
+  payouts         OwnerPayout[]
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+// Выплаты владельцам автомобилей
+model OwnerPayout {
+  id            String    @id @default(cuid())
+  ownerId       String
+  owner         CarOwner  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  amount        Float     // Сумма выплаты
+  currency      String    @default("USD") // "USD" / "GEL"
+  periodMonth   String?   // "2026-10"
+  status        String    @default("PAID") // "PAID", "PENDING"
+  paymentMethod String    @default("BANK_TRANSFER") // "BANK_TRANSFER", "CASH", "CRYPTO"
+  paidAt        DateTime  @default(now())
+  notes         String?
+  createdAt     DateTime  @default(now())
+}
+
+// Журнал фиксации пробега
+model MileageLog {
+  id          String   @id @default(cuid())
+  carId       String
+  car         Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  mileage     Int      // Зафиксированный пробег
+  source      String   @default("MANUAL") // "HANDOVER", "RETURN", "OIL_CHANGE", "CHECKLIST", "SERVICE", "MANUAL"
+  bookingId   String?
+  loggedBy    String?  // Имя менеджера или механика
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+// Учет неисправностей, узлов и агрегатов для автосервиса
+model CarIssue {
+  id                  String    @id @default(cuid())
+  carId               String
+  car                 Car       @relation(fields: [carId], references: [id], onDelete: Cascade)
+  bookingId           String?
+  category            String    // "ENGINE_TRANSMISSION", "SUSPENSION", "BRAKES", "STEERING", "ELECTRICAL_CHECK_ENGINE", "CLIMATE_AC", "BODY_GLASS_LIGHTS", "TIRES"
+  title               String    // "Гул в передней ступице справа", "Стерлись передние колодки", "Кондиционер слабо охлаждает"
+  description         String?   // Подробные симптомы и дефекты
+  priority            String    @default("MEDIUM") // "CRITICAL" (запрет выезда), "HIGH", "MEDIUM", "LOW"
+  status              String    @default("OPEN") // "OPEN", "IN_SERVICE", "RESOLVED", "MONITORING"
+  detectedAt          DateTime  @default(now())
+  detectedBy          String?   // Имя менеджера / водителя / механика
+  detectedMileage     Int?      // Пробег при обнаружении
+  serviceStationName  String?   // СТО / сервис (например, "Tegeta Motors Тбилиси")
+  repairCost          Float?    @default(0) // Затраты на устранение (USD/GEL)
+  repairNotes         String?   // Отчет автосервиса о выполненных работах
+  resolvedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+// Чек-лист технического состояния автомобиля
+model CarTechnicalChecklist {
+  id                   String   @id @default(cuid())
+  carId                String
+  car                  Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  inspectorName        String   // Имя проверяющего сотрудника
+  mileageAtCheck       Int      // Пробег при проверке
+  overallCondition     String   @default("GOOD") // "EXCELLENT", "GOOD", "NEEDS_ATTENTION", "CRITICAL_DEFECTS"
+  
+  // Узлы и уровни жидкостей
+  engineOilLevel       String   @default("OK") // "OK", "LOW", "NEEDS_REFILL", "CRITICAL"
+  brakeFluidLevel      String   @default("OK") // "OK", "LOW"
+  coolantLevel         String   @default("OK") // "OK", "LOW"
+  tireCondition        String   @default("GOOD") // "GOOD", "WORN", "NEEDS_REPLACEMENT"
+  tirePressureBar      Float    @default(2.2)  // Давление в шинах (Bar)
+  brakePadsWearPerc    Int      @default(30)   // Износ тормозных колодок в % (0-100)
+  
+  // Электрика и безопасность
+  exteriorLightsOk     Boolean  @default(true) // Фары, габариты, стоп-сигналы, поворотники
+  wipersAndWashOk      Boolean  @default(true) // Стеклоочистители и омыватель
+  airConditioningOk    Boolean  @default(true) // Кондиционер и печка
+  suspensionNoiseOk    Boolean  @default(true) // Отсутствие стуков в подвеске
+  emergencyKitOk       Boolean  @default(true) // Запаска, домкрат, огнетушитель, знак, аптечка
+  
+  notes                String?  // Замечания и рекомендации механику
+  checkedAt            DateTime @default(now())
+}
+
+// Задачи и поручения от руководителя менеджеру
+model ManagerTask {
+  id              String    @id @default(cuid())
+  title           String    // Краткое название задачи (например: "Перегнать Toyota RAV4 из Тбилиси в Батуми")
+  description     String?   // Подробное описание и инструкции от руководителя
+  category        String    @default("GENERAL") // "RELOCATION", "MAINTENANCE", "DOCUMENTS", "CLIENT_DELIVERY", "CLEANING", "FINANCE", "GENERAL"
+  priority        String    @default("MEDIUM")  // "URGENT", "HIGH", "MEDIUM", "LOW"
+  status          String    @default("PENDING") // "PENDING", "IN_PROGRESS", "COMPLETED", "VERIFIED", "CANCELLED"
+
+  // Исполнитель и локация
+  assignedToName  String?   // Имя менеджера или "Менеджер смены Тбилиси" / "Все менеджеры"
+  cityId          String?
+  city            City?     @relation(fields: [cityId], references: [id])
+  
+  // Связанный автомобиль (опционально)
+  carId           String?
+  car             Car?      @relation(fields: [carId], references: [id])
+
+  // Связанное бронирование (опционально)
+  bookingId       String?
+
+  // Сроки
+  dueDateTime     DateTime? // Дедлайн выполнения задачи
+  
+  // Создатель (Руководитель)
+  createdByName   String    @default("Руководитель")
+
+  // Отчет о выполнении от менеджера
+  completedByName String?   // Кто выполнил
+  completedAt     DateTime?
+  completionNotes String?   // Отчет менеджера о выполнении
+
+  // Проверка руководителем
+  verifiedAt      DateTime?
+  verifiedByName  String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
