@@ -20,6 +20,8 @@ export async function POST(
       damagesDescription = null,
       damageChargeAmount = 0,
       damagePhotosJson = null,
+      techPassportReturned = true,
+      lostTechPassportCharge = 0,
       finesChecked = true,
       finesDetectedCount = 0,
       finesTotalAmountGEL = 0,
@@ -82,6 +84,8 @@ export async function POST(
         damagesDescription: damagesDescription || null,
         damageChargeAmount: Number(damageChargeAmount) || 0,
         damagePhotosJson: damagePhotosJson || null,
+        techPassportReturned: Boolean(techPassportReturned),
+        lostTechPassportCharge: Number(lostTechPassportCharge) || 0,
         finesChecked: Boolean(finesChecked),
         finesDetectedCount: Number(finesDetectedCount) || 0,
         finesTotalAmountGEL: Number(finesTotalAmountGEL) || 0,
@@ -109,6 +113,8 @@ export async function POST(
         damagesDescription: damagesDescription || null,
         damageChargeAmount: Number(damageChargeAmount) || 0,
         damagePhotosJson: damagePhotosJson || null,
+        techPassportReturned: Boolean(techPassportReturned),
+        lostTechPassportCharge: Number(lostTechPassportCharge) || 0,
         finesChecked: Boolean(finesChecked),
         finesDetectedCount: Number(finesDetectedCount) || 0,
         finesTotalAmountGEL: Number(finesTotalAmountGEL) || 0,
@@ -203,20 +209,23 @@ export async function POST(
     });
 
     // 6. 🚨 КРИТИЧЕСКАЯ БИЗНЕС-ЛОГИКА: АВТОМАТИЧЕСКАЯ ПОСТАНОВКА НА СТОП
-    // Проверяем: закончился ли техосмотр или страховка?
+    // Проверяем: закончился ли техосмотр, страховка или утерян техпаспорт?
     const car = booking.car;
     const isInspectionExpired = car.inspectionExpiryDate ? new Date(car.inspectionExpiryDate) <= now : false;
     const isInsuranceExpired = car.insuranceExpiryDate ? new Date(car.insuranceExpiryDate) <= now : false;
+    const isTechPassportLost = !techPassportReturned;
 
     let isStopBlocked = false;
     let stopReason: string | null = null;
     let newCarStatus = "AVAILABLE";
 
-    if (isInspectionExpired || isInsuranceExpired) {
+    if (isInspectionExpired || isInsuranceExpired || isTechPassportLost) {
       isStopBlocked = true;
       newCarStatus = "MAINTENANCE_BLOCKED";
 
-      if (isInspectionExpired && isInsuranceExpired) {
+      if (isTechPassportLost) {
+        stopReason = "Утерян оригинал техпаспорта автомобиля. Требуется получение дубликата в Сервисном Агентстве МВД Грузии.";
+      } else if (isInspectionExpired && isInsuranceExpired) {
         stopReason = "Истекли государственный техосмотр (PTI) и полис страховки КАСКО";
       } else if (isInspectionExpired) {
         const expDateFormatted = new Date(car.inspectionExpiryDate!).toLocaleDateString("ru-RU");

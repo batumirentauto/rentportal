@@ -92,6 +92,10 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
     setInspectedItems((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // 3.5. Проверка наличия оригинала техпаспорта в автомобиле
+  const [techPassportReturned, setTechPassportReturned] = useState<boolean>(true);
+  const [lostTechPassportCharge, setLostTechPassportCharge] = useState<number>(100); // 100 USD (270 GEL) за восстановление в Сервисном Агентстве МВД
+
   // 4. Штрафы ПДД (protocol.ge / Videos Police GE)
   const [trafficFines, setTrafficFines] = useState<any[]>(booking.trafficFines || []);
   const [selectedFineIds, setSelectedFineIds] = useState<string[]>([]);
@@ -166,7 +170,8 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
   // Общие начисления/удержания:
   const finesToDeduct = finesPaidByClientToCompany ? selectedFinesTotalUSD : 0;
-  const deductionsTotal = fuelChargeAmount + (hasNewDamages ? damageChargeAmount : 0) + finesToDeduct + extraWashFee;
+  const lostPassportFee = !techPassportReturned ? lostTechPassportCharge : 0;
+  const deductionsTotal = fuelChargeAmount + (hasNewDamages ? damageChargeAmount : 0) + finesToDeduct + extraWashFee + lostPassportFee;
 
   // Итоговый баланс:
   // Если есть залог: Баланс = (Залог + Сдача) - Удержания
@@ -181,7 +186,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
   const finalBalanceAmount = Math.abs(rawBalance);
 
-  // Проверка окончания техосмотра или страховки (Авто-СТОП)
+  // Проверка окончания техосмотра, страховки или утери техпаспорта (Авто-СТОП)
   const now = new Date();
   const isInspectionExpired = car.inspectionExpiryDate
     ? new Date(car.inspectionExpiryDate) <= now
@@ -189,7 +194,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const isInsuranceExpired = car.insuranceExpiryDate
     ? new Date(car.insuranceExpiryDate) <= now
     : false;
-  const willStopBlock = isInspectionExpired || isInsuranceExpired;
+  const willStopBlock = isInspectionExpired || isInsuranceExpired || !techPassportReturned;
 
   const handleSubmitReturn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,6 +215,8 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
           damagesDescription: hasNewDamages ? damagesDescription : null,
           damageChargeAmount: hasNewDamages ? damageChargeAmount : 0,
           damagePhotosJson: damagePhotoUrl ? JSON.stringify([damagePhotoUrl]) : null,
+          techPassportReturned,
+          lostTechPassportCharge: lostPassportFee,
           finesChecked: true,
           finesDetectedCount: trafficFines.length,
           finesTotalAmountGEL: selectedFinesTotalGEL,
@@ -355,6 +362,13 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 <div className="flex justify-between py-0.5 text-red-300">
                   <span>Ущерб за повреждения кузова/салона:</span>
                   <span className="font-mono font-bold">${damageChargeAmount} USD</span>
+                </div>
+              )}
+
+              {!techPassportReturned && (
+                <div className="flex justify-between py-0.5 text-rose-400 font-bold">
+                  <span>Удержание за утерю техпаспорта:</span>
+                  <span className="font-mono font-bold">-${lostTechPassportCharge} USD</span>
                 </div>
               )}
             </div>
@@ -598,6 +612,81 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                         placeholder="https://... фото дефекта"
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white text-xs"
                       />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3.5. Проверка наличия оригинала техпаспорта в автомобиле */}
+            <div className={`p-3.5 rounded-2xl border transition-all ${
+              techPassportReturned
+                ? "bg-slate-950 border-slate-800"
+                : "bg-red-950/60 border-2 border-red-500 shadow-xl shadow-red-950/50"
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-200 flex items-center space-x-1.5 text-xs">
+                  <FileText className={`w-4 h-4 ${techPassportReturned ? "text-amber-400" : "text-red-400"}`} />
+                  <span>Проверка наличия оригинала техпаспорта:</span>
+                </span>
+
+                <div className="flex space-x-1">
+                  <button
+                    type="button"
+                    onClick={() => setTechPassportReturned(true)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                      techPassportReturned
+                        ? "bg-emerald-600 text-white border-emerald-500 shadow"
+                        : "bg-slate-900 text-slate-400 border-slate-700"
+                    }`}
+                  >
+                    ✓ В наличии (В бардачке)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTechPassportReturned(false)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                      !techPassportReturned
+                        ? "bg-red-600 text-white border-red-500 shadow"
+                        : "bg-slate-900 text-slate-400 border-slate-700"
+                    }`}
+                  >
+                    ⛔ Утерян / Не сдан
+                  </button>
+                </div>
+              </div>
+
+              {techPassportReturned ? (
+                <div className="mt-2 p-2 bg-emerald-950/20 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-300">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Оригинал техпаспорта проверен менеджером и находится в автомобиле</span>
+                  </div>
+                  <span className="font-mono text-[11px] text-emerald-400 font-bold">ОК ✓</span>
+                </div>
+              ) : (
+                <div className="mt-2.5 p-3 bg-red-950/80 border border-red-500 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-center space-x-2 text-red-200 font-black">
+                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 animate-pulse" />
+                    <span>ВНИМАНИЕ: ОРИГИНАЛ ТЕХПАСПОРТА НЕ СДАН КЛИЕНТОМ!</span>
+                  </div>
+                  <p className="text-[11px] text-red-300 leading-relaxed">
+                    Без техпаспорта эксплуатация авто в Грузии запрещена. Автомобиль будет <strong>АВТОМАТИЧЕСКИ ПОСТАВЛЕН НА СТОП</strong> до восстановления дубликата в Сервисном Агентстве МВД (Рустави/Батуми).
+                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-red-500/40">
+                    <span className="text-red-200 font-bold text-[11px]">
+                      Удержание с клиента за восстановление техпаспорта:
+                    </span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-mono font-bold text-white">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={lostTechPassportCharge}
+                        onChange={(e) => setLostTechPassportCharge(Number(e.target.value))}
+                        className="w-24 bg-slate-900 border border-red-500 rounded-lg p-1 text-right text-white font-mono font-black"
+                      />
+                      <span className="text-slate-400 text-[10px]">USD</span>
                     </div>
                   </div>
                 </div>
@@ -860,6 +949,13 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <div className="flex justify-between text-red-300">
                     <span>Ущерб за повреждения ({damagesDescription || "кузов"}):</span>
                     <span className="font-mono font-bold">-${damageChargeAmount} USD</span>
+                  </div>
+                )}
+
+                {!techPassportReturned && (
+                  <div className="flex justify-between text-rose-400 font-bold">
+                    <span>Утеря техпаспорта (восстановление в МВД Грузии):</span>
+                    <span className="font-mono">-${lostTechPassportCharge} USD</span>
                   </div>
                 )}
 
