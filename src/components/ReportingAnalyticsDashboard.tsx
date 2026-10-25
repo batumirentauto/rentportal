@@ -106,7 +106,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
               </span>
             </div>
             <h2 className="text-2xl font-black text-white mt-1 tracking-tight flex items-center space-x-2">
-              <span>Сводная отчетность GEODRIVE (Грузия)</span>
+              <span>Сводная отчетность VSL (Грузия)</span>
             </h2>
           </div>
 

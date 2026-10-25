@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-amber-400 via-orange-300 to-amber-200 bg-clip-text text-transparent">
-                  GEODRIVE
+                  VSL
                 </span>
                 <span className="text-xs bg-red-600/90 text-white px-2 py-0.5 rounded font-bold uppercase tracking-wider">
                   Грузия

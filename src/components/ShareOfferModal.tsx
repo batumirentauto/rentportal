@@ -40,7 +40,7 @@ export const ShareOfferModal: React.FC<ShareOfferModalProps> = ({
 
   // Format shareable text offer
   const offerText = useMemo(() => {
-    let text = `🚗 *GEODRIVE Georgia | Персональная подборка автомобилей*\n\n`;
+    let text = `🚗 *VSL Georgia | Персональная подборка автомобилей*\n\n`;
     text += `Здравствуйте, ${clientName}! Мы подобрали для вас отличные свободные автомобили в идеальном техническом состоянии:\n\n`;
 
     selectedCars.forEach((car, idx) => {
@@ -69,7 +69,7 @@ export const ShareOfferModal: React.FC<ShareOfferModalProps> = ({
     text += `📞 Для быстрого бронирования ответьте на это сообщение или позвоните нам:\n`;
     text += `📱 WhatsApp / Телефон: +995 599 123 456\n`;
     text += `🌐 Офисы: Тбилиси (Руставели, 24) • Батуми (Горгиладзе, 54) • Аэропорт Кутаиси\n`;
-    text += `GEODRIVE — надежный автопрокат в Грузии 🇬🇪`;
+    text += `VSL — надежный автопрокат в Грузии 🇬🇪`;
 
     return text;
   }, [clientName, selectedCars, customRates]);
@@ -89,7 +89,7 @@ export const ShareOfferModal: React.FC<ShareOfferModalProps> = ({
   // Handle Telegram
   const handleShareTelegram = () => {
     const encodedText = encodeURIComponent(offerText);
-    const url = `https://t.me/share/url?url=${encodeURIComponent("https://geodrive.ge")}&text=${encodedText}`;
+    const url = `https://t.me/share/url?url=${encodeURIComponent("https://rentportal-production.up.railway.app")}&text=${encodedText}`;
     window.open(url, "_blank");
   };
 
@@ -210,7 +210,7 @@ export const ShareOfferModal: React.FC<ShareOfferModalProps> = ({
                     {/* Logo & City Badge */}
                     <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5">
                       <span className="bg-slate-950/80 backdrop-blur-xs text-white text-[10px] font-black px-2 py-0.5 rounded-lg border border-slate-700/80">
-                        GEODRIVE
+                        VSL
                       </span>
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border flex items-center space-x-1 ${cityTheme.badgeBg}`}

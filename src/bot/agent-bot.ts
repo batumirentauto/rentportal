@@ -126,7 +126,7 @@ async function executeTool(name: string, args: any): Promise<string> {
 }
 
 // System prompt
-const SYSTEM_INSTRUCTION = `Ты — ведущий AI-разработчик системы автопроката в Грузии (GEODRIVE: Тбилиси, Батуми, Кутаиси).
+const SYSTEM_INSTRUCTION = `Ты — ведущий AI-разработчик системы автопроката в Грузии (VSL: Тбилиси, Батуми, Кутаиси).
 Ты запущен прямо на Mac в рабочей папке проекта: ${WORKSPACE_DIR}.
 Стек проекта: Next.js (App Router, TypeScript), Tailwind CSS, Prisma ORM, SQLite/PostgreSQL.
 

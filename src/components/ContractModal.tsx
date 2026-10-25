@@ -75,7 +75,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
               <h3 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] mb-2 text-amber-700">
                 1. АРЕНДОДАТЕЛЬ (КОМПАНИЯ)
               </h3>
-              <p><strong>ООО «GEODRIVE GEORGIA»</strong></p>
+              <p><strong>ООО «VSL GEORGIA»</strong></p>
               <p>Код компании (Tax ID): 405991823</p>
               <p>Юр. адрес: Грузия, г. Тбилиси, ул. Руставели 24</p>
               <p>Филиалы: Тбилиси • Батуми • Кутаиси</p>
@@ -201,7 +201,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
           {/* Signatures */}
           <div className="pt-6 grid grid-cols-2 gap-8 border-t border-slate-300">
             <div className="border-t border-slate-400 pt-2 text-center">
-              <p className="font-bold">АРЕНДОДАТЕЛЬ (GEODRIVE):</p>
+              <p className="font-bold">АРЕНДОДАТЕЛЬ (VSL):</p>
               <p className="text-[10px] text-slate-500 mt-6">М.П. / Подпись менеджера</p>
             </div>
             <div className="border-t border-slate-400 pt-2 text-center">

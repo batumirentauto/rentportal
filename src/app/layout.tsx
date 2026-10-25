@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GEODRIVE — Автопрокат в Грузии (Тбилиси, Батуми, Кутаиси)",
-  description: "Система управления выдачей, мойкой и финансами автопроката GeoDrive в Грузии",
+  title: "VSL — Автопрокат в Грузии (Тбилиси, Батуми, Кутаиси)",
+  description: "Система управления выдачей, мойкой и финансами автопроката VSL в Грузии",
 };
 
 export default function RootLayout({

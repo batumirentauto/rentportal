@@ -127,7 +127,7 @@ export const LoyalClientMobileApp: React.FC = () => {
         <div>
           <div className="flex items-center space-x-2">
             <span className="text-xs font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 px-2.5 py-0.5 rounded shadow">
-              GEODRIVE VIP Mobile App
+              VSL VIP Mobile App
             </span>
             <span className="text-xs text-slate-400 font-mono">
               Мобильное приложение для постоянных клиентов
@@ -447,7 +447,7 @@ export const LoyalClientMobileApp: React.FC = () => {
                   <Crown className="w-8 h-8 text-amber-400 mx-auto" />
                   <h4 className="font-black text-base text-white">Статус Gold VIP</h4>
                   <p className="text-xs text-amber-200">
-                    Привилегии клуба постоянных гостей GEODRIVE Georgia
+                    Привилегии клуба постоянных гостей VSL Georgia
                   </p>
                 </div>
 
@@ -502,7 +502,7 @@ export const LoyalClientMobileApp: React.FC = () => {
                   <Phone className="w-7 h-7" />
                 </div>
                 <div>
-                  <h4 className="font-black text-base text-white">Служба заботы GEODRIVE</h4>
+                  <h4 className="font-black text-base text-white">Служба заботы VSL</h4>
                   <p className="text-xs text-slate-400 mt-1 max-w-[260px] mx-auto">
                     Круглосуточная помощь на дорогах Грузии, консультации по маршрутам в горы и поддержка 24/7
                   </p>
