@@ -73,13 +73,15 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
     setLoading(true);
     setErrorMsg(null);
     try {
-      const [pricingRes, timelineRes] = await Promise.all([
+      const [pricingRes, timelineRes, teamRes] = await Promise.all([
         fetch("/api/pricing"),
         fetch("/api/fleet/timeline"),
+        fetch("/api/team"),
       ]);
 
       const pricingData = await pricingRes.json();
       const timelineData = await timelineRes.json();
+      const teamData = await teamRes.json();
 
       if (pricingData.cars) {
         setCars(pricingData.cars);
@@ -87,7 +89,12 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
       if (timelineData.cities) {
         setCities(timelineData.cities);
       }
-      if (timelineData.financialAccounts) {
+      if (teamData.accounts && teamData.accounts.length > 0) {
+        setAccounts(teamData.accounts);
+        if (!accountId) {
+          setAccountId(teamData.accounts[0].id);
+        }
+      } else if (timelineData.financialAccounts) {
         setAccounts(timelineData.financialAccounts);
         if (timelineData.financialAccounts.length > 0 && !accountId) {
           setAccountId(timelineData.financialAccounts[0].id);
@@ -368,7 +375,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
               >
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
-                    {acc.name} (${acc.currentBalance})
+                    {acc.name} ({acc.currentBalance} {acc.currency === "GEL" ? "₾" : "$"})
                   </option>
                 ))}
               </select>

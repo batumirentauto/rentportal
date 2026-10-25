@@ -20,25 +20,33 @@ import {
 import { RecordExpenseModal } from "./RecordExpenseModal";
 
 export const FinanceView: React.FC = () => {
-  const [activeFinanceTab, setActiveFinanceTab] = useState<"payments" | "expenses">("payments");
+  const [activeFinanceTab, setActiveFinanceTab] = useState<"payments" | "expenses" | "manager_cash">("payments");
   const [financeData, setFinanceData] = useState<any>(null);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [managerCashAccounts, setManagerCashAccounts] = useState<any[]>([]);
+  const [managerCashByCity, setManagerCashByCity] = useState<any>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [finRes, expRes] = await Promise.all([
+      const [finRes, expRes, execRes] = await Promise.all([
         fetch("/api/finance"),
         fetch("/api/expenses"),
+        fetch("/api/executive/analytics"),
       ]);
 
       const finJson = await finRes.json();
       const expJson = await expRes.json();
+      const execJson = await execRes.json();
 
       if (finJson.success) setFinanceData(finJson);
       if (expJson.success) setExpenses(expJson.expenses || []);
+      if (execJson.success) {
+        setManagerCashAccounts(execJson.managerCashAccounts || []);
+        setManagerCashByCity(execJson.managerCashByCity || {});
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -133,8 +141,8 @@ export const FinanceView: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Switcher: Payments vs Expenses */}
-      <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800 max-w-md">
+      {/* Main Switcher: Payments vs Expenses vs Manager Cash */}
+      <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800 max-w-xl">
         <button
           onClick={() => setActiveFinanceTab("payments")}
           className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 ${
@@ -157,6 +165,18 @@ export const FinanceView: React.FC = () => {
         >
           <Receipt className="w-4 h-4" />
           <span>Журнал расходов ({expenses.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveFinanceTab("manager_cash")}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 ${
+            activeFinanceTab === "manager_cash"
+              ? "bg-emerald-600 text-white shadow-md font-black"
+              : "text-emerald-400 hover:text-white"
+          }`}
+        >
+          <Coins className="w-4 h-4" />
+          <span>Кассы менеджеров ({managerCashAccounts.length})</span>
         </button>
       </div>
 
@@ -479,6 +499,101 @@ export const FinanceView: React.FC = () => {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: MANAGER CASH REGISTERS (НАЛИЧНЫЕ КАССЫ МЕНЕДЖЕРОВ ПО ГОРОДАМ) */}
+      {activeFinanceTab === "manager_cash" && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-black px-2.5 py-0.5 rounded uppercase">
+                    Децентрализованные кассы
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    Раздельные кассы для каждого менеджера в городе
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-white mt-1 flex items-center space-x-2">
+                  <Coins className="w-5 h-5 text-amber-400" />
+                  <span>Балансы наличных касс менеджеров (Грузия)</span>
+                </h3>
+              </div>
+
+              <div className="flex items-center space-x-2 bg-slate-950 px-4 py-2 rounded-2xl border border-slate-800">
+                <span className="text-xs text-slate-400">Всего у менеджеров:</span>
+                <span className="text-base font-black text-emerald-400 font-mono">
+                  {managerCashAccounts.reduce((sum, a) => sum + (a.currentBalance || 0), 0)} ₾
+                </span>
+              </div>
+            </div>
+
+            {/* City Groups */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { city: "Батуми", code: "BUS", icon: "🌊", desc: "Батуми (Офис & Аэропорт)" },
+                { city: "Тбилиси", code: "TBS", icon: "🏛️", desc: "Тбилиси (Офис & Аэропорт)" },
+                { city: "Кутаиси", code: "KUT", icon: "🌿", desc: "Кутаиси (Копитнари)" },
+              ].map((grp) => {
+                const cityAccounts = managerCashByCity?.[grp.city] || [];
+                const citySum = cityAccounts.reduce((sum: number, a: any) => sum + (a.currentBalance || 0), 0);
+
+                return (
+                  <div key={grp.code} className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xl">{grp.icon}</span>
+                        <div>
+                          <h4 className="font-extrabold text-sm text-white">{grp.city}</h4>
+                          <span className="text-[10px] text-slate-500 font-mono">{grp.desc}</span>
+                        </div>
+                      </div>
+                      <span className="font-mono font-black text-amber-400 text-xs">
+                        {citySum} ₾
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {cityAccounts.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic py-2 text-center">Нет открытых касс</p>
+                      ) : (
+                        cityAccounts.map((acc: any) => (
+                          <div
+                            key={acc.id}
+                            className="bg-slate-900 border border-slate-800/80 rounded-xl p-3 space-y-1.5 shadow"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-white flex items-center space-x-1">
+                                <User className="w-3.5 h-3.5 text-slate-400" />
+                                <span>{acc.managerName}</span>
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                ₾ GEL
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-baseline pt-1">
+                              <span className="text-[10px] text-slate-400">На руках в кассе:</span>
+                              <span className="font-mono font-black text-emerald-400 text-sm">
+                                {acc.currentBalance} ₾
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-800/60 font-mono">
+                              <span>Сегодня:</span>
+                              <span>+{acc.todayIncome || 0} ₾ / -{acc.todayExpense || 0} ₾</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

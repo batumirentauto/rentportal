@@ -6,6 +6,7 @@ export async function GET() {
     const users = await prisma.user.findMany({
       include: {
         city: true,
+        financialAccounts: true,
         owner: {
           include: {
             cars: {
@@ -28,25 +29,36 @@ export async function GET() {
       orderBy: { nameRu: "asc" },
     });
 
+    const accounts = await prisma.financialAccount.findMany({
+      include: { city: true, user: true },
+      orderBy: { type: "asc" },
+    });
+
     return NextResponse.json({
       success: true,
-      users: users.map((u) => ({
-        id: u.id,
-        fullName: u.fullName,
-        phone: u.phone,
-        email: u.email,
-        telegram: u.telegram,
-        role: u.role,
-        status: u.status,
-        cityName: u.city?.nameRu || "Все филиалы",
-        cityCode: u.city?.code || "ALL",
-        cityId: u.cityId,
-        ownerId: u.ownerId,
-        ownerName: u.owner?.fullName,
-        carsCount: u.owner?.cars?.length || 0,
-        cars: u.owner?.cars?.map((c) => `${c.brand} ${c.model} (${c.plateNumber})`) || [],
-        createdAt: u.createdAt,
-      })),
+      users: users.map((u) => {
+        const cashAcc = u.financialAccounts?.find((a) => a.type === "CASH") || u.financialAccounts?.[0];
+        return {
+          id: u.id,
+          fullName: u.fullName,
+          phone: u.phone,
+          email: u.email,
+          telegram: u.telegram,
+          role: u.role,
+          status: u.status,
+          cityName: u.city?.nameRu || "Все филиалы",
+          cityCode: u.city?.code || "ALL",
+          cityId: u.cityId,
+          cashAccountId: cashAcc?.id || null,
+          cashAccountName: cashAcc?.name || null,
+          cashBalanceGEL: cashAcc?.currentBalance || 0,
+          ownerId: u.ownerId,
+          ownerName: u.owner?.fullName,
+          carsCount: u.owner?.cars?.length || 0,
+          cars: u.owner?.cars?.map((c) => `${c.brand} ${c.model} (${c.plateNumber})`) || [],
+          createdAt: u.createdAt,
+        };
+      }),
       owners: owners.map((o) => ({
         id: o.id,
         fullName: o.fullName,
@@ -57,6 +69,16 @@ export async function GET() {
         id: c.id,
         nameRu: c.nameRu,
         code: c.code,
+      })),
+      accounts: accounts.map((a) => ({
+        id: a.id,
+        name: a.name,
+        type: a.type,
+        currency: a.currency,
+        currentBalance: a.currentBalance,
+        managerResponsible: a.managerResponsible,
+        userId: a.userId,
+        cityName: a.city?.nameRu || "Центральный",
       })),
     });
   } catch (error: any) {
@@ -74,18 +96,110 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, userId, fullName, phone, email, telegram, role = "MANAGER", cityId, ownerId, status = "ACTIVE" } = body;
+    const {
+      action,
+      userId,
+      fullName,
+      phone,
+      email,
+      telegram,
+      role = "MANAGER",
+      cityId,
+      ownerId,
+      status = "ACTIVE",
+      // Cash Transfer / Collection (Инкассация)
+      fromAccountId,
+      toAccountId,
+      amount,
+      notes,
+      managerName,
+    } = body;
 
+    // 1. Инкассация / Передача денег из кассы менеджера в центральную кассу или на банковский счет (BOG, TBC)
+    if (action === "TRANSFER_CASH") {
+      if (!fromAccountId || !toAccountId || !amount) {
+        return NextResponse.json(
+          { success: false, error: "Укажите кассу списания, целевой счёт и сумму инкассации" },
+          { status: 400 }
+        );
+      }
+
+      const numAmount = Number(amount);
+      if (numAmount <= 0) {
+        return NextResponse.json({ success: false, error: "Сумма должна быть больше 0" }, { status: 400 });
+      }
+
+      // Списываем из кассы менеджера
+      const fromAcc = await prisma.financialAccount.update({
+        where: { id: fromAccountId },
+        data: { currentBalance: { decrement: numAmount } },
+      });
+
+      // Пополняем целевой счет / кассу
+      const toAcc = await prisma.financialAccount.update({
+        where: { id: toAccountId },
+        data: { currentBalance: { increment: numAmount } },
+      });
+
+      // Фиксируем расход в кассе менеджера
+      await prisma.expense.create({
+        data: {
+          accountId: fromAccountId,
+          category: "OTHER",
+          amount: numAmount,
+          currency: fromAcc.currency || "GEL",
+          description: `Инкассация: передача наличных в «${toAcc.name}» (${notes || "сдача выручки"})`,
+          cityId: fromAcc.cityId || undefined,
+          managerName: managerName || fromAcc.managerResponsible || "Менеджер",
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Инкассация успешно проведена! ${numAmount} ₾ передано из «${fromAcc.name}» в «${toAcc.name}»`,
+        fromBalance: fromAcc.currentBalance,
+        toBalance: toAcc.currentBalance,
+      });
+    }
+
+    // 2. Удаление пользователя
     if (action === "DELETE" && userId) {
       await prisma.user.delete({ where: { id: userId } });
       return NextResponse.json({ success: true, message: "Пользователь удалён" });
     }
 
+    // 3. Обновление роли
     if (action === "UPDATE_ROLE" && userId) {
       const updated = await prisma.user.update({
         where: { id: userId },
         data: { role, status, cityId: cityId || null, ownerId: ownerId || null },
       });
+
+      // Если сотруднику назначена роль менеджера и у него еще нет кассы — создаем
+      if (role === "MANAGER") {
+        const existingCash = await prisma.financialAccount.findFirst({
+          where: { userId },
+        });
+        if (!existingCash) {
+          const city = updated.cityId ? await prisma.city.findUnique({ where: { id: updated.cityId } }) : null;
+          const cityName = city?.nameRu || "Грузия";
+          await prisma.financialAccount.create({
+            data: {
+              name: `Касса нал: ${updated.fullName} (${cityName})`,
+              type: "CASH",
+              currency: "GEL",
+              bankName: "NONE",
+              cityId: updated.cityId || undefined,
+              userId: updated.id,
+              managerResponsible: updated.fullName,
+              isManagerCash: true,
+              initialBalance: 0,
+              currentBalance: 0,
+            },
+          });
+        }
+      }
+
       return NextResponse.json({ success: true, user: updated });
     }
 
@@ -96,7 +210,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create new user
+    // 4. Создание нового пользователя
     const newUser = await prisma.user.create({
       data: {
         fullName,
@@ -114,10 +228,33 @@ export async function POST(request: Request) {
       },
     });
 
+    // 5. АВТОМАТИЧЕСКОЕ СОЗДАНИЕ ПЕРСОНАЛЬНОЙ НАЛИЧНОЙ КАССЫ ДЛЯ МЕНЕДЖЕРА
+    let createdCashAccount = null;
+    if (role === "MANAGER") {
+      const cityName = newUser.city?.nameRu || "Грузия";
+      createdCashAccount = await prisma.financialAccount.create({
+        data: {
+          name: `Касса нал: ${fullName} (${cityName})`,
+          type: "CASH",
+          currency: "GEL",
+          bankName: "NONE",
+          cityId: cityId || undefined,
+          userId: newUser.id,
+          managerResponsible: fullName,
+          isManagerCash: true,
+          initialBalance: 0,
+          currentBalance: 0,
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
-      message: "Пользователь успешно создан и добавлен в команду!",
+      message: role === "MANAGER"
+        ? `Менеджер «${fullName}» успешно добавлен! Для него автоматически открыта персональная наличная касса по филиалу.`
+        : "Пользователь успешно создан и добавлен в команду!",
       user: newUser,
+      cashAccount: createdCashAccount,
     });
   } catch (error: any) {
     if (error?.digest?.startsWith?.("NEXT_")) {

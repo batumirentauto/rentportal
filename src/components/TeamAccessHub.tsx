@@ -34,6 +34,9 @@ interface TeamUser {
   cityName: string;
   cityCode: string;
   cityId?: string;
+  cashAccountId?: string | null;
+  cashAccountName?: string | null;
+  cashBalanceGEL?: number;
   ownerId?: string;
   ownerName?: string;
   carsCount: number;
@@ -480,7 +483,7 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
                 <th className="py-3 px-4 font-bold">Участник / Контакты</th>
                 <th className="py-3 px-3 font-bold">Роль в системе</th>
                 <th className="py-3 px-3 font-bold">Филиал / Город</th>
-                <th className="py-3 px-3 font-bold">Автомобили в управлении</th>
+                <th className="py-3 px-3 font-bold">Касса / Привязка</th>
                 <th className="py-3 px-3 font-bold text-center">Статус</th>
                 <th className="py-3 px-4 font-bold text-right">Действия</th>
               </tr>
@@ -534,9 +537,23 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
                         </span>
                       </td>
 
-                      {/* Cars */}
+                      {/* Cars / Cash Account */}
                       <td className="py-3 px-3">
-                        {u.role === "OWNER" ? (
+                        {u.role === "MANAGER" ? (
+                          <div>
+                            <div className="flex items-center space-x-1.5">
+                              <span className="font-mono font-black text-amber-400 text-xs">
+                                💵 {u.cashBalanceGEL || 0} ₾
+                              </span>
+                              <span className="bg-amber-500/20 text-amber-300 text-[9px] px-1.5 py-0.2 rounded font-bold">
+                                Касса
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 block truncate max-w-[190px]">
+                              {u.cashAccountName || `Касса: ${u.fullName}`}
+                            </span>
+                          </div>
+                        ) : u.role === "OWNER" ? (
                           u.carsCount > 0 ? (
                             <div>
                               <span className="font-bold text-emerald-400 font-mono">
@@ -707,6 +724,12 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
               </div>
 
               {/* City or Owner linking */}
+              {newRole === "MANAGER" && (
+                <div className="bg-amber-950/40 border border-amber-500/30 p-2.5 rounded-xl text-[11px] text-amber-300 leading-relaxed">
+                  💡 <strong>Автоматическое открытие кассы:</strong> Для этого менеджера будет автоматически открыта отдельная персональная наличная касса. Даже если в городе уже работают другие менеджеры, у каждого из них будет своя касса и отдельный учёт в отчётности.
+                </div>
+              )}
+
               {newRole === "OWNER" ? (
                 <div>
                   <label className="text-slate-300 font-bold block mb-1">

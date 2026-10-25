@@ -104,6 +104,28 @@ export async function POST(
       },
     });
 
+    // Находим персональную наличную кассу ответственного менеджера или кассу города
+    let managerCashAcc = null;
+    if (managerName) {
+      managerCashAcc = await prisma.financialAccount.findFirst({
+        where: {
+          type: "CASH",
+          managerResponsible: { contains: managerName.split(" ")[0] },
+        },
+      });
+    }
+    if (!managerCashAcc && booking.car.cityId) {
+      managerCashAcc = await prisma.financialAccount.findFirst({
+        where: {
+          type: "CASH",
+          cityId: booking.car.cityId,
+        },
+      });
+    }
+    if (!managerCashAcc) {
+      managerCashAcc = await prisma.financialAccount.findFirst({ where: { currency: "GEL", type: "CASH" } });
+    }
+
     // 2. Создаем проводку за аренду и услуги
     const rentalPay = await prisma.payment.create({
       data: {
@@ -113,6 +135,7 @@ export async function POST(
         currency: rentalCurrency,
         method: paymentMethod,
         status: "PAID",
+        accountId: paymentMethod === "CASH" ? managerCashAcc?.id : undefined,
         amountExpected: Number(amountExpected) || Number(rentalAmount) || booking.totalAmount,
         amountReceived: Number(amountReceived) || Number(rentalAmount) || booking.totalAmount,
         changeOnReturn: Number(changeOnReturn) || 0,
@@ -120,6 +143,14 @@ export async function POST(
         notes: paymentNotes || `Оплата аренды при выдаче (${paymentMethod})`,
       },
     });
+
+    // Если оплата наличными — пополняем баланс кассы менеджера
+    if (paymentMethod === "CASH" && managerCashAcc) {
+      await prisma.financialAccount.update({
+        where: { id: managerCashAcc.id },
+        data: { currentBalance: { increment: Number(rentalAmount) || booking.totalAmount } },
+      });
+    }
 
     // 3. Создаем проводку депозита (если указан)
     let depositPay = null;
@@ -132,12 +163,20 @@ export async function POST(
           currency: depositCurrency,
           method: depositMethod,
           status: "PAID",
+          accountId: depositMethod === "CASH" ? managerCashAcc?.id : undefined,
           amountExpected: Number(depositAmount),
           amountReceived: Number(depositAmount),
           managerName,
           notes: `Залог/депозит за авто (${depositMethod}). Подлежит возврату при сдаче авто.`,
         },
       });
+
+      if (depositMethod === "CASH" && managerCashAcc) {
+        await prisma.financialAccount.update({
+          where: { id: managerCashAcc.id },
+          data: { currentBalance: { increment: Number(depositAmount) } },
+        });
+      }
     }
 
     // 3.5. Автоматический учет мойки автомобиля при выдаче (20 ₾ полная, 10 ₾ кузов/салон)
@@ -154,15 +193,12 @@ export async function POST(
         ? "Мойка кузова (10 ₾)"
         : "Мойка салона (10 ₾)";
 
-      let account = await prisma.financialAccount.findFirst({ where: { currency: "GEL" } });
-      if (!account) {
-        account = await prisma.financialAccount.findFirst();
-      }
+      const accountForWash = managerCashAcc || (await prisma.financialAccount.findFirst({ where: { currency: "GEL" } }));
 
-      if (account) {
+      if (accountForWash) {
         washExpense = await prisma.expense.create({
           data: {
-            accountId: account.id,
+            accountId: accountForWash.id,
             category: "WASHING",
             amount: finalWashCost,
             currency: "GEL",
@@ -172,6 +208,12 @@ export async function POST(
             description: `Мойка перед выдачей: ${washTypeLabel} — ${booking.car.brand} ${booking.car.model} (${booking.car.plateNumber}), бронь #${booking.bookingNumber}`,
             date: calculatedHandoverAt,
           },
+        });
+
+        // Списываем стоимость мойки из кассы менеджера
+        await prisma.financialAccount.update({
+          where: { id: accountForWash.id },
+          data: { currentBalance: { decrement: finalWashCost } },
         });
       }
 

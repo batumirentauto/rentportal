@@ -309,6 +309,9 @@ model FinancialAccount {
   initialBalance     Float      @default(0)
   currentBalance     Float      @default(0)
   managerResponsible String?   // Ответственный менеджер
+  userId             String?   // Привязка к конкретному менеджеру (персональная касса менеджера)
+  user               User?     @relation(fields: [userId], references: [id])
+  isManagerCash      Boolean   @default(false) // Признак персональной наличной кассы менеджера
   payments           Payment[]
   expenses           Expense[]
   createdAt          DateTime   @default(now())
@@ -429,9 +432,10 @@ model User {
   status      String    @default("ACTIVE")  // "ACTIVE", "INACTIVE"
   cityId      String?
   city        City?     @relation(fields: [cityId], references: [id])
-  ownerId     String?   // Привязка к CarOwner если роль OWNER
-  owner       CarOwner? @relation(fields: [ownerId], references: [id])
-  avatarUrl   String?
+  ownerId           String?   // Привязка к CarOwner если роль OWNER
+  owner             CarOwner? @relation(fields: [ownerId], references: [id])
+  financialAccounts FinancialAccount[] // Персональные кассы менеджера
+  avatarUrl         String?
   notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

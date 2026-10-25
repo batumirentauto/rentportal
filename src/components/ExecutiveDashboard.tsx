@@ -18,6 +18,10 @@ import {
   ArrowDownRight,
   UserCheck,
   CheckSquare,
+  ArrowRightLeft,
+  ShieldCheck,
+  Sparkles,
+  Users,
 } from "lucide-react";
 import { ManagerTasksSection } from "./ManagerTasksSection";
 
@@ -35,6 +39,14 @@ export const ExecutiveDashboard: React.FC = () => {
   const [expenseDesc, setExpenseDesc] = useState<string>("");
   const [expenseManager, setExpenseManager] = useState<string>("Менеджер");
   const [isSubmittingExpense, setIsSubmittingExpense] = useState<boolean>(false);
+
+  // Cash Collection / Transfer Modal (Инкассация из кассы менеджера в банк или главную кассу)
+  const [isTransferOpen, setIsTransferOpen] = useState<boolean>(false);
+  const [transferFromAccount, setTransferFromAccount] = useState<any>(null);
+  const [transferToAccountId, setTransferToAccountId] = useState<string>("");
+  const [transferAmount, setTransferAmount] = useState<number>(300);
+  const [transferNotes, setTransferNotes] = useState<string>("");
+  const [isSubmittingTransfer, setIsSubmittingTransfer] = useState<boolean>(false);
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -88,6 +100,39 @@ export const ExecutiveDashboard: React.FC = () => {
     }
   };
 
+  const handleTransferCash = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferFromAccount?.id || !transferToAccountId || !transferAmount) return;
+    setIsSubmittingTransfer(true);
+    try {
+      const res = await fetch("/api/executive/analytics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "TRANSFER_CASH",
+          fromAccountId: transferFromAccount.id,
+          toAccountId: transferToAccountId,
+          amount: transferAmount,
+          notes: transferNotes,
+          managerName: transferFromAccount.managerName || "Менеджер",
+        }),
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        setIsTransferOpen(false);
+        setTransferNotes("");
+        await fetchAnalytics();
+      } else {
+        alert(resData.error || "Ошибка проведения инкассации");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Ошибка сети при проведении инкассации");
+    } finally {
+      setIsSubmittingTransfer(false);
+    }
+  };
+
   if (loading || !data) {
     return (
       <div className="py-24 text-center text-slate-400">
@@ -97,7 +142,19 @@ export const ExecutiveDashboard: React.FC = () => {
     );
   }
 
-  const { kpi, balances, accounts, revenueByCategory, revenueByCity, expensesByCategory, dailyInflow, recentExpenses } = data;
+  const {
+    kpi,
+    balances,
+    accounts,
+    managerCashAccounts,
+    managerCashByCity,
+    companyBankAccounts,
+    revenueByCategory,
+    revenueByCity,
+    expensesByCategory,
+    dailyInflow,
+    recentExpenses,
+  } = data;
 
   const categoryLabels: Record<string, string> = {
     WASHING: "🧼 Мойка автомобилей",
@@ -127,7 +184,7 @@ export const ExecutiveDashboard: React.FC = () => {
             Управленческий учёт, Выручка & Мультикасса Грузии
           </h1>
           <p className="text-xs text-slate-300 mt-1">
-            Сводка по филиалам (Тбилиси, Батуми, Кутаиси), кассам менеджеров, банковским счетам BOG, TBC, Credo и расходам
+            Раздельный учёт касс нескольких менеджеров по городам, расчётные счета Bank of Georgia, TBC, Credo и расходы
           </p>
         </div>
 
@@ -155,7 +212,7 @@ export const ExecutiveDashboard: React.FC = () => {
           onClick={() => setExecutiveTab("finance")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
             executiveTab === "finance"
-              ? "bg-amber-500 text-slate-950 shadow"
+              ? "bg-amber-500 text-slate-950 shadow font-black"
               : "bg-slate-900 text-slate-300 hover:text-white border border-slate-800"
           }`}
         >
@@ -167,7 +224,7 @@ export const ExecutiveDashboard: React.FC = () => {
           onClick={() => setExecutiveTab("tasks")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
             executiveTab === "tasks"
-              ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
+              ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg font-black"
               : "text-indigo-300 hover:text-white bg-indigo-950/40 border border-indigo-500/30"
           }`}
         >
@@ -182,276 +239,455 @@ export const ExecutiveDashboard: React.FC = () => {
         <>
           {/* KPI Cards (Сегодня vs Вчера vs Всего) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Revenue Today */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl relative overflow-hidden">
-          <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
-            <span>Выручка Сегодня:</span>
-            <span className="flex items-center text-emerald-400 text-xs font-bold">
-              <ArrowUpRight className="w-3.5 h-3.5" /> +{kpi.revenueTodayUSD} ₾
-            </span>
-          </div>
-          <div className="text-3xl font-black text-amber-400 font-mono mt-1">
-            {kpi.revenueTodayUSD} <span className="text-sm font-normal text-slate-400">GEL (₾)</span>
-          </div>
-          <div className="flex justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
-            <span>Вчера выручка:</span>
-            <span className="font-bold text-white font-mono">{kpi.revenueYesterdayUSD} ₾</span>
-          </div>
-        </div>
+            {/* Revenue Today */}
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl relative overflow-hidden">
+              <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
+                <span>Выручка Сегодня:</span>
+                <span className="flex items-center text-emerald-400 text-xs font-bold">
+                  <ArrowUpRight className="w-3.5 h-3.5" /> +{kpi.revenueTodayUSD} ₾
+                </span>
+              </div>
+              <div className="text-3xl font-black text-amber-400 font-mono mt-1">
+                {kpi.revenueTodayUSD} <span className="text-sm font-normal text-slate-400">GEL (₾)</span>
+              </div>
+              <div className="flex justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
+                <span>Вчера выручка:</span>
+                <span className="font-bold text-white font-mono">{kpi.revenueYesterdayUSD} ₾</span>
+              </div>
+            </div>
 
-        {/* Expenses Today */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-          <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
-            <span>Расходы Сегодня:</span>
-            <span className="flex items-center text-rose-400 text-xs font-bold">
-              <ArrowDownRight className="w-3.5 h-3.5" /> {kpi.expensesTodayGEL} ₾
-            </span>
-          </div>
-          <div className="text-3xl font-black text-rose-400 font-mono mt-1">
-            {kpi.expensesTodayGEL} <span className="text-sm font-normal text-slate-400">GEL (₾)</span>
-          </div>
-          <div className="flex justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
-            <span>Вчера расходы:</span>
-            <span className="font-bold text-white font-mono">{kpi.expensesYesterdayGEL} ₾</span>
-          </div>
-        </div>
+            {/* Expenses Today */}
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+              <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
+                <span>Расходы Сегодня:</span>
+                <span className="flex items-center text-rose-400 text-xs font-bold">
+                  <ArrowDownRight className="w-3.5 h-3.5" /> {kpi.expensesTodayGEL} ₾
+                </span>
+              </div>
+              <div className="text-3xl font-black text-rose-400 font-mono mt-1">
+                {kpi.expensesTodayGEL} <span className="text-sm font-normal text-slate-400">GEL (₾)</span>
+              </div>
+              <div className="flex justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
+                <span>Вчера расходы:</span>
+                <span className="font-bold text-white font-mono">{kpi.expensesYesterdayGEL} ₾</span>
+              </div>
+            </div>
 
-        {/* Total Period Revenue */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-          <span className="text-slate-400 text-xs font-semibold block">Всего выручка (Период):</span>
-          <div className="text-3xl font-black text-white font-mono mt-1">
-            {kpi.revenueTotalUSD} ₾
+            {/* Total Period Revenue */}
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+              <span className="text-slate-400 text-xs font-semibold block">Всего выручка (Период):</span>
+              <div className="text-3xl font-black text-white font-mono mt-1">
+                {kpi.revenueTotalUSD} ₾
+              </div>
+              <div className="flex justify-between text-[11px] text-emerald-400 font-medium mt-2 pt-2 border-t border-slate-800/80">
+                <span>Расчетная прибыль:</span>
+                <span className="font-bold font-mono">+{kpi.netProfitEstimateUSD} ₾ (GEL)</span>
+              </div>
+            </div>
+
+            {/* Total Cash in managers hands */}
+            <div className="bg-gradient-to-br from-slate-900 via-emerald-950/20 to-slate-900 border border-emerald-500/30 p-5 rounded-2xl">
+              <div className="flex justify-between items-center text-xs text-emerald-400 font-bold uppercase tracking-wider">
+                <span>В кассах менеджеров:</span>
+                <Users className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div className="text-3xl font-black text-emerald-400 font-mono mt-1">
+                {kpi.totalManagerCashGEL || balances.totalCashUSD} ₾
+              </div>
+              <div className="flex justify-between text-[11px] text-slate-300 mt-2 pt-2 border-t border-slate-800/80">
+                <span>На счетах в банках:</span>
+                <span className="font-bold text-white font-mono">{balances.totalBankGEL} ₾ (GEL)</span>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between text-[11px] text-emerald-400 font-medium mt-2 pt-2 border-t border-slate-800/80">
-            <span>Расчетная прибыль:</span>
-            <span className="font-bold font-mono">+{kpi.netProfitEstimateUSD} ₾ (GEL)</span>
-          </div>
-        </div>
 
-        {/* Total Cash in hands */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-          <span className="text-slate-400 text-xs font-semibold block">В наличных кассах:</span>
-          <div className="text-3xl font-black text-emerald-400 font-mono mt-1">
-            {balances.totalCashUSD} ₾
-          </div>
-          <div className="flex justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
-            <span>На банковских счетах:</span>
-            <span className="font-bold text-white font-mono">{balances.totalBankGEL} ₾</span>
-          </div>
-        </div>
-      </div>
+          {/* 1. НАЛИЧНЫЕ КАССЫ МЕНЕДЖЕРОВ ПО ГОРОДАМ (ДЕЦЕНТРАЛИЗОВАННЫЙ УЧЕТ) */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-black px-2.5 py-0.5 rounded uppercase">
+                    Децентрализованная касса
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    Несколько менеджеров в городе = у каждого своя персональная касса
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-white mt-1 flex items-center space-x-2">
+                  <Wallet className="w-5 h-5 text-amber-400" />
+                  <span>Наличные кассы менеджеров по городам</span>
+                </h3>
+              </div>
 
-      {/* MULTI-CASH & BANK ACCOUNTS (Мультикасса по городам и банкам) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-extrabold text-white flex items-center space-x-2">
-              <Wallet className="w-5 h-5 text-amber-400" />
-              <span>Мультикасса & Счета компании (Остатки на сейчас)</span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Физические кассы менеджеров в филиалах, расчетные счета в банках Грузии и криптокошелек
-            </p>
-          </div>
-        </div>
+              <div className="flex items-center space-x-3 bg-slate-950 px-4 py-2 rounded-2xl border border-slate-800">
+                <span className="text-xs text-slate-400">Всего у менеджеров на руках:</span>
+                <span className="text-base font-black text-emerald-400 font-mono">
+                  {kpi.totalManagerCashGEL} ₾
+                </span>
+              </div>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {accounts.map((acc: any) => {
-            const isCash = acc.type === "CASH";
-            const isCrypto = acc.type === "CRYPTO_WALLET";
-            const isBank = acc.type === "BANK_ACCOUNT";
+            {/* City Groups */}
+            <div className="space-y-6">
+              {[
+                { city: "Батуми", code: "BUS", icon: "🌊", desc: "Филиал Батуми (Аэропорт & Офис)" },
+                { city: "Тбилиси", code: "TBS", icon: "🏛️", desc: "Филиал Тбилиси (Аэропорт & Центр)" },
+                { city: "Кутаиси", code: "KUT", icon: "🌿", desc: "Филиал Кутаиси (Аэропорт Копитнари)" },
+              ].map((grp) => {
+                const accountsInCity = managerCashByCity?.[grp.city] || [];
+                const cityCashSum = accountsInCity.reduce((sum: number, a: any) => sum + (a.currentBalance || 0), 0);
 
-            return (
-              <div
-                key={acc.id}
-                className="bg-slate-950/70 border border-slate-800 hover:border-slate-700 rounded-xl p-4 flex flex-col justify-between transition-all shadow"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                      {isCash ? "💵 Касса Наличные" : isCrypto ? "💎 Крипта" : `🏦 ${acc.bankName} Bank`}
-                    </span>
-                    <span className="text-xs font-mono font-bold text-slate-400">
-                      {acc.currency}
-                    </span>
-                  </div>
+                return (
+                  <div key={grp.code} className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xl">{grp.icon}</span>
+                        <div>
+                          <h4 className="font-extrabold text-sm text-white flex items-center space-x-2">
+                            <span>{grp.city}</span>
+                            <span className="text-[11px] text-slate-500 font-normal">({accountsInCity.length} менеджера с кассами)</span>
+                          </h4>
+                          <span className="text-[10px] text-slate-400">{grp.desc}</span>
+                        </div>
+                      </div>
 
-                  <h4 className="font-bold text-white text-sm leading-tight">
-                    {acc.name}
-                  </h4>
-
-                  {acc.managerResponsible && (
-                    <div className="flex items-center space-x-1 text-[11px] text-slate-400 mt-1">
-                      <UserCheck className="w-3.5 h-3.5 text-amber-400" />
-                      <span>{acc.managerResponsible}</span>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Остаток по городу:</span>
+                        <span className="font-mono font-black text-amber-400 text-sm">
+                          {cityCashSum} ₾ (GEL)
+                        </span>
+                      </div>
                     </div>
-                  )}
 
-                  {acc.accountNumber && (
-                    <span className="text-[10px] text-slate-500 font-mono block mt-1 truncate">
-                      {acc.accountNumber}
-                    </span>
-                  )}
-                </div>
+                    {/* Manager Cards in this city */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                      {accountsInCity.map((acc: any) => (
+                        <div
+                          key={acc.id}
+                          className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition shadow"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center font-bold text-xs text-emerald-300">
+                                💵
+                              </div>
+                              <div>
+                                <h5 className="font-bold text-white text-xs leading-tight">
+                                  {acc.managerName}
+                                </h5>
+                                <span className="text-[10px] text-slate-400 font-mono block">
+                                  {acc.name}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[9px] px-1.5 py-0.5 rounded font-black">
+                              Активна
+                            </span>
+                          </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-800 flex justify-between items-baseline">
-                  <span className="text-[11px] text-slate-400">Текущий остаток:</span>
-                  <span className="text-xl font-black text-amber-400 font-mono">
-                    {acc.currency === "GEL" ? `${acc.currentBalance} ₾` : `$${acc.currentBalance}`}
-                  </span>
-                </div>
+                          {/* Balance Display */}
+                          <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between items-baseline">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase">Остаток на руках:</span>
+                            <span className="font-mono font-black text-emerald-400 text-base">
+                              {acc.currentBalance} ₾
+                            </span>
+                          </div>
+
+                          {/* Activity: Today In / Out */}
+                          <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-400 font-mono">
+                            <div className="bg-slate-950/80 p-1.5 rounded border border-slate-800/80">
+                              <span className="block text-slate-500">Принято сегодня:</span>
+                              <span className="font-bold text-white">+{acc.todayIncome || 0} ₾</span>
+                            </div>
+                            <div className="bg-slate-950/80 p-1.5 rounded border border-slate-800/80">
+                              <span className="block text-slate-500">Расходы сегодня:</span>
+                              <span className="font-bold text-rose-400">-{acc.todayExpense || 0} ₾</span>
+                            </div>
+                          </div>
+
+                          {/* Action Button: Cash Collection / Transfer to Bank */}
+                          <button
+                            onClick={() => {
+                              setTransferFromAccount(acc);
+                              setTransferAmount(Math.min(acc.currentBalance, 500) || 100);
+                              const defaultTarget = companyBankAccounts?.[0]?.id || "";
+                              setTransferToAccountId(defaultTarget);
+                              setIsTransferOpen(true);
+                            }}
+                            className="w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-slate-700 rounded-lg text-[11px] font-bold transition flex items-center justify-center space-x-1.5 active:scale-95"
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Инкассация / Сдать в банк</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 2. РАСЧЕТНЫЕ БАНКОВСКИЕ СЧЕТА И КРИПТА КОМПАНИИ */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-extrabold text-white flex items-center space-x-2">
+                  <Landmark className="w-5 h-5 text-indigo-400" />
+                  <span>Банковские расчетные счета компании & Криптокошелек</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Официальные счета для безналичных оплат клиентов, депозитов и приема инкассаций
+                </p>
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </div>
 
-      {/* Revenue Structure vs Expenses Structure */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Structure */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-          <h3 className="font-extrabold text-base text-white flex items-center space-x-2">
-            <TrendingUp className="w-5 h-5 text-emerald-400" />
-            <span>Структура выручки (по городам и типам)</span>
-          </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {companyBankAccounts.map((acc: any) => {
+                const isCrypto = acc.type === "CRYPTO_WALLET";
 
-          <div className="space-y-3">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-              По городам проката:
-            </span>
-            {Object.entries(revenueByCity).map(([city, amount]: any) => (
-              <div key={city} className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-200 font-semibold">{city}</span>
-                  <span className="text-amber-400 font-mono font-bold">${amount} USD</span>
-                </div>
-                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                return (
                   <div
-                    className="bg-amber-500 h-full rounded-full transition-all"
-                    style={{
-                      width: `${kpi.revenueTotalUSD > 0 ? (amount / kpi.revenueTotalUSD) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+                    key={acc.id}
+                    className="bg-slate-950/70 border border-slate-800 hover:border-slate-700 rounded-xl p-4 flex flex-col justify-between transition-all shadow"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                          {isCrypto ? "💎 Крипта" : `🏦 ${acc.bankName} Bank`}
+                        </span>
+                        <span className="text-xs font-mono font-bold text-slate-400">
+                          {acc.currency}
+                        </span>
+                      </div>
 
-          <div className="pt-4 border-t border-slate-800 space-y-2">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-              По видам услуг:
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[11px]">Аренда авто:</span>
-                <span className="font-bold text-white font-mono">${revenueByCategory.RENTAL}</span>
-              </div>
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[11px]">Доставка / Города:</span>
-                <span className="font-bold text-white font-mono">${revenueByCategory.DELIVERY}</span>
-              </div>
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[11px]">Доп. оборудование:</span>
-                <span className="font-bold text-white font-mono">${revenueByCategory.EXTRA}</span>
-              </div>
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[11px]">Залоги на удержании:</span>
-                <span className="font-bold text-emerald-400 font-mono">${revenueByCategory.DEPOSIT}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+                      <h4 className="font-bold text-white text-sm leading-tight">
+                        {acc.name}
+                      </h4>
 
-        {/* Expenses Structure */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-extrabold text-base text-white flex items-center space-x-2">
-              <TrendingDown className="w-5 h-5 text-rose-400" />
-              <span>Структура расходов компании</span>
-            </h3>
-            <span className="text-xs text-rose-400 font-mono font-bold">
-              Всего: {kpi.expensesTotalGEL} ₾
-            </span>
-          </div>
+                      {acc.accountNumber && (
+                        <span className="text-[10px] text-slate-500 font-mono block mt-1 truncate">
+                          {acc.accountNumber}
+                        </span>
+                      )}
+                    </div>
 
-          <div className="space-y-2.5">
-            {Object.entries(expensesByCategory).map(([catKey, amount]: any) => {
-              if (amount === 0) return null;
-              const perc = kpi.expensesTotalGEL > 0 ? Math.round((amount / kpi.expensesTotalGEL) * 100) : 0;
-              return (
-                <div key={catKey} className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-semibold text-white block">
-                      {categoryLabels[catKey] || catKey}
-                    </span>
-                    <span className="text-[10px] text-slate-400">{perc}% от общих затрат</span>
+                    <div className="mt-4 pt-3 border-t border-slate-800 flex justify-between items-baseline">
+                      <span className="text-[11px] text-slate-400">Остаток:</span>
+                      <span className="text-xl font-black text-amber-400 font-mono">
+                        {acc.currency === "GEL" ? `${acc.currentBalance} ₾` : `$${acc.currentBalance}`}
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-sm font-mono font-bold text-rose-400">
-                    {amount} ₾
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
-          {/* Recent Expenses List */}
-          <div className="pt-3 border-t border-slate-800 space-y-2">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-              Последние списания:
-            </span>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto text-xs">
-              {recentExpenses.map((e: any) => (
-                <div key={e.id} className="p-2 rounded-lg bg-slate-950/40 border border-slate-800/50 flex justify-between items-center text-[11px]">
-                  <div>
-                    <span className="font-semibold text-slate-200 block">{e.description}</span>
-                    <span className="text-[10px] text-slate-400">Счёт: {e.account?.name} • {e.managerName}</span>
+          {/* Revenue Structure vs Expenses Structure */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue Structure */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <h3 className="font-extrabold text-base text-white flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                <span>Структура выручки (по городам и типам)</span>
+              </h3>
+
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                  По городам проката:
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  {Object.entries(revenueByCity).map(([city, amt]) => (
+                    <div key={city} className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                      <span className="text-xs text-slate-400 block">{city}</span>
+                      <span className="font-mono font-black text-amber-400 text-base mt-1 block">
+                        {Number(amt)} ₾
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-2 border-t border-slate-800">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2">
+                    По категориям дохода:
+                  </span>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between">
+                      <span className="text-slate-400">Аренда авто:</span>
+                      <span className="font-mono font-bold text-emerald-400">{revenueByCategory.RENTAL || 0} ₾</span>
+                    </div>
+                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between">
+                      <span className="text-slate-400">Доставка авто:</span>
+                      <span className="font-mono font-bold text-cyan-400">{revenueByCategory.DELIVERY || 0} ₾</span>
+                    </div>
+                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between">
+                      <span className="text-slate-400">Доп. услуги:</span>
+                      <span className="font-mono font-bold text-purple-400">{revenueByCategory.EXTRA || 0} ₾</span>
+                    </div>
+                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between">
+                      <span className="text-slate-400">Залоги (депозиты):</span>
+                      <span className="font-mono font-bold text-amber-300">{revenueByCategory.DEPOSIT || 0} ₾</span>
+                    </div>
                   </div>
-                  <span className="font-mono font-bold text-rose-400 whitespace-nowrap ml-2">
-                    -{e.amount} {e.currency}
-                  </span>
                 </div>
-              ))}
+              </div>
+            </div>
+
+            {/* Expenses Structure */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <h3 className="font-extrabold text-base text-white flex items-center space-x-2">
+                <TrendingDown className="w-5 h-5 text-rose-400" />
+                <span>Структура расходов компании (GEL ₾)</span>
+              </h3>
+
+              <div className="space-y-2">
+                {Object.entries(expensesByCategory).map(([cat, amt]) => {
+                  const numAmt = Number(amt) || 0;
+                  const total = kpi.expensesTotalGEL || 1;
+                  const perc = Math.round((numAmt / total) * 100);
+
+                  return (
+                    <div key={cat} className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-300">{categoryLabels[cat] || cat}</span>
+                        <span className="font-mono font-bold text-white">
+                          {numAmt} ₾ ({perc}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-rose-500 h-1.5 rounded-full"
+                          style={{ width: `${Math.min(perc, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Day by Day Inflow (История кассы по дням: сколько вчера, сколько сегодня) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-        <h3 className="font-extrabold text-base text-white flex items-center space-x-2">
-          <Calendar className="w-5 h-5 text-amber-400" />
-          <span>Динамика сбора кассы по дням (Сколько поступило вчера, сегодня...)</span>
-        </h3>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-          {dailyInflow.map((day: any) => (
-            <div
-              key={day.date}
-              className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center space-y-1"
-            >
-              <span className="text-[11px] font-bold text-slate-400 block">{day.date}</span>
-              <div className="text-lg font-black text-amber-400 font-mono">
-                ${day.amountUSD}
-              </div>
-              <span className="text-[10px] text-slate-500 block">
-                {day.count} {day.count === 1 ? "выдача" : "выдач"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-      </>
+        </>
       )}
 
-      {/* Modal: Add Expense */}
+      {/* MODAL: CASH COLLECTION / TRANSFER (ИНКАССАЦИЯ ИЗ КАССЫ МЕНЕДЖЕРА В БАНК) */}
+      {isTransferOpen && transferFromAccount && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-emerald-600 flex items-center justify-center shadow">
+                  <ArrowRightLeft className="w-5 h-5 text-slate-950 font-black" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white">
+                    Инкассация кассы менеджера
+                  </h3>
+                  <span className="text-xs text-slate-400">
+                    Передача наличных в банк или главную кассу
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsTransferOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleTransferCash} className="space-y-4 text-xs">
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 block uppercase font-bold">Касса списания (Менеджер):</span>
+                <span className="font-bold text-white block text-sm">
+                  {transferFromAccount.name}
+                </span>
+                <span className="text-emerald-400 font-mono font-bold block text-xs">
+                  Текущий остаток в кассе: {transferFromAccount.currentBalance} ₾ (GEL)
+                </span>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">
+                  Куда передаются средства (Целевой счёт / Банк):
+                </label>
+                <select
+                  value={transferToAccountId}
+                  onChange={(e) => setTransferToAccountId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-medium focus:outline-none focus:border-amber-500"
+                  required
+                >
+                  <option value="">-- Выберите расчетный счет или банк --</option>
+                  {companyBankAccounts.map((acc: any) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} • {acc.currency} (Остаток: {acc.currentBalance})
+                    </option>
+                  ))}
+                  {managerCashAccounts
+                    .filter((a: any) => a.id !== transferFromAccount.id)
+                    .map((acc: any) => (
+                      <option key={acc.id} value={acc.id}>
+                        💵 Передача менеджеру: {acc.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">
+                  Сумма инкассации (₾ GEL):
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={transferFromAccount.currentBalance}
+                  value={transferAmount}
+                  onChange={(e) => setTransferAmount(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-emerald-400 font-mono font-black text-xl focus:outline-none focus:border-amber-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">
+                  Примечание / Номер инкассационной квитанции:
+                </label>
+                <input
+                  type="text"
+                  value={transferNotes}
+                  onChange={(e) => setTransferNotes(e.target.value)}
+                  placeholder="Взнос выручки за смену в терминал BOG / передача старшему менеджеру..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsTransferOpen(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingTransfer}
+                  className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-black shadow-lg transition"
+                >
+                  {isSubmittingTransfer ? "Инкассация..." : "Подтвердить инкассацию"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD EXPENSE */}
       {isAddExpenseOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-base font-bold text-white flex items-center space-x-2">
-                <Receipt className="w-5 h-5 text-rose-400" />
-                <span>Внести расход компании</span>
-              </h3>
+              <h3 className="font-extrabold text-base text-white">Внести расход компании</h3>
               <button
                 onClick={() => setIsAddExpenseOpen(false)}
                 className="text-slate-400 hover:text-white"
@@ -461,42 +697,49 @@ export const ExecutiveDashboard: React.FC = () => {
             </div>
 
             <form onSubmit={handleCreateExpense} className="space-y-4 text-xs">
-              {/* Account Selection */}
+              {/* Account */}
               <div>
                 <label className="text-slate-300 font-bold block mb-1">
-                  Списать с кассы / счета:
+                  С какой кассы / счета списать:
                 </label>
                 <select
                   value={expenseAccountId}
                   onChange={(e) => setExpenseAccountId(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500"
                 >
-                  {accounts.map((a: any) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} (Остаток: {a.currency === "GEL" ? `${a.currentBalance} ₾` : `$${a.currentBalance}`})
-                    </option>
-                  ))}
+                  <optgroup label="💵 Кассы менеджеров по городам">
+                    {managerCashAccounts?.map((acc: any) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} (Остаток: {acc.currentBalance} ₾)
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🏦 Банковские счета компании">
+                    {companyBankAccounts?.map((acc: any) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} ({acc.currency})
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 
               {/* Category */}
               <div>
-                <label className="text-slate-300 font-bold block mb-1">
-                  Категория расхода:
-                </label>
+                <label className="text-slate-300 font-bold block mb-1">Категория расхода:</label>
                 <select
                   value={expenseCategory}
                   onChange={(e) => setExpenseCategory(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500"
                 >
-                  <option value="WASHING">🧼 Мойка автомобиля</option>
-                  <option value="FUEL">⛽ Топливо / Заправка</option>
-                  <option value="MAINTENANCE">🔧 ТО, масло, запчасти, шины</option>
-                  <option value="OFFICE_RENT">🏢 Аренда офиса / стоянки</option>
-                  <option value="SALARY">💼 Зарплата менеджера / перегонщика</option>
-                  <option value="PARKING_FINES">🚨 Штрафы / муниципальная парковка</option>
-                  <option value="MARKETING">📣 Реклама и продвижение</option>
-                  <option value="OTHER">📦 Прочие операционные расходы</option>
+                  <option value="FUEL">⛽ Топливо и заправка</option>
+                  <option value="WASHING">🧼 Мойка автомобилей</option>
+                  <option value="MAINTENANCE">🔧 ТО и запчасти</option>
+                  <option value="SALARY">💼 Зарплата / Аванс</option>
+                  <option value="OFFICE_RENT">🏢 Аренда офиса / Связь</option>
+                  <option value="PARKING_FINES">🚨 Штрафы и парковки</option>
+                  <option value="MARKETING">📣 Маркетинг и реклама</option>
+                  <option value="OTHER">📦 Прочие расходы</option>
                 </select>
               </div>
 

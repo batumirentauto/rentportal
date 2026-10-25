@@ -60,12 +60,22 @@ export async function POST(
       });
     }
 
-    // Если мойка завершена ("CLEAN") и есть стоимость — создаем расход в Журнале расходов
+    // Если мойка завершена ("CLEAN") и есть стоимость — создаем расход в Журнале расходов и списываем из кассы
     if (washStatus === "CLEAN" && finalCost > 0) {
       const typeLabel = washType === "FULL" ? "Полная мойка (20 ₾)" : washType === "BODY" ? "Мойка кузова (10 ₾)" : "Мойка салона (10 ₾)";
-      let acc = await prisma.financialAccount.findFirst({ where: { currency: "GEL" } });
+      let acc = null;
+      if (managerName) {
+        acc = await prisma.financialAccount.findFirst({
+          where: { type: "CASH", managerResponsible: { contains: managerName.split(" ")[0] } },
+        });
+      }
+      if (!acc && booking.car.cityId) {
+        acc = await prisma.financialAccount.findFirst({
+          where: { type: "CASH", cityId: booking.car.cityId },
+        });
+      }
       if (!acc) {
-        acc = await prisma.financialAccount.findFirst();
+        acc = await prisma.financialAccount.findFirst({ where: { currency: "GEL", type: "CASH" } }) || await prisma.financialAccount.findFirst();
       }
 
       if (acc) {
@@ -81,6 +91,12 @@ export async function POST(
             description: `Оплата мойки авто: ${typeLabel} — ${booking.car.brand} ${booking.car.model} (${booking.car.plateNumber})`,
             date: new Date(),
           },
+        });
+
+        // Списываем средства с баланса кассы менеджера
+        await prisma.financialAccount.update({
+          where: { id: acc.id },
+          data: { currentBalance: { decrement: finalCost } },
         });
       }
     }

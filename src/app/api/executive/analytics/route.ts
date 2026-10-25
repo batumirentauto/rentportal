@@ -12,10 +12,11 @@ export async function GET() {
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    // 1. Все счета и кассы с балансами
+    // 1. Все счета и кассы с балансами (включая привязку к пользователям/менеджерам)
     const accounts = await prisma.financialAccount.findMany({
       include: {
         city: true,
+        user: true,
       },
       orderBy: {
         type: "asc",
@@ -152,19 +153,80 @@ export async function GET() {
       }
     });
 
-    // 5. Суммы на счетах и в кассах
-    let totalCashUSD = 0;
+    // 5. Разделение счетов: Банки/Крипта компании vs Наличные кассы менеджеров по городам
+    let totalCashGEL = 0;
     let totalBankGEL = 0;
     let totalBankUSD = 0;
     let totalCryptoUSD = 0;
 
+    const managerCashAccountsList: any[] = [];
+    const companyBankAccountsList: any[] = [];
+
     accounts.forEach((acc) => {
-      if (acc.type === "CASH") totalCashUSD += acc.currentBalance;
-      if (acc.type === "BANK_ACCOUNT") {
-        if (acc.currency === "GEL") totalBankGEL += acc.currentBalance;
-        if (acc.currency === "USD") totalBankUSD += acc.currentBalance;
+      if (acc.type === "CASH") {
+        totalCashGEL += acc.currentBalance;
+
+        // Расчет активности по этой конкретной кассе
+        const accPayments = payments.filter((p) => p.accountId === acc.id || (p.managerName && p.managerName.includes(acc.managerResponsible || "")));
+        const accExpenses = expenses.filter((e) => e.accountId === acc.id || (e.managerName && e.managerName.includes(acc.managerResponsible || "")));
+
+        const todayIncome = accPayments
+          .filter((p) => new Date(p.createdAt) >= today)
+          .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+        const todayExpense = accExpenses
+          .filter((e) => new Date(e.date) >= today)
+          .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+        managerCashAccountsList.push({
+          id: acc.id,
+          name: acc.name,
+          managerName: acc.managerResponsible || acc.user?.fullName || "Менеджер",
+          userId: acc.userId,
+          cityName: acc.city?.nameRu || "Батуми",
+          cityCode: acc.city?.code || "BUS",
+          cityId: acc.cityId,
+          currency: acc.currency,
+          currentBalance: acc.currentBalance,
+          initialBalance: acc.initialBalance,
+          todayIncome,
+          todayExpense,
+          totalIncome: accPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+          totalExpense: accExpenses.reduce((sum, e) => sum + (e.amount || 0), 0),
+        });
+      } else {
+        if (acc.type === "BANK_ACCOUNT") {
+          if (acc.currency === "GEL") totalBankGEL += acc.currentBalance;
+          if (acc.currency === "USD") totalBankUSD += acc.currentBalance;
+        }
+        if (acc.type === "CRYPTO_WALLET") totalCryptoUSD += acc.currentBalance;
+
+        companyBankAccountsList.push({
+          id: acc.id,
+          name: acc.name,
+          type: acc.type,
+          bankName: acc.bankName,
+          accountNumber: acc.accountNumber,
+          currency: acc.currency,
+          currentBalance: acc.currentBalance,
+          managerResponsible: acc.managerResponsible,
+        });
       }
-      if (acc.type === "CRYPTO_WALLET") totalCryptoUSD += acc.currentBalance;
+    });
+
+    // Группировка наличных касс менеджеров по городам
+    const managerCashByCity: Record<string, any[]> = {
+      Тбилиси: [],
+      Батуми: [],
+      Кутаиси: [],
+    };
+
+    managerCashAccountsList.forEach((acc) => {
+      const cityKey = acc.cityName || "Батуми";
+      if (!managerCashByCity[cityKey]) {
+        managerCashByCity[cityKey] = [];
+      }
+      managerCashByCity[cityKey].push(acc);
     });
 
     return NextResponse.json({
@@ -173,18 +235,25 @@ export async function GET() {
         revenueTodayUSD,
         revenueYesterdayUSD,
         revenueTotalUSD,
+        revenueTodayGEL,
+        revenueYesterdayGEL,
+        revenueTotalGEL,
         expensesTodayGEL,
         expensesYesterdayGEL,
         expensesTotalGEL,
-        netProfitEstimateUSD: revenueTotalUSD - Math.round(expensesTotalGEL / 2.7), // примерный курс 2.7 лари/$
+        netProfitEstimateUSD: revenueTotalUSD - Math.round(expensesTotalGEL / 2.7),
+        totalManagerCashGEL: totalCashGEL,
       },
       balances: {
-        totalCashUSD,
+        totalCashUSD: totalCashGEL, // Валюта в лари
         totalBankGEL,
         totalBankUSD,
         totalCryptoUSD,
       },
       accounts,
+      managerCashAccounts: managerCashAccountsList,
+      managerCashByCity,
+      companyBankAccounts: companyBankAccountsList,
       revenueByCategory,
       revenueByCity,
       expensesByCategory,
@@ -196,6 +265,74 @@ export async function GET() {
     console.error("Executive analytics error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to load executive analytics" },
+      { status: 500 }
+    );
+  }
+}
+
+// Проведение инкассации или передачи средств между счетами и кассами менеджеров
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { action, fromAccountId, toAccountId, amount, notes, managerName = "Руководитель" } = body;
+
+    if (action === "TRANSFER_CASH") {
+      if (!fromAccountId || !toAccountId || !amount) {
+        return NextResponse.json(
+          { success: false, error: "Укажите кассу отправителя, целевой счёт и сумму" },
+          { status: 400 }
+        );
+      }
+
+      const numAmount = Number(amount);
+      if (numAmount <= 0) {
+        return NextResponse.json({ success: false, error: "Сумма должна быть положительной" }, { status: 400 });
+      }
+
+      const fromAcc = await prisma.financialAccount.findUnique({ where: { id: fromAccountId } });
+      const toAcc = await prisma.financialAccount.findUnique({ where: { id: toAccountId } });
+
+      if (!fromAcc || !toAcc) {
+        return NextResponse.json({ success: false, error: "Касса или счёт не найдены" }, { status: 404 });
+      }
+
+      // Списание с кассы
+      await prisma.financialAccount.update({
+        where: { id: fromAccountId },
+        data: { currentBalance: { decrement: numAmount } },
+      });
+
+      // Пополнение целевого счета
+      await prisma.financialAccount.update({
+        where: { id: toAccountId },
+        data: { currentBalance: { increment: numAmount } },
+      });
+
+      // Запись расхода в кассе менеджера
+      const expense = await prisma.expense.create({
+        data: {
+          accountId: fromAccountId,
+          category: "OTHER",
+          amount: numAmount,
+          currency: fromAcc.currency || "GEL",
+          description: `Инкассация: сдача выручки в «${toAcc.name}» (${notes || "инкассация смены"})`,
+          cityId: fromAcc.cityId || undefined,
+          managerName,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Инкассация успешно зафиксирована! ${numAmount} ₾ передано в «${toAcc.name}»`,
+        expense,
+      });
+    }
+
+    return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });
+  } catch (error: any) {
+    console.error("POST /api/executive/analytics error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to process transfer" },
       { status: 500 }
     );
   }

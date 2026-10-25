@@ -302,7 +302,7 @@ export async function GET(request: Request) {
 
     // 6. MULTI-ACCOUNT CASH REGISTERS & BALANCES
     const financialAccounts = await prisma.financialAccount.findMany({
-      include: { city: true },
+      include: { city: true, user: true },
       orderBy: { type: "asc" },
     });
 
@@ -331,32 +331,60 @@ export async function GET(request: Request) {
         currency: acc.currency,
         currentBalance: acc.currentBalance,
         balanceUSD,
+        managerResponsible: acc.managerResponsible,
+        userId: acc.userId,
+        isManagerCash: acc.isManagerCash,
         cityName: acc.city?.nameRu || "Центральный",
         cityCode: acc.city?.code || "ALL",
       };
     });
 
-    // 7. MANAGER PERFORMANCE BREAKDOWN
+    // 7. MANAGER PERFORMANCE BREAKDOWN WITH PERSONAL CASH REGISTERS
     const managerMap: Record<
       string,
-      { name: string; bookingsCount: number; revenueUSD: number; extrasTotalUSD: number; city: string }
+      { name: string; bookingsCount: number; revenueUSD: number; extrasTotalUSD: number; city: string; cashBalanceGEL: number; cashAccountName?: string }
     > = {};
 
     filteredBookings.forEach((b) => {
       const mgr = b.handoverReport?.managerName || b.payments[0]?.managerName || "Менеджер смены";
       if (!managerMap[mgr]) {
+        // Находим кассу этого менеджера
+        const cashAcc = financialAccounts.find((a) =>
+          a.type === "CASH" && (a.managerResponsible?.toLowerCase().includes(mgr.toLowerCase()) || mgr.toLowerCase().includes(a.managerResponsible?.toLowerCase() || ""))
+        );
+
         managerMap[mgr] = {
           name: mgr,
           bookingsCount: 0,
           revenueUSD: 0,
           extrasTotalUSD: 0,
           city: b.pickupLocation?.city?.nameRu || "Грузия",
+          cashBalanceGEL: cashAcc?.currentBalance || 0,
+          cashAccountName: cashAcc?.name,
         };
       }
       managerMap[mgr].bookingsCount += 1;
       managerMap[mgr].revenueUSD += b.totalAmount;
       managerMap[mgr].extrasTotalUSD += b.extrasTotal || 0;
     });
+
+    // Добавляем менеджеров, у которых есть касса, даже если в этом периоде не было броней
+    financialAccounts
+      .filter((a) => a.type === "CASH" && a.managerResponsible)
+      .forEach((a) => {
+        const mgrName = a.managerResponsible!;
+        if (!managerMap[mgrName]) {
+          managerMap[mgrName] = {
+            name: mgrName,
+            bookingsCount: 0,
+            revenueUSD: 0,
+            extrasTotalUSD: 0,
+            city: a.city?.nameRu || "Грузия",
+            cashBalanceGEL: a.currentBalance,
+            cashAccountName: a.name,
+          };
+        }
+      });
 
     const managerPerformance = Object.values(managerMap).sort((a, b) => b.revenueUSD - a.revenueUSD);
 
