@@ -19,6 +19,7 @@ import { ReturnWizardModal } from "@/components/ReturnWizardModal";
 import { NotificationsModal } from "@/components/NotificationsModal";
 import { KnowledgeBaseView } from "@/components/KnowledgeBaseView";
 import { CustomerCrmHub } from "@/components/CustomerCrmHub";
+import { AiAssistantModal } from "@/components/AiAssistantModal";
 import { RefreshCw } from "lucide-react";
 
 export default function Home() {
@@ -276,6 +277,9 @@ export default function Home() {
         }}
         onOpenHandover={(b) => setHandoverBooking(b)}
       />
+
+      {/* Floating Interactive AI Assistant (Copilot) */}
+      <AiAssistantModal />
     </div>
   );
 }
