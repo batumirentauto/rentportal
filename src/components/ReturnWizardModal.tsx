@@ -350,8 +350,8 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   finalBalanceType === "REFUND_TO_CLIENT" ? "text-emerald-400" :
                   finalBalanceType === "PAYMENT_BY_CLIENT" ? "text-amber-400" : "text-slate-300"
                 }`}>
-                  {finalBalanceType === "REFUND_TO_CLIENT" && `Выдано клиенту: $${finalBalanceAmount} USD`}
-                  {finalBalanceType === "PAYMENT_BY_CLIENT" && `Получено с клиента: $${finalBalanceAmount} USD`}
+                  {finalBalanceType === "REFUND_TO_CLIENT" && `Выдано клиенту: ${finalBalanceAmount} ₾ (GEL)`}
+                  {finalBalanceType === "PAYMENT_BY_CLIENT" && `Получено с клиента: ${finalBalanceAmount} ₾ (GEL)`}
                   {finalBalanceType === "ZERO_SETTLED" && `Взаиморасчет закрыт в 0`}
                 </span>
               </div>
@@ -359,35 +359,35 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
               {changeReturnedToClient > 0 && (
                 <div className="flex justify-between py-0.5 text-blue-300">
                   <span>Сдача клиенту (из переплаты при выдаче):</span>
-                  <span className="font-mono font-bold">${changeReturnedToClient} USD</span>
+                  <span className="font-mono font-bold">{changeReturnedToClient} ₾ (GEL)</span>
                 </div>
               )}
 
               {selectedFinesTotalUSD > 0 && finesPaidByClientToCompany && (
                 <div className="flex justify-between py-0.5 text-rose-300">
                   <span>Оплата штрафов ПДД (клиент ➔ компании):</span>
-                  <span className="font-mono font-bold">${selectedFinesTotalUSD} USD ({selectedFinesTotalGEL} GEL)</span>
+                  <span className="font-mono font-bold">{selectedFinesTotalGEL} ₾ (GEL)</span>
                 </div>
               )}
 
               {fuelChargeAmount > 0 && (
                 <div className="flex justify-between py-0.5 text-amber-300">
                   <span>Доплата за недостающее топливо ({fuelShortagePercent}%):</span>
-                  <span className="font-mono font-bold">${fuelChargeAmount} USD</span>
+                  <span className="font-mono font-bold">{fuelChargeAmount} ₾ (GEL)</span>
                 </div>
               )}
 
               {hasNewDamages && damageChargeAmount > 0 && (
                 <div className="flex justify-between py-0.5 text-red-300">
                   <span>Ущерб за повреждения кузова/салона:</span>
-                  <span className="font-mono font-bold">${damageChargeAmount} USD</span>
+                  <span className="font-mono font-bold">{damageChargeAmount} ₾ (GEL)</span>
                 </div>
               )}
 
               {!techPassportReturned && (
                 <div className="flex justify-between py-0.5 text-rose-400 font-bold">
                   <span>Удержание за утерю техпаспорта:</span>
-                  <span className="font-mono font-bold">-${lostTechPassportCharge} USD</span>
+                  <span className="font-mono font-bold">-{lostTechPassportCharge} ₾ (GEL)</span>
                 </div>
               )}
             </div>
@@ -609,7 +609,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <label className="text-slate-400 text-[10px] block mb-0.5">
-                        Сумма ущерба к оплате ($ USD):
+                        Сумма ущерба к оплате (₾ GEL):
                       </label>
                       <input
                         type="number"
@@ -697,7 +697,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                       Удержание с клиента за восстановление техпаспорта:
                     </span>
                     <div className="flex items-center space-x-1.5">
-                      <span className="font-mono font-bold text-white">$</span>
+                      <span className="font-mono font-bold text-white">₾</span>
                       <input
                         type="number"
                         min="0"
@@ -705,7 +705,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                         onChange={(e) => setLostTechPassportCharge(Number(e.target.value))}
                         className="w-24 bg-slate-900 border border-red-500 rounded-lg p-1 text-right text-white font-mono font-black"
                       />
-                      <span className="text-slate-400 text-[10px]">USD</span>
+                      <span className="text-slate-400 text-[10px]">GEL</span>
                     </div>
                   </div>
                 </div>
@@ -792,7 +792,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 {fuelShortagePercent > 0 ? (
                   <div className="flex items-center justify-between text-[11px] text-amber-300 pt-0.5">
                     <span>Нехватка: -{fuelShortagePercent}% (~{Math.round(fuelShortagePercent * 0.6)} л)</span>
-                    <span className="font-mono font-bold">+${fuelChargeAmount} USD</span>
+                    <span className="font-mono font-bold">+{fuelChargeAmount} ₾ (GEL)</span>
                   </div>
                 ) : (
                   <span className="text-[10px] text-emerald-400 block">

@@ -177,11 +177,11 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
               )}
               <div className="flex justify-between py-1.5 font-bold text-sm text-slate-900 border-b-2 border-slate-900">
                 <span>ИТОГО К ОПЛАТЕ:</span>
-                <span>${booking.totalAmount} ({booking.currency})</span>
+                <span>{booking.totalAmount} ₾ (GEL)</span>
               </div>
               <div className="flex justify-between py-1 text-slate-700 bg-amber-50 px-2 rounded">
                 <span className="font-semibold">СУММА ГАРАНТИЙНОГО ДЕПОЗИТА (ЗАЛОГ):</span>
-                <span className="font-bold">${booking.depositAmount} USD / эквивалент в GEL</span>
+                <span className="font-bold">{booking.depositAmount} ₾ (GEL)</span>
               </div>
             </div>
           </div>
@@ -192,7 +192,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
             <ul className="list-disc pl-4 space-y-1">
               <li>Разрешенное передвижение: по всем дорогам общего пользования Грузии. Запрещен выезд на оккупированные территории (Абхазия, Цхинвальский регион), а также перевал в Тушети (Омало) без отдельного согласования.</li>
               <li>Топливо: автомобиль выдается с уровнем {booking.car.currentFuelPerc}% и возвращается с аналогичным уровнем топлива.</li>
-              <li>Чистота: авто возвращается в чистом виде либо оплачивается мойка (25 GEL).</li>
+              <li>Чистота: авто возвращается в чистом виде либо оплачивается мойка (20 GEL полная мойка, 10 GEL кузов/салон).</li>
               <li>Все штрафы видеофиксации (патентная полиция МВД Грузии) и платные муниципальные парковки оплачиваются Арендатором.</li>
               <li>Депозит возвращается в полном объеме при возврате автомобиля в исходном состоянии.</li>
             </ul>

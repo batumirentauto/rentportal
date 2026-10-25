@@ -612,7 +612,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                                     {booking.isSelfServiceBooking && <span title="Забронировано через VIP приложение">📱</span>}
                                     <span className="truncate">{booking.customer.fullName}</span>
                                   </span>
-                                  <span className="font-mono font-black">${booking.totalAmount}</span>
+                                  <span className="font-mono font-black">{booking.totalAmount} ₾</span>
                                 </div>
 
                                 {/* Route info badge on the bar */}
@@ -744,7 +744,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                     <span>Перемещение авто между филиалами:</span>
                   </span>
                   <span className="bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded font-mono text-[10px]">
-                    Сбор One-Way: ${selectedBooking.deliveryFee}
+                    Сбор One-Way: {selectedBooking.deliveryFee} ₾
                   </span>
                 </div>
                 <div className="flex items-center space-x-3 text-sm font-black text-white pt-1">
@@ -838,13 +838,13 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 <div>
                   <span className="text-slate-400 block text-[10px]">Стоимость аренды:</span>
                   <span className="text-lg font-black text-amber-400 font-mono">
-                    ${selectedBooking.totalAmount} USD
+                    {selectedBooking.totalAmount} ₾ (GEL)
                   </span>
                 </div>
                 <div className="text-right">
                   <span className="text-slate-400 block text-[10px]">Депозит:</span>
                   <span className="text-sm font-bold text-emerald-400 font-mono">
-                    ${selectedBooking.depositAmount} USD
+                    {selectedBooking.depositAmount} ₾ (GEL)
                   </span>
                 </div>
               </div>

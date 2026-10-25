@@ -52,8 +52,8 @@ export const ShareOfferModal: React.FC<ShareOfferModalProps> = ({
       text += `✨ *${idx + 1}. ${car.brand} ${car.model} (${car.year} г.)*\n`;
       text += `📍 Город: ${cityTheme.name} (${car.city?.code || car.cityCode})\n`;
       text += `⚙️ Характеристики: ${car.transmission === "AUTOMATIC" ? "Автомат" : "Механика"} • ${car.fuelType} • ${car.engineVolume || "2.5L"}\n`;
-      text += `💰 Стоимость: *$${rate} USD / день* (~${rateGel} GEL)\n`;
-      text += `🛡️ Залог: $${car.depositAmount || 300} USD (возвратный)\n`;
+      text += `💰 Стоимость: *${rate} ₾ (GEL) / день* (~$${Math.round(rate / 2.7)} USD)\n`;
+      text += `🛡️ Залог: ${car.depositAmount || 300} ₾ (GEL) (возвратный)\n`;
       text += `✅ *Включено бесплатно:*\n`;
       text += `   • Страховка КАСКО + ОСАГО (0% франшиза)\n`;
       text += `   • Безлимитный пробег по всей Грузии\n`;

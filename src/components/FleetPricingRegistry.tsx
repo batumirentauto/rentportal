@@ -307,21 +307,21 @@ export const FleetPricingRegistry: React.FC = () => {
             <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800/80">
               <span className="text-[11px] text-slate-400 block font-medium">Ср. выплата владельцам:</span>
               <div className="text-xl font-black text-emerald-400 font-mono mt-0.5">
-                ${data.summary.avgOwnerRate} <span className="text-xs text-emerald-500/70 font-sans font-normal">/ день</span>
+                {data.summary.avgOwnerRate} ₾ <span className="text-xs text-emerald-500/70 font-sans font-normal">/ день</span>
               </div>
             </div>
 
             <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800/80">
               <span className="text-[11px] text-slate-400 block font-medium">Ср. тариф клиентам (стд):</span>
               <div className="text-xl font-black text-amber-400 font-mono mt-0.5">
-                ${data.summary.avgStdClientRate} <span className="text-xs text-amber-500/70 font-sans font-normal">/ день</span>
+                {data.summary.avgStdClientRate} ₾ <span className="text-xs text-amber-500/70 font-sans font-normal">/ день</span>
               </div>
             </div>
 
             <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800/80">
               <span className="text-[11px] text-slate-400 block font-medium">Ср. маржа компании:</span>
               <div className="text-xl font-black text-cyan-400 font-mono mt-0.5">
-                +${data.summary.avgMargin} <span className="text-xs text-cyan-500/70 font-sans font-normal">/ день</span>
+                +{data.summary.avgMargin} ₾ <span className="text-xs text-cyan-500/70 font-sans font-normal">/ день</span>
               </div>
             </div>
           </div>
@@ -540,7 +540,7 @@ export const FleetPricingRegistry: React.FC = () => {
                       {/* Owner daily rate */}
                       <td className="py-3.5 px-3 text-right">
                         <div className="font-mono font-bold text-sm text-emerald-400">
-                          ${car.rates.ownerDailyRate}
+                          {car.rates.ownerDailyRate} ₾
                         </div>
                         <div className="text-[10px] text-emerald-500/70">/ день</div>
                       </td>
@@ -552,7 +552,7 @@ export const FleetPricingRegistry: React.FC = () => {
                           <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 text-center min-w-[62px]">
                             <span className="text-[9px] text-slate-400 block leading-tight">Мин (15+ дн.)</span>
                             <span className="font-mono font-bold text-xs text-blue-400">
-                              ${car.rates.clientMinRate}
+                              {car.rates.clientMinRate} ₾
                             </span>
                           </div>
 
@@ -562,7 +562,7 @@ export const FleetPricingRegistry: React.FC = () => {
                           <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1 text-center min-w-[70px] shadow-sm">
                             <span className="text-[9px] text-amber-300 block font-bold leading-tight">Стандарт</span>
                             <span className="font-mono font-black text-xs text-amber-400">
-                              ${car.rates.clientStandardRate}
+                              {car.rates.clientStandardRate} ₾
                             </span>
                           </div>
 
@@ -572,7 +572,7 @@ export const FleetPricingRegistry: React.FC = () => {
                           <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 text-center min-w-[62px]">
                             <span className="text-[9px] text-slate-400 block leading-tight">Макс (1-3 дн.)</span>
                             <span className="font-mono font-bold text-xs text-orange-400">
-                              ${car.rates.clientMaxRate}
+                              {car.rates.clientMaxRate} ₾
                             </span>
                           </div>
                         </div>
@@ -581,7 +581,7 @@ export const FleetPricingRegistry: React.FC = () => {
                       {/* Margin */}
                       <td className="py-3.5 px-3 text-right">
                         <div className="font-mono font-black text-sm text-cyan-300">
-                          +${car.rates.dailyMargin}
+                          +{car.rates.dailyMargin} ₾
                         </div>
                         <div className="text-[10px] text-cyan-400/80 font-semibold">
                           {car.rates.marginPercent}% маржа
@@ -643,10 +643,10 @@ export const FleetPricingRegistry: React.FC = () => {
               {/* Owner Daily Rate */}
               <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-3.5 space-y-2">
                 <label className="text-emerald-300 font-bold block">
-                  💵 Выплата владельцу автомобиля ($/день):
+                  💵 Выплата владельцу автомобиля (₾ GEL / день):
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-emerald-500 font-mono font-bold">$</span>
+                  <span className="absolute left-3 top-2.5 text-emerald-500 font-mono font-bold">₾</span>
                   <input
                     type="number"
                     min="1"
@@ -664,7 +664,7 @@ export const FleetPricingRegistry: React.FC = () => {
               {/* Client Price Fork: Min, Standard, Max */}
               <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
                 <span className="text-slate-300 font-bold block">
-                  🏷️ Вилка цен для клиентов ($/день):
+                  🏷️ Вилка цен для клиентов (₾ GEL / день):
                 </span>
                 
                 <div className="grid grid-cols-3 gap-2">
@@ -673,7 +673,7 @@ export const FleetPricingRegistry: React.FC = () => {
                       🟢 Мин (15+ дн.):
                     </label>
                     <div className="relative">
-                      <span className="absolute left-2.5 top-2 text-slate-500 font-mono">$</span>
+                      <span className="absolute left-2.5 top-2 text-slate-500 font-mono">₾</span>
                       <input
                         type="number"
                         min="1"
@@ -690,7 +690,7 @@ export const FleetPricingRegistry: React.FC = () => {
                       🟡 Стандарт (реком.):
                     </label>
                     <div className="relative">
-                      <span className="absolute left-2.5 top-2 text-amber-500 font-mono">$</span>
+                      <span className="absolute left-2.5 top-2 text-amber-500 font-mono">₾</span>
                       <input
                         type="number"
                         min="1"
@@ -707,7 +707,7 @@ export const FleetPricingRegistry: React.FC = () => {
                       🔴 Макс (1-3 дн. / пик):
                     </label>
                     <div className="relative">
-                      <span className="absolute left-2.5 top-2 text-slate-500 font-mono">$</span>
+                      <span className="absolute left-2.5 top-2 text-slate-500 font-mono">₾</span>
                       <input
                         type="number"
                         min="1"

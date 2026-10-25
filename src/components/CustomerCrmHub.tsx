@@ -357,15 +357,15 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
           <div className="bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl shadow">
             <span className="text-emerald-300 block text-[11px] font-semibold">Совокупный LTV:</span>
             <div className="text-2xl font-black text-emerald-400 font-mono mt-1">
-              ${summary.totalRevenueUSD.toLocaleString()} USD
+              {summary.totalRevenueUSD.toLocaleString()} ₾
             </div>
-            <span className="text-[10px] text-emerald-400/80">Оплачено за аренду</span>
+            <span className="text-[10px] text-emerald-400/80">Оплачено за аренду (GEL)</span>
           </div>
 
           <div className="bg-slate-900 border border-blue-500/30 p-4 rounded-2xl shadow">
             <span className="text-blue-300 block text-[11px] font-semibold">Всего аренд (броней):</span>
             <div className="text-2xl font-black text-blue-400 mt-1">{summary.totalBookingsCount}</div>
-            <span className="text-[10px] text-blue-400/80">Средний LTV: ${summary.averageLTV}</span>
+            <span className="text-[10px] text-blue-400/80">Средний LTV: {summary.averageLTV} ₾</span>
           </div>
 
           <div className="bg-slate-900 border border-rose-500/40 p-4 rounded-2xl shadow col-span-2 sm:col-span-1">
@@ -550,7 +550,7 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                     <div className="border-l border-slate-800 pl-4">
                       <span className="text-[10px] text-slate-500 block">LTV клиента:</span>
                       <span className="font-mono font-black text-amber-400 text-sm">
-                        ${totalSpent.toLocaleString()} USD
+                        {totalSpent.toLocaleString()} ₾ (GEL)
                       </span>
                     </div>
                   </div>
@@ -823,10 +823,10 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
 
                       <div className="text-right">
                         <span className="font-mono font-black text-amber-400 text-sm block">
-                          ${b.totalAmount} USD
+                          {b.totalAmount} ₾ (GEL)
                         </span>
                         <span className="text-[10px] text-slate-500">
-                          Тариф: ${b.dailyRate}/день
+                          Тариф: {b.dailyRate} ₾/день
                         </span>
                       </div>
                     </div>

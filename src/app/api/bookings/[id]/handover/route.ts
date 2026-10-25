@@ -26,12 +26,16 @@ export async function POST(
       actualHandoverDate,
       expectedReturnTime,
       expectedReturnDate,
+      // Мойка авто перед выдачей:
+      washOption = "NONE", // "NONE", "FULL" (20 GEL), "BODY" (10 GEL), "INTERIOR" (10 GEL)
+      washCost = 0,
+      washAccount = "CASH_BATUMI",
       // Финансовая часть:
       rentalAmount,
-      rentalCurrency = "USD",
+      rentalCurrency = "GEL",
       paymentMethod = "CASH", // "CASH", "CARD_POS", "TBC_BANK", "BOG_BANK", "CREDO_BANK", "CRYPTO"
       depositAmount = 300,
-      depositCurrency = "USD",
+      depositCurrency = "GEL",
       depositMethod = "CASH",
       amountExpected,
       amountReceived,
@@ -136,6 +140,54 @@ export async function POST(
       });
     }
 
+    // 3.5. Автоматический учет мойки автомобиля при выдаче (20 ₾ полная, 10 ₾ кузов/салон)
+    let washExpense = null;
+    let washTask = null;
+    const finalWashCost = Number(washCost) > 0
+      ? Number(washCost)
+      : (washOption === "FULL" ? 20 : (washOption === "BODY" || washOption === "INTERIOR") ? 10 : 0);
+
+    if (washOption && washOption !== "NONE" && finalWashCost > 0) {
+      const washTypeLabel = washOption === "FULL"
+        ? "Полная мойка (20 ₾)"
+        : washOption === "BODY"
+        ? "Мойка кузова (10 ₾)"
+        : "Мойка салона (10 ₾)";
+
+      let account = await prisma.financialAccount.findFirst({ where: { currency: "GEL" } });
+      if (!account) {
+        account = await prisma.financialAccount.findFirst();
+      }
+
+      if (account) {
+        washExpense = await prisma.expense.create({
+          data: {
+            accountId: account.id,
+            category: "WASHING",
+            amount: finalWashCost,
+            currency: "GEL",
+            carId: booking.carId,
+            cityId: booking.car.cityId,
+            managerName,
+            description: `Мойка перед выдачей: ${washTypeLabel} — ${booking.car.brand} ${booking.car.model} (${booking.car.plateNumber}), бронь #${booking.bookingNumber}`,
+            date: calculatedHandoverAt,
+          },
+        });
+      }
+
+      washTask = await prisma.carWashTask.create({
+        data: {
+          carId: booking.carId,
+          bookingId: id,
+          status: "COMPLETED",
+          priority: "NORMAL",
+          washType: washOption,
+          cost: finalWashCost,
+          notes: `Мойка проведена перед выдачей авто (${washTypeLabel})`,
+        },
+      });
+    }
+
     // 4. Обновляем статус бронирования на ACTIVE ("В аренде"), фиксируем фактическое время выдачи и время возврата
     const bookingUpdateData: any = {
       status: "ACTIVE",
@@ -150,11 +202,12 @@ export async function POST(
       data: bookingUpdateData,
     });
 
-    // 5. Обновляем статус автомобиля на RENTED и обновляем его актуальный пробег и топливо
+    // 5. Обновляем статус автомобиля на RENTED, чистоту на CLEAN и обновляем его актуальный пробег и топливо
     await prisma.car.update({
       where: { id: booking.carId },
       data: {
         status: "RENTED",
+        washStatus: "CLEAN",
         currentMileage: Number(mileageAtHandover) || booking.car.currentMileage,
         currentFuelPerc: Number(fuelLevelPercent) || booking.car.currentFuelPerc,
       },

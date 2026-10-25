@@ -165,7 +165,7 @@ model Booking {
   extrasTotal         Float           @default(0) // Доп. оборудование
   totalAmount         Float           // Общая сумма к оплате
   depositAmount       Float           @default(300) // Залог/депозит
-  currency            String          @default("USD") // Базовая валюта расчёта: GEL / USD / EUR
+  currency            String          @default("GEL") // Базовая валюта расчёта: GEL / USD / EUR
   ownerDailyRate      Float?          // Фиксированная/скорректированная ставка владельца за день
   ownerTotalPayout    Float?          // Итоговая сумма к выплате владельцу за аренду
   
@@ -302,7 +302,7 @@ model FinancialAccount {
   type               String     // "CASH", "BANK_ACCOUNT", "CARD_ACQUIRING", "CRYPTO_WALLET"
   bankName           String?    // "TBC", "BOG", "CREDO", "NONE"
   accountNumber      String?    // IBAN или номер кошелька
-  currency           String     @default("USD") // "USD", "GEL", "EUR"
+  currency           String     @default("GEL") // "GEL", "USD", "EUR"
   cityId             String?    // Привязка к городу для физических касс
   city               City?      @relation(fields: [cityId], references: [id])
   initialBalance     Float      @default(0)

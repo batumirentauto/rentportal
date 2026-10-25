@@ -170,10 +170,10 @@ export const FinanceView: React.FC = () => {
                 Поступления за аренду:
               </span>
               <div className="text-3xl font-black text-amber-400 font-mono mt-1">
-                ${summary.totalUSD || 0}
+                {summary.totalGEL || 0} ₾
               </div>
               <span className="text-xs text-slate-500 mt-1 block">
-                + {summary.totalGEL || 0} GEL
+                {summary.totalUSD > 0 ? `+ $${summary.totalUSD} USD` : "Основная валюта: GEL (₾)"}
               </span>
             </div>
 
@@ -182,10 +182,10 @@ export const FinanceView: React.FC = () => {
                 Депозиты (Залоги на удержании):
               </span>
               <div className="text-3xl font-black text-emerald-400 font-mono mt-1">
-                ${summary.depositsUSD || 0}
+                {summary.depositsGEL || 0} ₾
               </div>
               <span className="text-xs text-emerald-500/80 mt-1 block">
-                Подлежат возврату при приёмке авто
+                {summary.depositsUSD > 0 ? `+ $${summary.depositsUSD} USD • ` : ""}Подлежат возврату при приёмке авто
               </span>
             </div>
 
@@ -194,7 +194,7 @@ export const FinanceView: React.FC = () => {
                 Сдача к возврату клиентам:
               </span>
               <div className="text-3xl font-black text-rose-400 font-mono mt-1">
-                ${summary.pendingRefundsUSD || 0}
+                {summary.pendingRefundsGEL || summary.pendingRefundsUSD || 0} ₾
               </div>
               <span className="text-xs text-rose-400/80 mt-1 block">
                 Сумма сдачи при возврате машины
@@ -211,35 +211,35 @@ export const FinanceView: React.FC = () => {
               <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
                 <span className="text-slate-400 block mb-1">💵 Наличные</span>
                 <span className="text-base font-bold text-white font-mono">
-                  ${summary.byMethod?.CASH || 0}
+                  {summary.byMethod?.CASH || 0} ₾
                 </span>
               </div>
 
               <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
                 <span className="text-slate-400 block mb-1">💳 Терминал</span>
                 <span className="text-base font-bold text-white font-mono">
-                  ${summary.byMethod?.CARD_POS || 0}
+                  {summary.byMethod?.CARD_POS || 0} ₾
                 </span>
               </div>
 
               <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
                 <span className="text-slate-400 block mb-1">🏦 Bank of Georgia</span>
                 <span className="text-base font-bold text-amber-400 font-mono">
-                  ${summary.byMethod?.BOG_BANK || 0}
+                  {summary.byMethod?.BOG_BANK || 0} ₾
                 </span>
               </div>
 
               <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
                 <span className="text-slate-400 block mb-1">🏦 TBC Bank</span>
                 <span className="text-base font-bold text-blue-400 font-mono">
-                  ${summary.byMethod?.TBC_BANK || 0}
+                  {summary.byMethod?.TBC_BANK || 0} ₾
                 </span>
               </div>
 
               <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
                 <span className="text-slate-400 block mb-1">🏦 Credo Bank</span>
                 <span className="text-base font-bold text-red-400 font-mono">
-                  ${summary.byMethod?.CREDO_BANK || 0}
+                  {summary.byMethod?.CREDO_BANK || 0} ₾
                 </span>
               </div>
 

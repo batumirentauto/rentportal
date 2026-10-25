@@ -375,7 +375,7 @@ export const LoyalClientMobileApp: React.FC = () => {
                         </h4>
                       </div>
                       <span className="font-mono text-xs text-amber-400 font-black">
-                        ${trip.totalAmount} USD
+                        {trip.totalAmount} ₾ (GEL)
                       </span>
                     </div>
 
@@ -609,7 +609,7 @@ export const LoyalClientMobileApp: React.FC = () => {
                   {selectedCar.cityName} • {selectedCar.transmission}
                 </span>
                 <span className="text-amber-400 font-mono font-black text-sm">
-                  ${selectedCar.vipDailyRate} USD / сутки
+                  {selectedCar.vipDailyRate} ₾ / сутки
                 </span>
                 <span className="text-[10px] text-slate-400 ml-1.5">(скидка -{selectedCar.discountPercent}%)</span>
               </div>
@@ -697,7 +697,7 @@ export const LoyalClientMobileApp: React.FC = () => {
               <div>
                 <span className="text-slate-400 block text-[10px]">Итого к оплате при получении:</span>
                 <span className="text-lg font-black text-amber-400 font-mono">
-                  ${selectedCar.vipDailyRate * rentalDays} USD
+                  {selectedCar.vipDailyRate * rentalDays} ₾ (GEL)
                 </span>
               </div>
               <div className="text-right">
@@ -761,7 +761,7 @@ export const LoyalClientMobileApp: React.FC = () => {
               <div className="flex justify-between text-slate-400">
                 <span>Итого:</span>
                 <span className="font-black text-amber-400 font-mono">
-                  ${bookingSuccessData.totalAmount} USD
+                  {bookingSuccessData.totalAmount} ₾ (GEL)
                 </span>
               </div>
             </div>

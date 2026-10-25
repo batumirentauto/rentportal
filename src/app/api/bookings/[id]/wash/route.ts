@@ -8,7 +8,11 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { washStatus, cost = 0, notes } = body; // washStatus: "CLEAN", "WASHING", "NEEDS_WASH"
+    const { washStatus, washType = "FULL", cost, notes, account = "CASH_BATUMI", managerName = "Менеджер смены" } = body; // washStatus: "CLEAN", "WASHING", "NEEDS_WASH"
+
+    const finalCost = cost !== undefined
+      ? Number(cost)
+      : (washType === "FULL" ? 20 : washType === "BODY" || washType === "INTERIOR" ? 10 : 0);
 
     const booking = await prisma.booking.findUnique({
       where: { id },
@@ -37,7 +41,8 @@ export async function POST(
         where: { bookingId: id },
         data: {
           status: washStatus === "CLEAN" ? "COMPLETED" : washStatus === "WASHING" ? "IN_PROGRESS" : "PENDING",
-          cost: cost || 25,
+          washType,
+          cost: finalCost,
           notes: notes || undefined,
         },
       });
@@ -48,11 +53,36 @@ export async function POST(
           bookingId: id,
           status: washStatus === "WASHING" ? "IN_PROGRESS" : "PENDING",
           priority: "URGENT",
-          washType: "FULL",
-          cost: cost || 25,
-          notes: notes || "Создано менеджером перед выдачей",
+          washType,
+          cost: finalCost,
+          notes: notes || "Создано менеджером",
         },
       });
+    }
+
+    // Если мойка завершена ("CLEAN") и есть стоимость — создаем расход в Журнале расходов
+    if (washStatus === "CLEAN" && finalCost > 0) {
+      const typeLabel = washType === "FULL" ? "Полная мойка (20 ₾)" : washType === "BODY" ? "Мойка кузова (10 ₾)" : "Мойка салона (10 ₾)";
+      let acc = await prisma.financialAccount.findFirst({ where: { currency: "GEL" } });
+      if (!acc) {
+        acc = await prisma.financialAccount.findFirst();
+      }
+
+      if (acc) {
+        await prisma.expense.create({
+          data: {
+            accountId: acc.id,
+            category: "WASHING",
+            amount: finalCost,
+            currency: "GEL",
+            carId: booking.carId,
+            cityId: booking.car.cityId,
+            managerName,
+            description: `Оплата мойки авто: ${typeLabel} — ${booking.car.brand} ${booking.car.model} (${booking.car.plateNumber})`,
+            date: new Date(),
+          },
+        });
+      }
     }
 
     return NextResponse.json({

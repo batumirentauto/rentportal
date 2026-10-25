@@ -287,7 +287,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           extrasTotal: 0,
           totalAmount,
           depositAmount,
-          currency: "USD",
+          currency: "GEL",
           ownerDailyRate,
           isAddedDuringDay: true,
         }),
@@ -710,7 +710,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                   <div className="flex items-center space-x-2">
                     <span className="text-slate-400">Владельцу авто:</span>
                     <span className="font-mono font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
-                      ${ownerDailyRate}/день (${ownerTotalPayout} за {rentalDays} дн.)
+                      {ownerDailyRate} ₾/день ({ownerTotalPayout} ₾ за {rentalDays} дн.)
                     </span>
                   </div>
 
@@ -738,7 +738,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                     >
                       <div className="text-[9px] text-slate-400">🟢 Мин (15+ дн.):</div>
                       <div className="font-mono font-bold text-xs text-blue-400">
-                        ${selectedCar.clientMinDailyRate || 35}/дн
+                        {selectedCar.clientMinDailyRate || 35} ₾/дн
                       </div>
                     </button>
 
@@ -753,7 +753,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                     >
                       <div className="text-[9px] text-amber-400/80">🟡 Стандарт (реком.):</div>
                       <div className="font-mono font-bold text-xs text-amber-300">
-                        ${selectedCar.clientStandardDailyRate || 50}/дн
+                        {selectedCar.clientStandardDailyRate || 50} ₾/дн
                       </div>
                     </button>
 
@@ -768,7 +768,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                     >
                       <div className="text-[9px] text-orange-400/80">🔴 Макс (1-3 дн. / пик):</div>
                       <div className="font-mono font-bold text-xs text-orange-400">
-                        ${selectedCar.clientMaxDailyRate || 75}/дн
+                        {selectedCar.clientMaxDailyRate || 75} ₾/дн
                       </div>
                     </button>
                   </div>
@@ -850,11 +850,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               <div>
                 <span className="text-slate-400 block text-[10px]">Клиент платит (с доставкой):</span>
                 <span className="font-mono text-lg font-black text-amber-400">
-                  ${totalAmount} USD
+                  {totalAmount} ₾ (GEL)
                 </span>
                 {oneWayFee > 0 && (
                   <span className="text-[10px] text-purple-300 block">
-                    (включая One-Way: +${oneWayFee})
+                    (включая One-Way: +{oneWayFee} ₾)
                   </span>
                 )}
               </div>
@@ -862,7 +862,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               <div>
                 <span className="text-slate-400 block text-[10px]">Выплата владельцу:</span>
                 <span className="font-mono text-sm font-bold text-emerald-400">
-                  ${ownerTotalPayout} USD
+                  {ownerTotalPayout} ₾ (GEL)
                 </span>
               </div>
 
@@ -873,14 +873,14 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                     ? "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
                     : "bg-red-950/80 text-red-300 border border-red-500/40"
                 }`}>
-                  {companyMargin >= 0 ? `+` : ``}${companyMargin} USD ({marginPercent}%)
+                  {companyMargin >= 0 ? `+` : ``}{companyMargin} ₾ ({marginPercent}%)
                 </span>
               </div>
 
               <div className="border-l border-slate-800 pl-3">
                 <span className="text-slate-400 block text-[10px]">Залог с клиента:</span>
                 <div className="flex items-center space-x-1">
-                  <span className="text-xs font-mono text-slate-500">$</span>
+                  <span className="text-xs font-mono text-slate-500">₾</span>
                   <input
                     type="number"
                     value={depositAmount}

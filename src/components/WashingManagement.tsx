@@ -3,7 +3,7 @@ import { Sparkles, Car, Check, Clock, AlertTriangle, RefreshCw } from "lucide-re
 
 interface WashingManagementProps {
   bookings: any[];
-  onToggleWash: (bookingId: string, currentStatus: string) => void;
+  onToggleWash: (bookingId: string, currentStatus: string, washType?: string, cost?: number) => void;
 }
 
 export const WashingManagement: React.FC<WashingManagementProps> = ({
@@ -79,14 +79,49 @@ export const WashingManagement: React.FC<WashingManagementProps> = ({
                     </p>
                   </div>
 
-                  <div className="flex space-x-2 pt-1">
-                    <button
-                      onClick={() => onToggleWash(booking.id, "CLEAN")}
-                      className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>Помыта и готова</span>
-                    </button>
+                  <div className="pt-1">
+                    <span className="text-[10px] text-slate-400 block mb-1.5 font-medium">
+                      Зафиксировать мойку и готовность авто (автоматический расход в кассе):
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                      <button
+                        onClick={() => onToggleWash(booking.id, "CLEAN", "FULL", 20)}
+                        className="py-2 px-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold transition flex flex-col items-center justify-center shadow"
+                      >
+                        <span className="flex items-center space-x-1">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Полная</span>
+                        </span>
+                        <span className="text-[10px] text-cyan-200 font-mono font-black">20 ₾</span>
+                      </button>
+
+                      <button
+                        onClick={() => onToggleWash(booking.id, "CLEAN", "BODY", 10)}
+                        className="py-2 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center shadow"
+                      >
+                        <span className="flex items-center space-x-1">
+                          <Car className="w-3.5 h-3.5" />
+                          <span>Кузов</span>
+                        </span>
+                        <span className="text-[10px] text-cyan-400 font-mono font-black">10 ₾</span>
+                      </button>
+
+                      <button
+                        onClick={() => onToggleWash(booking.id, "CLEAN", "INTERIOR", 10)}
+                        className="py-2 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center shadow"
+                      >
+                        <span>💺 Салон</span>
+                        <span className="text-[10px] text-cyan-400 font-mono font-black">10 ₾</span>
+                      </button>
+
+                      <button
+                        onClick={() => onToggleWash(booking.id, "CLEAN", "FREE", 0)}
+                        className="py-2 px-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-xs font-medium transition flex flex-col items-center justify-center"
+                      >
+                        <span>✓ Чистая</span>
+                        <span className="text-[10px] text-slate-500 font-mono">0 ₾</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

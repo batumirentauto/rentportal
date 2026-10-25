@@ -17,6 +17,7 @@ import {
   Check,
   Clock,
   Calendar,
+  Sparkles,
 } from "lucide-react";
 
 interface HandoverWizardModalProps {
@@ -38,6 +39,11 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
   const [fuelPercent, setFuelPercent] = useState<number>(booking.car.currentFuelPerc);
   const [techPassportVerified, setTechPassportVerified] = useState<boolean>(true);
   const [clientBriefed, setClientBriefed] = useState<boolean>(true);
+
+  // Мойка авто перед выдачей (20 ₾ полная, 10 ₾ кузов/салон)
+  const [washOption, setWashOption] = useState<"NONE" | "FULL" | "BODY" | "INTERIOR">("NONE");
+  const [washCost, setWashCost] = useState<number>(0);
+  const [washAccount, setWashAccount] = useState<string>("CASH_BATUMI");
 
   // Time & Date of Handover & Return (опциональные поля с умными значениями по умолчанию)
   const bookingReturnDate = useMemo(() => {
@@ -90,10 +96,10 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
 
   // Step 4: Payments
   const [rentalAmount, setRentalAmount] = useState<number>(booking.totalAmount);
-  const [rentalCurrency, setRentalCurrency] = useState<string>(booking.currency || "USD");
+  const [rentalCurrency, setRentalCurrency] = useState<string>(booking.currency || "GEL");
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH"); // "CASH", "CARD_POS", "TBC_BANK", "BOG_BANK", "CREDO_BANK", "CRYPTO"
   const [depositAmount, setDepositAmount] = useState<number>(booking.depositAmount || 300);
-  const [depositCurrency, setDepositCurrency] = useState<string>("USD");
+  const [depositCurrency, setDepositCurrency] = useState<string>("GEL");
   const [depositMethod, setDepositMethod] = useState<string>("CASH");
   
   // Change calculation
@@ -142,6 +148,10 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
           actualHandoverDate,
           expectedReturnTime,
           expectedReturnDate,
+          // Учет мойки перед выдачей
+          washOption,
+          washCost,
+          washAccount,
           rentalAmount,
           rentalCurrency,
           paymentMethod,
@@ -372,6 +382,102 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* УЧЕТ МОЙКИ АВТОМОБИЛЯ ПЕРЕД ВЫДАЧЕЙ */}
+              <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                    <span className="font-bold text-white text-xs uppercase tracking-wider">
+                      Мойка автомобиля перед выдачей
+                    </span>
+                  </div>
+                  <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-lg border ${
+                    washCost > 0 ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/40" : "bg-slate-900 text-slate-400 border-slate-700"
+                  }`}>
+                    {washCost > 0 ? `Расход: ${washCost} ₾ (GEL)` : "Без мойки"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Была ли проведена мойка авто перед выдачей клиенту? При выборе мойки автоматически спишется расход в кассе.
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setWashOption("NONE"); setWashCost(0); }}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      washOption === "NONE"
+                        ? "bg-slate-700 text-white border-slate-500 font-bold shadow"
+                        : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <span className="block text-base mb-0.5">❌</span>
+                    <span className="text-xs block font-bold">Не мыли</span>
+                    <span className="text-[10px] text-slate-500 block">0 ₾ (чистая)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setWashOption("FULL"); setWashCost(20); }}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      washOption === "FULL"
+                        ? "bg-cyan-600 text-white border-cyan-400 font-bold shadow-lg shadow-cyan-900/40"
+                        : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-cyan-300"
+                    }`}
+                  >
+                    <span className="block text-base mb-0.5">✨</span>
+                    <span className="text-xs block font-bold">Полная мойка</span>
+                    <span className="text-[11px] font-mono font-black text-cyan-300 block">20 ₾ (GEL)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setWashOption("BODY"); setWashCost(10); }}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      washOption === "BODY"
+                        ? "bg-cyan-600 text-white border-cyan-400 font-bold shadow-lg shadow-cyan-900/40"
+                        : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-cyan-300"
+                    }`}
+                  >
+                    <span className="block text-base mb-0.5">🚗</span>
+                    <span className="text-xs block font-bold">Только кузов</span>
+                    <span className="text-[11px] font-mono font-black text-cyan-300 block">10 ₾ (GEL)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setWashOption("INTERIOR"); setWashCost(10); }}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      washOption === "INTERIOR"
+                        ? "bg-cyan-600 text-white border-cyan-400 font-bold shadow-lg shadow-cyan-900/40"
+                        : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-cyan-300"
+                    }`}
+                  >
+                    <span className="block text-base mb-0.5">💺</span>
+                    <span className="text-xs block font-bold">Только салон</span>
+                    <span className="text-[11px] font-mono font-black text-cyan-300 block">10 ₾ (GEL)</span>
+                  </button>
+                </div>
+
+                {washOption !== "NONE" && (
+                  <div className="flex items-center justify-between bg-slate-950/80 p-2.5 rounded-xl border border-cyan-500/30 text-xs">
+                    <span className="text-slate-300">Источник списания (касса):</span>
+                    <select
+                      value={washAccount}
+                      onChange={(e) => setWashAccount(e.target.value)}
+                      className="bg-slate-900 border border-slate-700 text-cyan-300 text-xs rounded-lg px-2.5 py-1 font-medium focus:outline-none"
+                    >
+                      <option value="CASH_BATUMI">💵 Касса наличные Батуми</option>
+                      <option value="CASH_TBILISI">💵 Касса наличные Тбилиси</option>
+                      <option value="CASH_KUTAISI">💵 Касса наличные Кутаиси</option>
+                      <option value="MANAGER_POCKET">👤 Карман менеджера (под отчет)</option>
+                      <option value="BANK_BOG">🏦 Bank of Georgia</option>
+                      <option value="BANK_TBC">🏦 TBC Bank</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Checks */}
@@ -615,7 +721,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                       Сумма к оплате (Аренда + Допы + Доставка):
                     </span>
                     <div className="text-2xl font-extrabold text-amber-400 font-mono mt-0.5">
-                      ${rentalAmount} <span className="text-sm font-normal text-slate-400">USD</span>
+                      {rentalAmount} <span className="text-sm font-bold text-amber-500/80">₾ (GEL)</span>
                     </div>
                   </div>
                   <div className="text-right">
@@ -623,7 +729,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                       Депозит (Залог):
                     </span>
                     <div className="text-lg font-bold text-emerald-400 font-mono mt-0.5">
-                      ${depositAmount} <span className="text-sm font-normal text-slate-400">USD</span>
+                      {depositAmount} <span className="text-sm font-bold text-emerald-500/80">₾ (GEL)</span>
                     </div>
                   </div>
                 </div>
@@ -721,7 +827,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
                     Способ приёма залога (депозита):
                   </label>
-                  <span className="text-xs text-amber-400 font-semibold">${depositAmount} USD</span>
+                  <span className="text-xs text-amber-400 font-semibold">{depositAmount} ₾ (GEL)</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <button
@@ -768,7 +874,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   </span>
                   {changeOnReturn > 0 && (
                     <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded font-bold">
-                      Сдача при возврате: ${changeOnReturn} USD
+                      Сдача при возврате: {changeOnReturn} ₾ (GEL)
                     </span>
                   )}
                 </div>
@@ -776,7 +882,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[11px] text-slate-400 block mb-1">
-                      Получено фактически от клиента ($):
+                      Получено фактически от клиента (₾):
                     </label>
                     <input
                       type="number"
@@ -787,7 +893,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   </div>
                   <div>
                     <label className="text-[11px] text-slate-400 block mb-1">
-                      Сдача к возврату клиенту ($):
+                      Сдача к возврату клиенту (₾):
                     </label>
                     <input
                       type="number"

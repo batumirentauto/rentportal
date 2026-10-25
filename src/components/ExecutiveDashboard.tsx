@@ -187,15 +187,15 @@ export const ExecutiveDashboard: React.FC = () => {
           <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
             <span>Выручка Сегодня:</span>
             <span className="flex items-center text-emerald-400 text-xs font-bold">
-              <ArrowUpRight className="w-3.5 h-3.5" /> +${kpi.revenueTodayUSD}
+              <ArrowUpRight className="w-3.5 h-3.5" /> +{kpi.revenueTodayUSD} ₾
             </span>
           </div>
           <div className="text-3xl font-black text-amber-400 font-mono mt-1">
-            ${kpi.revenueTodayUSD} <span className="text-sm font-normal text-slate-400">USD</span>
+            {kpi.revenueTodayUSD} <span className="text-sm font-normal text-slate-400">GEL (₾)</span>
           </div>
           <div className="flex justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
             <span>Вчера выручка:</span>
-            <span className="font-bold text-white font-mono">${kpi.revenueYesterdayUSD}</span>
+            <span className="font-bold text-white font-mono">{kpi.revenueYesterdayUSD} ₾</span>
           </div>
         </div>
 
@@ -208,7 +208,7 @@ export const ExecutiveDashboard: React.FC = () => {
             </span>
           </div>
           <div className="text-3xl font-black text-rose-400 font-mono mt-1">
-            {kpi.expensesTodayGEL} <span className="text-sm font-normal text-slate-400">GEL</span>
+            {kpi.expensesTodayGEL} <span className="text-sm font-normal text-slate-400">GEL (₾)</span>
           </div>
           <div className="flex justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
             <span>Вчера расходы:</span>
@@ -220,11 +220,11 @@ export const ExecutiveDashboard: React.FC = () => {
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
           <span className="text-slate-400 text-xs font-semibold block">Всего выручка (Период):</span>
           <div className="text-3xl font-black text-white font-mono mt-1">
-            ${kpi.revenueTotalUSD}
+            {kpi.revenueTotalUSD} ₾
           </div>
           <div className="flex justify-between text-[11px] text-emerald-400 font-medium mt-2 pt-2 border-t border-slate-800/80">
             <span>Расчетная прибыль:</span>
-            <span className="font-bold font-mono">+${kpi.netProfitEstimateUSD} USD</span>
+            <span className="font-bold font-mono">+{kpi.netProfitEstimateUSD} ₾ (GEL)</span>
           </div>
         </div>
 
@@ -232,11 +232,11 @@ export const ExecutiveDashboard: React.FC = () => {
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
           <span className="text-slate-400 text-xs font-semibold block">В наличных кассах:</span>
           <div className="text-3xl font-black text-emerald-400 font-mono mt-1">
-            ${balances.totalCashUSD}
+            {balances.totalCashUSD} ₾
           </div>
           <div className="flex justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
             <span>На банковских счетах:</span>
-            <span className="font-bold text-white font-mono">{balances.totalBankGEL} ₾ / ${balances.totalBankUSD}</span>
+            <span className="font-bold text-white font-mono">{balances.totalBankGEL} ₾</span>
           </div>
         </div>
       </div>

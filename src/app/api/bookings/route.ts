@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       extrasTotal = 0,
       totalAmount = 120,
       depositAmount = 300,
-      currency = "USD",
+      currency = "GEL",
       isAddedDuringDay = true,
       extras = [],
     } = body;
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
         extrasTotal: Number(extrasTotal || 0),
         totalAmount: Number(totalAmount),
         depositAmount: Number(depositAmount || 300),
-        currency: currency || "USD",
+        currency: currency || "GEL",
         ownerDailyRate: effectiveOwnerDailyRate,
         ownerTotalPayout,
         status: "CONFIRMED",

@@ -90,7 +90,7 @@ export async function POST(request: Request) {
         extrasTotal,
         totalAmount,
         depositAmount: 300,
-        currency: "USD",
+        currency: "GEL",
         status: "CONFIRMED",
         isAddedDuringDay: true, // Urgent notification for dispatcher/manager
         isSelfServiceBooking: true,

@@ -89,13 +89,22 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [fetchBookings, fetchNotifications]);
 
-  // Toggle washing status
-  const handleToggleWash = async (bookingId: string, newStatus: string) => {
+  // Toggle washing status (20 GEL полная, 10 GEL кузов/салон)
+  const handleToggleWash = async (
+    bookingId: string,
+    newStatus: string,
+    washType: string = "FULL",
+    cost: number = 20
+  ) => {
     try {
       const res = await fetch(`/api/bookings/${bookingId}/wash`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ washStatus: newStatus, cost: 25 }),
+        body: JSON.stringify({
+          washStatus: newStatus,
+          washType,
+          cost: newStatus === "CLEAN" ? cost : 0,
+        }),
       });
       const data = await res.json();
       if (data.success) {

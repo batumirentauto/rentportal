@@ -328,7 +328,7 @@ export const OwnerInvestorCabinet: React.FC = () => {
           </div>
           <div className="mt-2">
             <span className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight">
-              ${metrics?.totalOwnerEarningsUSD?.toLocaleString()} USD
+              {metrics?.totalOwnerEarningsUSD?.toLocaleString()} ₾ (GEL)
             </span>
             <div className="text-[11px] text-slate-400 mt-1">
               за {metrics?.totalDaysRented || 0} дней аренды автопарка
@@ -348,10 +348,10 @@ export const OwnerInvestorCabinet: React.FC = () => {
           </div>
           <div className="mt-2">
             <span className="text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
-              ${metrics?.pendingBalanceUSD?.toLocaleString()} USD
+              {metrics?.pendingBalanceUSD?.toLocaleString()} ₾ (GEL)
             </span>
             <div className="text-[11px] text-slate-400 mt-1">
-              уже выплачено: ${metrics?.totalPaidOutUSD?.toLocaleString()} USD
+              уже выплачено: {metrics?.totalPaidOutUSD?.toLocaleString()} ₾ (GEL)
             </div>
           </div>
         </div>
@@ -389,7 +389,7 @@ export const OwnerInvestorCabinet: React.FC = () => {
           </div>
           <div className="mt-2">
             <span className="text-2xl sm:text-3xl font-black text-purple-300 font-mono tracking-tight">
-              ${metrics?.averageDailyRateUSD || 0} USD/сутки
+              {metrics?.averageDailyRateUSD || 0} ₾ / сутки
             </span>
             <div className="text-[11px] text-slate-400 mt-1">
               средний фиксированный доход за 1 авто-день
@@ -505,7 +505,7 @@ export const OwnerInvestorCabinet: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400">Доход этого авто:</span>
                     <span className="font-mono font-black text-emerald-400 text-sm">
-                      ${car.earnedUSD} USD
+                      {car.earnedUSD} ₾ (GEL)
                     </span>
                   </div>
 
@@ -514,7 +514,7 @@ export const OwnerInvestorCabinet: React.FC = () => {
                     <div>
                       <span className="text-[10px] text-slate-400 block">Ставка владельцу:</span>
                       <span className="font-mono font-black text-amber-400 text-xs">
-                        ${car.defaultOwnerDailyRate} USD / сутки
+                        {car.defaultOwnerDailyRate} ₾ / сутки
                       </span>
                     </div>
                     <button
@@ -610,17 +610,17 @@ export const OwnerInvestorCabinet: React.FC = () => {
 
                       <td className="py-3 px-3 text-center">
                         <div className="font-mono font-bold text-amber-300">
-                          ${b.ownerDailyRate} USD / сут.
+                          {b.ownerDailyRate} ₾ / сут.
                         </div>
                         {b.isRateAdjusted && (
                           <span className="text-[9px] bg-purple-950 text-purple-300 border border-purple-500/40 px-1 py-0.2 rounded font-sans">
-                            скорректировано (база: ${b.defaultCarRate})
+                            скорректировано (база: {b.defaultCarRate} ₾)
                           </span>
                         )}
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono font-black text-emerald-400 text-sm">
-                        ${b.ownerTotalPayout} USD
+                        {b.ownerTotalPayout} ₾
                       </td>
 
                       <td className="py-3 px-4 text-center">
@@ -658,7 +658,7 @@ export const OwnerInvestorCabinet: React.FC = () => {
             </p>
           </div>
           <span className="text-xs text-emerald-400 font-bold font-mono">
-            Всего выплачено: ${metrics?.totalPaidOutUSD} USD
+            Всего выплачено: {metrics?.totalPaidOutUSD} ₾ (GEL)
           </span>
         </div>
 
