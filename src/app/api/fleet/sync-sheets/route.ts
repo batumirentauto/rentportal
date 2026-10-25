@@ -207,6 +207,10 @@ export async function POST(req: Request) {
     const colCarTitle = findCol("авто", "машина", "автомобиль", "car");
     const colPlate = findCol("госномер", "гос номер", "гос. номер", "номер авто", "номер", "plate");
     const colTechPass = findCol("техпаспорт", "тп", "techpassport", "номер тп", "номер техпаспорта");
+    const colMileage = findCol("пробег", "км", "mileage", "km");
+    const colVin = findCol("vin", "вин", "номер кузова");
+    const colYear = findCol("год", "year", "выпуск", "uj", "год выпуска");
+    const colColor = findCol("цвет", "color");
     const colCity = findCol("город", "city", "локация");
     const colPriceStd = findCol("цена", "тариф", "сутки", "стандарт", "standard rate", "цена в сутки");
     const colOwner = findCol("владелец", "хозяин", "инвестор", "owner", "собственник");
@@ -230,14 +234,19 @@ export async function POST(req: Request) {
       const plateNumber = cleanPlate(rawPlate);
       const rawTitle = colCarTitle !== -1 ? row[colCarTitle]?.trim() : "";
       const techPassportNumber = colTechPass !== -1 ? row[colTechPass]?.trim().toUpperCase() : null;
+      const rawMileage = colMileage !== -1 && row[colMileage] ? parseInt(row[colMileage].replace(/\D/g, ""), 10) : null;
+      const vin = colVin !== -1 && row[colVin] ? row[colVin].trim().toUpperCase() : null;
+      const rawYear = colYear !== -1 && row[colYear] ? parseInt(row[colYear].replace(/\D/g, ""), 10) : null;
+      const rawColor = colColor !== -1 && row[colColor] ? row[colColor].trim() : null;
 
       const parsed = parseCarTitle(rawTitle);
 
       const brand = parsed.brand;
       const model = parsed.model;
-      const year = parsed.year;
-      const color = parsed.color;
+      const year = (rawYear && rawYear > 1990 && rawYear < 2030) ? rawYear : parsed.year;
+      const color = rawColor || parsed.color;
       const carClass = parsed.carClass;
+      const currentMileage = rawMileage && rawMileage > 0 ? rawMileage : 45000;
       
       const priceStd = colPriceStd !== -1 && row[colPriceStd]
         ? parseFloat(row[colPriceStd].replace(/[^0-9.]/g, "")) || parsed.defaultPrice
@@ -304,6 +313,8 @@ export async function POST(req: Request) {
             carClass,
             hasTechPassport: !!techPassportNumber,
             ...(techPassportNumber ? { techPassportNumber } : {}),
+            ...(vin ? { vin } : {}),
+            ...(rawMileage ? { currentMileage } : {}),
             clientStandardDailyRate: priceStd,
             clientMinDailyRate: priceMin,
             clientMaxDailyRate: priceMax,
@@ -323,7 +334,8 @@ export async function POST(req: Request) {
             year,
             color,
             carClass,
-            currentMileage: 45000,
+            currentMileage,
+            vin,
             status: "AVAILABLE",
             washStatus: "CLEAN",
             hasTechPassport: !!techPassportNumber,
