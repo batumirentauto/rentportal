@@ -19,6 +19,7 @@ import { ReturnWizardModal } from "@/components/ReturnWizardModal";
 import { NotificationsModal } from "@/components/NotificationsModal";
 import { KnowledgeBaseView } from "@/components/KnowledgeBaseView";
 import { CustomerCrmHub } from "@/components/CustomerCrmHub";
+import { TeamAccessHub } from "@/components/TeamAccessHub";
 import { AiAssistantModal } from "@/components/AiAssistantModal";
 import { RecordExpenseModal } from "@/components/RecordExpenseModal";
 import { RefreshCw } from "lucide-react";
@@ -26,7 +27,7 @@ import { RefreshCw } from "lucide-react";
 export default function Home() {
   const [selectedCity, setSelectedCity] = useState<string>("ALL");
   const [activeTab, setActiveTab] = useState<
-    "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "crm" | "washing" | "finance" | "reports" | "executive" | "knowledge"
+    "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "crm" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "team"
   >("timeline");
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -237,6 +238,17 @@ export default function Home() {
             {activeTab === "executive" && <ExecutiveDashboard />}
 
             {activeTab === "knowledge" && <KnowledgeBaseView />}
+
+            {activeTab === "team" && (
+              <TeamAccessHub
+                onSwitchToOwner={(ownerId) => {
+                  setActiveTab("owners");
+                }}
+                onSwitchToRoleTab={(tab: any) => {
+                  setActiveTab(tab);
+                }}
+              />
+            )}
           </>
         )}
       </main>

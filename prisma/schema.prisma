@@ -17,6 +17,7 @@ model City {
   financialAccounts FinancialAccount[]
   expenses  Expense[]
   managerTasks ManagerTask[]
+  users     User[]
   createdAt DateTime   @default(now())
 }
 
@@ -351,6 +352,9 @@ model Expense {
   city           City?             @relation(fields: [cityId], references: [id])
   carId          String?
   car            Car?              @relation(fields: [carId], references: [id])
+  ownerId        String?           // Привязка расхода к владельцу автомобиля (инвестору)
+  owner          CarOwner?         @relation(fields: [ownerId], references: [id])
+  isOwnerExpense Boolean           @default(false) // Расход внесен владельцем (ТО, ремонт, страховка, шины)
   managerName    String?           // Кто потратил / провел расход
   date           DateTime          @default(now())
   receiptPhotoUrl String?
@@ -404,12 +408,33 @@ model CarOwner {
   passportNumber  String?
   bankName        String?       // "Bank of Georgia", "TBC Bank"
   bankIban        String?       // "GE29BG0000000123456789"
-  payoutCurrency  String        @default("USD") // "USD" или "GEL"
+  payoutCurrency  String        @default("GEL") // "GEL" или "USD"
   cars            Car[]
   payouts         OwnerPayout[]
+  expenses        Expense[]     // Расходы на автомобили владельца (ТО, ремонты, страховки)
+  users           User[]        // Аккаунты доступа
   notes           String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+}
+
+// Пользователи и сотрудники (Команда & Доступ)
+model User {
+  id          String    @id @default(cuid())
+  fullName    String    // Имя и фамилия сотрудника / владельца
+  phone       String?
+  email       String?   @unique
+  telegram    String?
+  role        String    @default("MANAGER") // "EXECUTIVE", "MANAGER", "OWNER", "TECHNICIAN"
+  status      String    @default("ACTIVE")  // "ACTIVE", "INACTIVE"
+  cityId      String?
+  city        City?     @relation(fields: [cityId], references: [id])
+  ownerId     String?   // Привязка к CarOwner если роль OWNER
+  owner       CarOwner? @relation(fields: [ownerId], references: [id])
+  avatarUrl   String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // Выплаты владельцам автомобилей

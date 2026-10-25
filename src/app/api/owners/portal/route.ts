@@ -76,6 +76,23 @@ export async function GET(request: Request) {
     // Collect all bookings for owner's cars
     const ownerBookingsList: any[] = [];
 
+    // Fetch expenses for owner's cars (ТО, ремонты, страховки, шины, техосмотр)
+    const ownerCarIds = owner.cars.map((c) => c.id);
+    const ownerExpenses = await prisma.expense.findMany({
+      where: {
+        OR: [
+          { ownerId: selectedOwnerId },
+          { carId: { in: ownerCarIds }, isOwnerExpense: true },
+        ],
+      },
+      include: {
+        car: true,
+      },
+      orderBy: { date: "desc" },
+    });
+
+    const totalOwnerExpensesGEL = ownerExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
     const ownerCarsSummary = owner.cars.map((car) => {
       const isCurrentlyRented = car.status === "RENTED";
       if (isCurrentlyRented) activeRentedCarsNow++;
@@ -122,6 +139,12 @@ export async function GET(request: Request) {
       const daysInPeriod = period === "thisMonth" ? now.getDate() : 30;
       const utilizationRate = Math.min(100, Math.round((carDays / daysInPeriod) * 100));
 
+      const carExpenses = ownerExpenses
+        .filter((e) => e.carId === car.id)
+        .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+      const netProfit = carEarnings - carExpenses;
+
       return {
         id: car.id,
         plateNumber: car.plateNumber,
@@ -138,6 +161,8 @@ export async function GET(request: Request) {
         daysRented: carDays,
         utilizationRate,
         earnedUSD: carEarnings,
+        expensesGEL: carExpenses,
+        netProfitGEL: netProfit,
         activeBooking: activeBooking
           ? {
               bookingNumber: activeBooking.bookingNumber,
@@ -151,6 +176,7 @@ export async function GET(request: Request) {
     // Payouts calculation
     const totalPaidOutUSD = owner.payouts.reduce((sum, p) => sum + p.amount, 0);
     const pendingBalanceUSD = Math.max(0, totalOwnerEarningsUSD - totalPaidOutUSD);
+    const netProfitInvestorGEL = totalOwnerEarningsUSD - totalOwnerExpensesGEL;
 
     // Sort bookings descending by date
     ownerBookingsList.sort(
@@ -181,6 +207,8 @@ export async function GET(request: Request) {
         totalCarsCount: owner.cars.length,
         activeRentedCarsNow,
         totalOwnerEarningsUSD,
+        totalOwnerExpensesGEL,
+        netProfitInvestorGEL,
         totalDaysRented,
         averageDailyRateUSD:
           totalDaysRented > 0 ? Math.round(totalOwnerEarningsUSD / totalDaysRented) : 0,
@@ -190,6 +218,20 @@ export async function GET(request: Request) {
       cars: ownerCarsSummary,
       bookings: ownerBookingsList,
       payouts: owner.payouts,
+      expenses: ownerExpenses.map((e) => ({
+        id: e.id,
+        carId: e.carId,
+        carBrand: e.car?.brand,
+        carModel: e.car?.model,
+        carPlate: e.car?.plateNumber,
+        category: e.category,
+        amount: e.amount,
+        currency: e.currency,
+        description: e.description,
+        receiptPhotoUrl: e.receiptPhotoUrl,
+        date: e.date,
+        managerName: e.managerName,
+      })),
     });
   } catch (error: any) {
     if (error?.digest?.startsWith?.("NEXT_")) {
@@ -263,12 +305,75 @@ export async function PATCH(request: Request) {
   }
 }
 
-// Зафиксировать выплату владельцу авто
+// Зафиксировать выплату владельцу или внести расход на автомобиль владельца
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { ownerId, amount, currency = "USD", paymentMethod = "BANK_TRANSFER", notes } = body;
+    const { action, ownerId, carId, category, amount, currency = "GEL", description, receiptPhotoUrl, date, expenseId, paymentMethod = "BANK_TRANSFER", notes } = body;
 
+    // 1. Добавление расхода владельцем на свой автомобиль (ТО, ремонт, КАСКО, шины)
+    if (action === "ADD_EXPENSE") {
+      if (!ownerId || !amount || !description) {
+        return NextResponse.json(
+          { success: false, error: "Укажите владельца, сумму и описание расхода" },
+          { status: 400 }
+        );
+      }
+
+      let carCityId: string | undefined;
+      if (carId) {
+        const car = await prisma.car.findUnique({ where: { id: carId } });
+        carCityId = car?.cityId;
+      }
+
+      let account = await prisma.financialAccount.findFirst({ where: { currency: "GEL" } });
+      if (!account) {
+        account = await prisma.financialAccount.findFirst();
+      }
+
+      if (!account) {
+        return NextResponse.json({ success: false, error: "Касса для списания не найдена" }, { status: 400 });
+      }
+
+      const owner = await prisma.carOwner.findUnique({ where: { id: ownerId } });
+
+      const expense = await prisma.expense.create({
+        data: {
+          accountId: account.id,
+          ownerId,
+          carId: carId || undefined,
+          cityId: carCityId,
+          category: category || "MAINTENANCE",
+          amount: Number(amount),
+          currency,
+          description,
+          receiptPhotoUrl: receiptPhotoUrl || undefined,
+          isOwnerExpense: true,
+          managerName: owner ? `Инвестор: ${owner.fullName}` : "Владелец автомобиля",
+          date: date ? new Date(date) : new Date(),
+        },
+        include: { car: true },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Расход успешно сохранён в журнале инвестора!",
+        expense,
+      });
+    }
+
+    // 2. Удаление расхода инвестором
+    if (action === "DELETE_EXPENSE" && expenseId) {
+      await prisma.expense.delete({
+        where: { id: expenseId },
+      });
+      return NextResponse.json({
+        success: true,
+        message: "Расход успешно удален",
+      });
+    }
+
+    // 3. Выплата инвестору (стандартный сценарий)
     if (!ownerId || !amount) {
       return NextResponse.json(
         { success: false, error: "ownerId and amount are required" },
@@ -280,7 +385,7 @@ export async function POST(request: Request) {
       data: {
         ownerId,
         amount: Number(amount),
-        currency,
+        currency: currency || "GEL",
         status: "PAID",
         paymentMethod,
         notes: notes || `Выплата владельцу (${paymentMethod})`,
@@ -298,7 +403,7 @@ export async function POST(request: Request) {
     }
     console.error("POST /api/owners/portal error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to record owner payout" },
+      { success: false, error: error.message || "Failed to process owner action" },
       { status: 500 }
     );
   }

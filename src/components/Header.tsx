@@ -8,8 +8,8 @@ interface HeaderProps {
   onOpenNotifications: () => void;
   onSimulateNewBooking: () => void;
   onOpenRecordExpense?: () => void;
-  activeTab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm";
-  setActiveTab: (tab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm") => void;
+  activeTab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team";
+  setActiveTab: (tab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team") => void;
   isSimulating: boolean;
 }
 
@@ -312,6 +312,17 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <span>👔 Кабинет Руководителя & Мультикасса</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("team")}
+            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+              activeTab === "team"
+                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black shadow-lg"
+                : "text-purple-300 hover:text-white hover:bg-purple-950/40 border border-purple-500/30"
+            }`}
+          >
+            <span>👥 Команда & Доступ</span>
           </button>
 
           <button
