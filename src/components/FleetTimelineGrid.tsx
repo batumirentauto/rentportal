@@ -362,7 +362,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
         <div className="overflow-x-auto">
           <div className="min-w-[980px]">
             {/* Header row: Cars column + Day columns */}
-            <div className="grid grid-cols-[260px_repeat(auto-fit,minmax(50px,1fr))] border-b border-slate-800 bg-slate-950 sticky top-0 z-20">
+            <div className="grid grid-cols-[280px_1fr] border-b border-slate-800 bg-slate-950 sticky top-0 z-20">
               <div className="p-3 border-r border-slate-800 font-bold text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between">
                 <span>Автомобиль / Локация</span>
                 <span className="text-[10px] text-slate-500">{filteredCars.length} авто</span>
@@ -556,7 +556,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                         </div>
 
                         {/* Booking Bars */}
-                        <div className="relative h-full flex items-center px-1 pointer-events-none">
+                        <div className="absolute inset-0 flex items-center pointer-events-none">
                           {car.bookings.map((booking: any) => {
                             const bStart = new Date(booking.startDate);
                             const bEnd = new Date(booking.endDate);
