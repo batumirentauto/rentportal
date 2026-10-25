@@ -73,6 +73,8 @@ export async function GET(request: Request) {
         carClass: car.carClass || "COMFORT",
         cityCode: car.city.code,
         cityName: car.city.nameRu,
+        hasTechPassport: car.hasTechPassport,
+        techPassportNumber: car.techPassportNumber,
         status: car.status,
         hasActiveBooking: !!activeBooking,
         owner: car.owner
