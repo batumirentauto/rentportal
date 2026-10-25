@@ -360,19 +360,19 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       {/* TIMELINE GANTT GRID CONTAINER */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <div className="min-w-[980px]">
+          <div className="min-w-[720px] sm:min-w-[980px]">
             {/* Header row: Cars column + Day columns */}
-            <div className="grid grid-cols-[280px_1fr] border-b border-slate-800 bg-slate-950 sticky top-0 z-20">
-              <div className="p-3 border-r border-slate-800 font-bold text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                <span>Автомобиль / Локация</span>
-                <span className="text-[10px] text-slate-500">{filteredCars.length} авто</span>
+            <div className="grid grid-cols-[140px_1fr] sm:grid-cols-[240px_1fr] border-b border-slate-800 bg-slate-950 sticky top-0 z-20">
+              <div className="p-2 sm:p-3 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-30 bg-slate-950">
+                <span className="truncate">Автомобиль</span>
+                <span className="text-[10px] text-slate-500 hidden sm:inline">{filteredCars.length} авто</span>
               </div>
 
               {/* Day headers */}
               <div
                 className="grid"
                 style={{
-                  gridTemplateColumns: `repeat(${days.length}, minmax(50px, 1fr))`,
+                  gridTemplateColumns: `repeat(${days.length}, minmax(46px, 1fr))`,
                 }}
               >
                 {days.map((day: any) => {
@@ -429,13 +429,13 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                       onClick={() => {
                         if (isSelectionMode) toggleCarSelection(car.id);
                       }}
-                      className={`grid grid-cols-[280px_1fr] hover:bg-slate-800/30 transition-colors group ${
+                      className={`grid grid-cols-[140px_1fr] sm:grid-cols-[240px_1fr] hover:bg-slate-800/30 transition-colors group ${
                         isSelectionMode ? "cursor-pointer" : ""
                       } ${isSelected ? "bg-purple-950/20" : ""}`}
                     >
                       {/* Left: Car Details & Distinct City Color Border */}
                       <div
-                        className={`p-3 border-r border-slate-800 bg-slate-900/95 flex items-center space-x-2.5 transition-all ${
+                        className={`sticky left-0 z-10 p-2 sm:p-3 border-r border-slate-800 bg-slate-900/95 flex items-center space-x-1.5 sm:space-x-2.5 transition-all ${
                           isSelected ? "bg-purple-950/40 ring-1 ring-purple-500/70" : ""
                         } ${cityTheme.borderL}`}
                       >
@@ -449,21 +449,21 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                                 e.stopPropagation();
                                 toggleCarSelection(car.id);
                               }}
-                              className="w-5 h-5 rounded accent-purple-500 cursor-pointer shadow-lg"
+                              className="w-4 h-4 sm:w-5 sm:h-5 rounded accent-purple-500 cursor-pointer shadow-lg"
                             />
                           </div>
                         )}
 
-                        <div className="flex-1 space-y-1.5 min-w-0">
+                        <div className="flex-1 space-y-1 sm:space-y-1.5 min-w-0">
                           {/* Brand & City badge */}
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-extrabold text-white text-xs truncate max-w-[140px]">
+                          <div className="flex items-center justify-between gap-1">
+                            <h4 className="font-extrabold text-white text-[11px] sm:text-xs truncate max-w-[80px] sm:max-w-[140px]" title={`${car.brand} ${car.model}`}>
                               {car.brand} {car.model}
                             </h4>
                             
                             {/* Prominent City Badge with Distinct Color */}
                             <span
-                              className={`text-[10px] px-2 py-0.5 rounded-lg font-black border flex items-center space-x-1 ${cityTheme.badgeBg}`}
+                              className={`text-[9px] sm:text-[10px] px-1 sm:px-2 py-0.5 rounded font-black border flex items-center space-x-0.5 shrink-0 ${cityTheme.badgeBg}`}
                               title={`Город дислокации: ${cityTheme.name}`}
                             >
                               <span>{cityTheme.icon}</span>
@@ -472,17 +472,17 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                           </div>
 
                           {/* Plate & Status */}
-                          <div className="flex items-center space-x-2">
-                            <span className="text-[11px] font-mono font-bold text-amber-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+                            <span className="text-[9px] sm:text-[11px] font-mono font-bold text-amber-400 bg-slate-950 px-1 py-0.5 rounded border border-slate-800">
                               {car.plateNumber}
                             </span>
                             {car.isStopBlocked ? (
-                              <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-600 text-white animate-pulse shadow-sm shadow-red-900">
-                                ⛔ НА СТОПЕ
+                              <span className="text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full bg-red-600 text-white animate-pulse shadow-sm shadow-red-900">
+                                СТОП
                               </span>
                             ) : (
                               <span
-                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                className={`text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 rounded-full ${
                                   isAvailableNow
                                     ? "bg-emerald-950 text-emerald-400 border border-emerald-500/40"
                                     : "bg-red-950 text-red-400 border border-red-500/40"
@@ -495,7 +495,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
                           {/* STOP BLOCKED ACTION BANNER */}
                           {car.isStopBlocked && (
-                            <div className="bg-red-950/80 border border-red-500/60 rounded-lg p-2 text-[10px] space-y-1.5 shadow">
+                            <div className="bg-red-950/80 border border-red-500/60 rounded-lg p-1.5 sm:p-2 text-[9px] sm:text-[10px] space-y-1 shadow">
                               <p className="text-red-200 font-semibold leading-tight line-clamp-2">
                                 ⚠️ {car.stopReason || "Истек техосмотр / страховка"}
                               </p>
@@ -504,25 +504,25 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                                   e.stopPropagation();
                                   setUnblockCar(car);
                                 }}
-                                className="w-full py-1 px-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-black rounded-md text-[10px] shadow transition active:scale-95 flex items-center justify-center space-x-1"
+                                className="w-full py-0.5 sm:py-1 px-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-black rounded text-[9px] sm:text-[10px] shadow transition active:scale-95 flex items-center justify-center space-x-1"
                               >
                                 <span>Продлить и снять со СТОПа</span>
                               </button>
                             </div>
                           )}
 
-                          {/* Relocation indicator with Next City's Color! */}
+                          {/* Relocation indicator or Subtitle */}
                           {car.nextRelocation && nextCityTheme ? (
                             <div
-                              className={`border px-2 py-1 rounded-lg text-[10px] flex items-center space-x-1 font-bold ${nextCityTheme.badgeBg}`}
+                              className={`border px-1.5 py-0.5 rounded text-[9px] flex items-center space-x-1 font-bold ${nextCityTheme.badgeBg}`}
                             >
                               <span>{nextCityTheme.icon}</span>
                               <span className="truncate">
-                                С {car.nextRelocation.date}: <strong>{nextCityTheme.name} ({car.nextRelocation.toCityCode})</strong>
+                                С {car.nextRelocation.date}: {car.nextRelocation.toCityCode}
                               </span>
                             </div>
                           ) : (
-                            <span className="text-[10px] text-slate-500 flex items-center space-x-1">
+                            <span className="hidden sm:flex text-[10px] text-slate-500 items-center space-x-1">
                               <span>{cityTheme.icon}</span>
                               <span>Базирование: {cityTheme.name}</span>
                             </span>
@@ -531,12 +531,12 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                       </div>
 
                       {/* Right: Days Timeline with Booking Bars */}
-                      <div className="relative h-24 overflow-hidden bg-slate-950/40">
+                      <div className="relative h-20 sm:h-24 overflow-hidden bg-slate-950/40">
                         {/* Day vertical grid lines & clickable slots */}
                         <div
                           className="grid h-full absolute inset-0"
                           style={{
-                            gridTemplateColumns: `repeat(${days.length}, minmax(50px, 1fr))`,
+                            gridTemplateColumns: `repeat(${days.length}, minmax(46px, 1fr))`,
                           }}
                         >
                           {days.map((day: any) => (
