@@ -540,10 +540,10 @@ export const TeamMessengerHub: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => addQuickTag("🧼 Мойка выполнена (20 ₾)")}
+                  onClick={() => addQuickTag("🧼 Автомобиль помыт")}
                   className="px-2 py-0.5 bg-cyan-950 text-cyan-300 border border-cyan-500/40 rounded-lg text-[10px] font-bold hover:bg-cyan-900 transition"
                 >
-                  🧼 Мойка 20 ₾
+                  🧼 Мойка выполнена
                 </button>
                 <button
                   type="button"

@@ -393,14 +393,14 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                       Мойка автомобиля перед выдачей
                     </span>
                   </div>
-                  <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-lg border ${
-                    washCost > 0 ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/40" : "bg-slate-900 text-slate-400 border-slate-700"
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-lg border ${
+                    washOption !== "NONE" ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40" : "bg-slate-900 text-slate-400 border-slate-700"
                   }`}>
-                    {washCost > 0 ? `Расход: ${washCost} ₾ (GEL)` : "Без мойки"}
+                    {washOption !== "NONE" ? "Учитывается в ежемесячный отчёт" : "Авто чистое"}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Была ли проведена мойка авто перед выдачей клиенту? При выборе мойки автоматически спишется расход в кассе.
+                  Была ли проведена мойка авто перед выдачей? Начисление фиксируется в отчёте партнеру-автомойке (расчёт раз в месяц).
                 </p>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -413,9 +413,9 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                         : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white"
                     }`}
                   >
-                    <span className="block text-base mb-0.5">❌</span>
+                    <span className="block text-base mb-0.5">✓</span>
                     <span className="text-xs block font-bold">Не мыли</span>
-                    <span className="text-[10px] text-slate-500 block">0 ₾ (чистая)</span>
+                    <span className="text-[10px] text-slate-500 block">Чистая машина</span>
                   </button>
 
                   <button
@@ -429,7 +429,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   >
                     <span className="block text-base mb-0.5">✨</span>
                     <span className="text-xs block font-bold">Полная мойка</span>
-                    <span className="text-[11px] font-mono font-black text-cyan-300 block">20 ₾ (GEL)</span>
+                    <span className="text-[10px] text-cyan-200/80 block">Кузов + салон</span>
                   </button>
 
                   <button
@@ -443,7 +443,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   >
                     <span className="block text-base mb-0.5">🚗</span>
                     <span className="text-xs block font-bold">Только кузов</span>
-                    <span className="text-[11px] font-mono font-black text-cyan-300 block">10 ₾ (GEL)</span>
+                    <span className="text-[10px] text-cyan-200/80 block">Снаружи</span>
                   </button>
 
                   <button
@@ -457,27 +457,9 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   >
                     <span className="block text-base mb-0.5">💺</span>
                     <span className="text-xs block font-bold">Только салон</span>
-                    <span className="text-[11px] font-mono font-black text-cyan-300 block">10 ₾ (GEL)</span>
+                    <span className="text-[10px] text-cyan-200/80 block">Уборка салона</span>
                   </button>
                 </div>
-
-                {washOption !== "NONE" && (
-                  <div className="flex items-center justify-between bg-slate-950/80 p-2.5 rounded-xl border border-cyan-500/30 text-xs">
-                    <span className="text-slate-300">Источник списания (касса):</span>
-                    <select
-                      value={washAccount}
-                      onChange={(e) => setWashAccount(e.target.value)}
-                      className="bg-slate-900 border border-slate-700 text-cyan-300 text-xs rounded-lg px-2.5 py-1 font-medium focus:outline-none"
-                    >
-                      <option value="CASH_BATUMI">💵 Касса наличные Батуми</option>
-                      <option value="CASH_TBILISI">💵 Касса наличные Тбилиси</option>
-                      <option value="CASH_KUTAISI">💵 Касса наличные Кутаиси</option>
-                      <option value="MANAGER_POCKET">👤 Карман менеджера (под отчет)</option>
-                      <option value="BANK_BOG">🏦 Bank of Georgia</option>
-                      <option value="BANK_TBC">🏦 TBC Bank</option>
-                    </select>
-                  </div>
-                )}
               </div>
 
               {/* Checks */}

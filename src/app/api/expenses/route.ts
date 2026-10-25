@@ -32,7 +32,16 @@ export async function POST(request: Request) {
       carId,
       managerName = "Менеджер",
       date,
+      status: requestedStatus,
+      isMonthlySettled: requestedIsMonthlySettled,
     } = body;
+
+    // Мойка по умолчанию считается начислением к ежемесячной оплате партнеру-мойке (не списание с рук)
+    const isWashingAccrual = category === "WASHING" && requestedStatus !== "PAID";
+    const status = requestedStatus || (isWashingAccrual ? "ACCRUED" : "PAID");
+    const isMonthlySettled = requestedIsMonthlySettled !== undefined 
+      ? Boolean(requestedIsMonthlySettled) 
+      : (status !== "ACCRUED");
 
     const expense = await prisma.expense.create({
       data: {
@@ -44,6 +53,8 @@ export async function POST(request: Request) {
         cityId: cityId || undefined,
         carId: carId || undefined,
         managerName,
+        status,
+        isMonthlySettled,
         date: date ? new Date(date) : new Date(),
       },
       include: {
@@ -51,15 +62,17 @@ export async function POST(request: Request) {
       },
     });
 
-    // Списываем средства с баланса кассы / счёта
-    await prisma.financialAccount.update({
-      where: { id: accountId },
-      data: {
-        currentBalance: {
-          decrement: Number(amount),
+    // Списываем средства с баланса кассы / счёта ТОЛЬКО если статус PAID (не начисление)
+    if (status === "PAID") {
+      await prisma.financialAccount.update({
+        where: { id: accountId },
+        data: {
+          currentBalance: {
+            decrement: Number(amount),
+          },
         },
-      },
-    });
+      });
+    }
 
     return NextResponse.json({ success: true, expense });
   } catch (error) {

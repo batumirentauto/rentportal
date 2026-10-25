@@ -43,6 +43,7 @@ export async function POST(
           status: washStatus === "CLEAN" ? "COMPLETED" : washStatus === "WASHING" ? "IN_PROGRESS" : "PENDING",
           washType,
           cost: finalCost,
+          isSettled: false,
           notes: notes || undefined,
         },
       });
@@ -55,14 +56,15 @@ export async function POST(
           priority: "URGENT",
           washType,
           cost: finalCost,
+          isSettled: false,
           notes: notes || "Создано менеджером",
         },
       });
     }
 
-    // Если мойка завершена ("CLEAN") и есть стоимость — создаем расход в Журнале расходов и списываем из кассы
+    // Если мойка завершена ("CLEAN") и есть стоимость — начисляем в расходы по мойкам (оплата раз в месяц по реестру)
     if (washStatus === "CLEAN" && finalCost > 0) {
-      const typeLabel = washType === "FULL" ? "Полная мойка (20 ₾)" : washType === "BODY" ? "Мойка кузова (10 ₾)" : "Мойка салона (10 ₾)";
+      const typeLabel = washType === "FULL" ? "Полная мойка" : washType === "BODY" ? "Мойка кузова" : "Мойка салона";
       let acc = null;
       if (managerName) {
         acc = await prisma.financialAccount.findFirst({
@@ -75,7 +77,7 @@ export async function POST(
         });
       }
       if (!acc) {
-        acc = await prisma.financialAccount.findFirst({ where: { currency: "GEL", type: "CASH" } }) || await prisma.financialAccount.findFirst();
+        acc = await prisma.financialAccount.findFirst({ where: { currency: "GEL" } }) || await prisma.financialAccount.findFirst();
       }
 
       if (acc) {
@@ -88,15 +90,11 @@ export async function POST(
             carId: booking.carId,
             cityId: booking.car.cityId,
             managerName,
-            description: `Оплата мойки авто: ${typeLabel} — ${booking.car.brand} ${booking.car.model} (${booking.car.plateNumber})`,
+            status: "ACCRUED", // Начислено к ежемесячной оплате партнеру-автомойке (не списывается из ежедневной кассы менеджера)
+            isMonthlySettled: false,
+            description: `Начислено за мойку: ${typeLabel} — ${booking.car.brand} ${booking.car.model} (${booking.car.plateNumber})`,
             date: new Date(),
           },
-        });
-
-        // Списываем средства с баланса кассы менеджера
-        await prisma.financialAccount.update({
-          where: { id: acc.id },
-          data: { currentBalance: { decrement: finalCost } },
         });
       }
     }

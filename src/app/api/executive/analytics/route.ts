@@ -126,6 +126,13 @@ export async function GET() {
     let expensesYesterdayGEL = 0;
     let expensesTotalGEL = 0;
 
+    // Учет ежемесячных начислений по автомойкам (оплата раз в месяц по реестру)
+    let washAccruedTotalGEL = 0;
+    let washPendingSettlementGEL = 0;
+    let washSettledTotalGEL = 0;
+    let washAccruedCount = 0;
+    let washPendingCount = 0;
+
     const expensesByCategory: Record<string, number> = {
       WASHING: 0,
       FUEL: 0,
@@ -145,6 +152,17 @@ export async function GET() {
       expensesTotalGEL += e.amount;
       if (isToday) expensesTodayGEL += e.amount;
       if (isYesterday) expensesYesterdayGEL += e.amount;
+
+      if (e.category === "WASHING") {
+        washAccruedTotalGEL += e.amount;
+        washAccruedCount += 1;
+        if (!e.isMonthlySettled) {
+          washPendingSettlementGEL += e.amount;
+          washPendingCount += 1;
+        } else {
+          washSettledTotalGEL += e.amount;
+        }
+      }
 
       if (expensesByCategory[e.category] !== undefined) {
         expensesByCategory[e.category] += e.amount;
@@ -244,6 +262,13 @@ export async function GET() {
         netProfitEstimateUSD: revenueTotalUSD - Math.round(expensesTotalGEL / 2.7),
         totalManagerCashGEL: totalCashGEL,
       },
+      washSummary: {
+        totalAccruedGEL: washAccruedTotalGEL,
+        pendingSettlementGEL: washPendingSettlementGEL,
+        settledGEL: washSettledTotalGEL,
+        totalCount: washAccruedCount,
+        pendingCount: washPendingCount,
+      },
       balances: {
         totalCashUSD: totalCashGEL, // Валюта в лари
         totalBankGEL,
@@ -275,6 +300,72 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, fromAccountId, toAccountId, amount, notes, managerName = "Руководитель" } = body;
+
+    // Закрытие ежемесячного реестра расчётов с автомойкой
+    if (action === "SETTLE_MONTHLY_WASH") {
+      const pendingWashes = await prisma.expense.findMany({
+        where: {
+          category: "WASHING",
+          isMonthlySettled: false,
+        },
+      });
+
+      const totalToSettle = pendingWashes.reduce((sum, e) => sum + e.amount, 0);
+
+      if (totalToSettle > 0) {
+        // Помечаем все начисленные расходы по мойкам как урегулированные (оплаченные партнеру)
+        await prisma.expense.updateMany({
+          where: {
+            category: "WASHING",
+            isMonthlySettled: false,
+          },
+          data: {
+            isMonthlySettled: true,
+            status: "PAID",
+          },
+        });
+
+        // Помечаем задачи мойки как закрытые
+        await prisma.carWashTask.updateMany({
+          where: {
+            isSettled: false,
+          },
+          data: {
+            isSettled: true,
+            settledAt: new Date(),
+          },
+        });
+
+        // Если указан целевой банковский счет, с которого производится безналичная оплата автомойке
+        const targetAccountId = toAccountId || fromAccountId;
+        if (targetAccountId) {
+          await prisma.financialAccount.update({
+            where: { id: targetAccountId },
+            data: { currentBalance: { decrement: totalToSettle } },
+          });
+
+          await prisma.expense.create({
+            data: {
+              accountId: targetAccountId,
+              category: "WASHING",
+              amount: totalToSettle,
+              currency: "GEL",
+              description: `Оплата ежемесячного счёта автомойке по реестру (${pendingWashes.length} моек)`,
+              managerName,
+              status: "PAID",
+              isMonthlySettled: true,
+            },
+          });
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Реестр моек успешно закрыт и оплачен на сумму ${totalToSettle} ₾ (${pendingWashes.length} моек)`,
+        settledAmount: totalToSettle,
+        count: pendingWashes.length,
+      });
+    }
 
     if (action === "TRANSFER_CASH") {
       if (!fromAccountId || !toAccountId || !amount) {

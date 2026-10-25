@@ -389,7 +389,7 @@ export const FinanceView: React.FC = () => {
                 {washExpenses} ₾
               </div>
               <span className="text-xs text-slate-500 mt-0.5 block">
-                Подготовка к выдачам
+                Начислено (расчёт раз в месяц по реестру)
               </span>
             </div>
 
@@ -460,10 +460,17 @@ export const FinanceView: React.FC = () => {
                             })}
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border text-[10px] font-bold ${badge.color}`}>
-                              <Icon className="w-3 h-3 shrink-0" />
-                              <span>{badge.label}</span>
-                            </span>
+                            <div className="flex flex-col space-y-1">
+                              <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border text-[10px] font-bold w-max ${badge.color}`}>
+                                <Icon className="w-3 h-3 shrink-0" />
+                                <span>{badge.label}</span>
+                              </span>
+                              {exp.status === "ACCRUED" && (
+                                <span className="text-[9px] bg-cyan-950/80 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded w-max font-medium">
+                                  Начислено (оплата раз в месяц)
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-slate-200 font-medium max-w-xs">
                             {exp.description}

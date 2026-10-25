@@ -280,7 +280,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
                       if (cat.id === "WASHING") {
                         if (!amount) setAmount("20");
                         setCurrency("GEL");
-                        if (!description) setDescription("Полная мойка авто (20 ₾)");
+                        if (!description) setDescription("Полная мойка авто");
                       }
                     }}
                     className={`p-2.5 rounded-xl border flex items-center space-x-2 transition-all active:scale-95 text-left ${
@@ -301,7 +301,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
           {category === "WASHING" && (
             <div className="bg-cyan-950/40 border border-cyan-500/30 rounded-xl p-2.5 space-y-1.5 animate-fadeIn">
               <span className="text-[10px] text-cyan-300 font-bold block">
-                ⚡ Быстрый выбор тарифа мойки (20 ₾ полная, 10 ₾ кузов/салон):
+                ⚡ Быстрый выбор типа мойки (начисляется в отчёт партнеру, оплата раз в месяц):
               </span>
               <div className="grid grid-cols-3 gap-1.5">
                 <button
@@ -311,10 +311,9 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
                     setCurrency("GEL");
                     setDescription("Полная мойка (кузов + салон)");
                   }}
-                  className="py-1.5 px-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-center font-bold text-xs transition"
+                  className="py-2 px-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-center font-bold text-xs transition"
                 >
-                  <span className="block text-[10px]">✨ Полная</span>
-                  <span className="font-mono text-cyan-200">20 ₾</span>
+                  <span className="block text-xs font-semibold">✨ Полная мойка</span>
                 </button>
                 <button
                   type="button"
@@ -323,10 +322,9 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
                     setCurrency("GEL");
                     setDescription("Мойка кузова");
                   }}
-                  className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 rounded-lg text-center font-bold text-xs transition"
+                  className="py-2 px-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 rounded-lg text-center font-bold text-xs transition"
                 >
-                  <span className="block text-[10px]">🚗 Кузов</span>
-                  <span className="font-mono text-cyan-300">10 ₾</span>
+                  <span className="block text-xs font-semibold">🚗 Кузов</span>
                 </button>
                 <button
                   type="button"
@@ -335,10 +333,9 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
                     setCurrency("GEL");
                     setDescription("Мойка / чистка салона");
                   }}
-                  className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 rounded-lg text-center font-bold text-xs transition"
+                  className="py-2 px-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 rounded-lg text-center font-bold text-xs transition"
                 >
-                  <span className="block text-[10px]">💺 Салон</span>
-                  <span className="font-mono text-cyan-300">10 ₾</span>
+                  <span className="block text-xs font-semibold">💺 Салон</span>
                 </button>
               </div>
             </div>

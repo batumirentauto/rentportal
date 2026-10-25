@@ -360,6 +360,8 @@ model Expense {
   owner          CarOwner?         @relation(fields: [ownerId], references: [id])
   isOwnerExpense Boolean           @default(false) // Расход внесен владельцем (ТО, ремонт, страховка, шины)
   managerName    String?           // Кто потратил / провел расход
+  status         String            @default("PAID") // "PAID", "ACCRUED" (начислено к ежемесячной оплате, e.g. мойка)
+  isMonthlySettled Boolean         @default(true)   // false для начисленных моек (оплата раз в месяц)
   date           DateTime          @default(now())
   receiptPhotoUrl String?
   createdAt      DateTime          @default(now())
@@ -376,6 +378,8 @@ model CarWashTask {
   deadline    DateTime?
   washType    String   @default("FULL") // "BODY", "INTERIOR", "FULL"
   cost        Float?   @default(0) // Затраты на мойку (GEL)
+  isSettled   Boolean  @default(false) // Оплачено ли автомойке по итогам месяца
+  settledAt   DateTime?
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

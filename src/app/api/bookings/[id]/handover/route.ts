@@ -179,7 +179,7 @@ export async function POST(
       }
     }
 
-    // 3.5. Автоматический учет мойки автомобиля при выдаче (20 ₾ полная, 10 ₾ кузов/салон)
+    // 3.5. Автоматическое начисление мойки автомобиля при выдаче (учёт в ежемесячном отчёте, оплата раз в месяц)
     let washExpense = null;
     let washTask = null;
     const finalWashCost = Number(washCost) > 0
@@ -188,10 +188,10 @@ export async function POST(
 
     if (washOption && washOption !== "NONE" && finalWashCost > 0) {
       const washTypeLabel = washOption === "FULL"
-        ? "Полная мойка (20 ₾)"
+        ? "Полная мойка"
         : washOption === "BODY"
-        ? "Мойка кузова (10 ₾)"
-        : "Мойка салона (10 ₾)";
+        ? "Мойка кузова"
+        : "Мойка салона";
 
       const accountForWash = managerCashAcc || (await prisma.financialAccount.findFirst({ where: { currency: "GEL" } }));
 
@@ -205,15 +205,11 @@ export async function POST(
             carId: booking.carId,
             cityId: booking.car.cityId,
             managerName,
-            description: `Мойка перед выдачей: ${washTypeLabel} — ${booking.car.brand} ${booking.car.model} (${booking.car.plateNumber}), бронь #${booking.bookingNumber}`,
+            status: "ACCRUED", // Начислено к ежемесячной оплате автомойке (не списывается с кармана менеджера)
+            isMonthlySettled: false,
+            description: `Начислено за мойку перед выдачей: ${washTypeLabel} — ${booking.car.brand} ${booking.car.model} (${booking.car.plateNumber}), бронь #${booking.bookingNumber}`,
             date: calculatedHandoverAt,
           },
-        });
-
-        // Списываем стоимость мойки из кассы менеджера
-        await prisma.financialAccount.update({
-          where: { id: accountForWash.id },
-          data: { currentBalance: { decrement: finalWashCost } },
         });
       }
 
@@ -225,7 +221,8 @@ export async function POST(
           priority: "NORMAL",
           washType: washOption,
           cost: finalWashCost,
-          notes: `Мойка проведена перед выдачей авто (${washTypeLabel})`,
+          isSettled: false, // Начислено, оплачивается автомойке раз в месяц
+          notes: `Выполнена ${washTypeLabel} перед выдачей клиенту. Начислено в ежемесячный отчёт.`,
         },
       });
     }

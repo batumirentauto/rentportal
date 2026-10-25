@@ -48,6 +48,11 @@ export const ExecutiveDashboard: React.FC = () => {
   const [transferNotes, setTransferNotes] = useState<string>("");
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState<boolean>(false);
 
+  // Car Wash Monthly Settlement (Оплата задолженности перед автомойкой по реестру раз в месяц)
+  const [isSettleWashOpen, setIsSettleWashOpen] = useState<boolean>(false);
+  const [settleWashAccountId, setSettleWashAccountId] = useState<string>("");
+  const [isSubmittingWashSettlement, setIsSubmittingWashSettlement] = useState<boolean>(false);
+
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
@@ -133,6 +138,34 @@ export const ExecutiveDashboard: React.FC = () => {
     }
   };
 
+  const handleSettleWash = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingWashSettlement(true);
+    try {
+      const res = await fetch("/api/executive/analytics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "SETTLE_MONTHLY_WASH",
+          toAccountId: settleWashAccountId || undefined,
+        }),
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        setIsSettleWashOpen(false);
+        alert(resData.message || "Расчёт с автомойкой успешно закрыт!");
+        await fetchAnalytics();
+      } else {
+        alert(resData.error || "Ошибка закрытия расчёта с автомойкой");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Ошибка сети при закрытии расчётов");
+    } finally {
+      setIsSubmittingWashSettlement(false);
+    }
+  };
+
   if (loading || !data) {
     return (
       <div className="py-24 text-center text-slate-400">
@@ -144,6 +177,7 @@ export const ExecutiveDashboard: React.FC = () => {
 
   const {
     kpi,
+    washSummary,
     balances,
     accounts,
     managerCashAccounts,
@@ -157,7 +191,7 @@ export const ExecutiveDashboard: React.FC = () => {
   } = data;
 
   const categoryLabels: Record<string, string> = {
-    WASHING: "🧼 Мойка автомобилей",
+    WASHING: "🧼 Мойка авто (расчёт раз в месяц)",
     FUEL: "⛽ Топливо и заправка",
     MAINTENANCE: "🔧 ТО и запчасти",
     SALARY: "💼 Зарплаты персонала",
@@ -566,6 +600,86 @@ export const ExecutiveDashboard: React.FC = () => {
                 })}
               </div>
             </div>
+
+            {/* 3. Car Wash Monthly Accruals & Settlement Card */}
+            <div className="bg-gradient-to-br from-slate-900 via-cyan-950/20 to-slate-900 border border-cyan-500/30 rounded-2xl p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-base text-white">
+                      Ежемесячный реестр расчётов с автомойкой
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Мойки начисляются автоматически при выдаче и приёмке, оплата производится раз в месяц
+                    </p>
+                  </div>
+                </div>
+
+                <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-slate-950 text-cyan-300 border border-cyan-500/30 self-start sm:self-auto">
+                  Тариф партнера: 20 ₾ полная / 10 ₾ кузов
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Начислено за период:</span>
+                  <div className="text-xl font-black text-white font-mono">
+                    {washSummary?.totalAccruedGEL || 0} ₾
+                  </div>
+                  <span className="text-[10px] text-slate-500 block">
+                    Всего зафиксировано: {washSummary?.totalCount || 0} моек
+                  </span>
+                </div>
+
+                <div className="bg-slate-950/80 p-3.5 rounded-xl border border-cyan-500/40 space-y-1">
+                  <span className="text-[10px] text-cyan-400 block uppercase font-bold">К оплате (задолженность):</span>
+                  <div className="text-xl font-black text-cyan-300 font-mono">
+                    {washSummary?.pendingSettlementGEL || 0} ₾
+                  </div>
+                  <span className="text-[10px] text-amber-400/90 block">
+                    {washSummary?.pendingCount || 0} моек ожидает закрытия
+                  </span>
+                </div>
+
+                <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Оплачено ранее:</span>
+                  <div className="text-xl font-black text-emerald-400 font-mono">
+                    {washSummary?.settledGEL || 0} ₾
+                  </div>
+                  <span className="text-[10px] text-slate-500 block">
+                    Закрытые реестры
+                  </span>
+                </div>
+              </div>
+
+              {(washSummary?.pendingSettlementGEL || 0) > 0 ? (
+                <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-cyan-950/40 p-3 rounded-xl border border-cyan-500/30">
+                  <span className="text-xs text-slate-300">
+                    Начислено к ежемесячному расчету: <strong className="text-white font-mono">{washSummary?.pendingSettlementGEL} ₾</strong>. Вы можете оплатить реестр с расчетного счета компании.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const defaultBank = companyBankAccounts?.[0]?.id || "";
+                      setSettleWashAccountId(defaultBank);
+                      setIsSettleWashOpen(true);
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-cyan-950 flex items-center justify-center space-x-1.5 whitespace-nowrap active:scale-95"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Закрыть реестр & Оплатить автомойке</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="text-xs text-slate-400 flex items-center space-x-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Все начисления за мойку закрыты и оплачены по реестру. Задолженность отсутствует.</span>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
@@ -811,6 +925,92 @@ export const ExecutiveDashboard: React.FC = () => {
                   className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow transition active:scale-95 disabled:opacity-50"
                 >
                   {isSubmittingExpense ? "Списание..." : "Провести расход"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SETTLE MONTHLY CAR WASH BILL */}
+      {isSettleWashOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow">
+                  <Sparkles className="w-5 h-5 text-white font-black" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white">
+                    Оплата счёта автомойки
+                  </h3>
+                  <span className="text-xs text-slate-400">
+                    Закрытие ежемесячного реестра
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSettleWashOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSettleWash} className="space-y-4 text-xs">
+              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
+                <span className="text-[10px] text-slate-400 block uppercase font-bold">Сумма к оплате по реестру:</span>
+                <span className="font-mono font-black text-cyan-300 block text-2xl">
+                  {washSummary?.pendingSettlementGEL || 0} ₾ (GEL)
+                </span>
+                <span className="text-[11px] text-slate-400 block">
+                  Количество моек в реестре: <strong>{washSummary?.pendingCount || 0} шт.</strong>
+                </span>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">
+                  Счёт компании для списания средств (Банк / Касса):
+                </label>
+                <select
+                  value={settleWashAccountId}
+                  onChange={(e) => setSettleWashAccountId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-medium focus:outline-none focus:border-cyan-500"
+                  required
+                >
+                  <option value="">-- Выберите расчетный счёт --</option>
+                  {companyBankAccounts.map((acc: any) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} ({acc.bankName || acc.type}) — Остаток: {acc.currentBalance} {acc.currency}
+                    </option>
+                  ))}
+                  {accounts.filter((a: any) => a.type === "CASH").map((acc: any) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} — Остаток: {acc.currentBalance} {acc.currency}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="p-3 bg-cyan-950/30 border border-cyan-500/20 rounded-xl text-slate-300 text-[11px] leading-relaxed">
+                ℹ️ После подтверждения все открытые мойки будут помечены как оплаченные, а с выбранного счета спишется итоговая сумма.
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsSettleWashOpen(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingWashSettlement}
+                  className="px-5 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl font-bold transition shadow-lg disabled:opacity-50"
+                >
+                  {isSubmittingWashSettlement ? "Проведение..." : "Подтвердить оплату"}
                 </button>
               </div>
             </form>
