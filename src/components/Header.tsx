@@ -27,18 +27,18 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20">
+        <div className="flex items-center justify-between h-14 sm:h-20">
           {/* Logo & Subtitle */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center shadow-md">
-              <Car className="w-6 h-6 text-white" />
+          <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center shadow-md">
+              <Car className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-amber-400 via-orange-300 to-amber-200 bg-clip-text text-transparent">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <span className="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-amber-400 via-orange-300 to-amber-200 bg-clip-text text-transparent">
                   VSL
                 </span>
-                <span className="text-xs bg-red-600/90 text-white px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                <span className="text-[10px] sm:text-xs bg-red-600/90 text-white px-1.5 sm:px-2 py-0.5 rounded font-bold uppercase tracking-wider">
                   Грузия
                 </span>
               </div>
@@ -48,8 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* City Selector */}
-          <div className="flex items-center space-x-1 sm:space-x-2 bg-slate-800/80 p-1 rounded-xl border border-slate-700">
+          {/* Desktop City Selector */}
+          <div className="hidden md:flex items-center space-x-1 sm:space-x-2 bg-slate-800/80 p-1 rounded-xl border border-slate-700">
             <button
               onClick={() => onSelectCity("ALL")}
               className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all ${
@@ -96,12 +96,12 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Actions: Notification bell & Demo simulation */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
             {/* Record Expense Button */}
             <button
               onClick={onOpenRecordExpense}
               title="Зафиксировать расход (топливо, мойка, ТО, парковка)"
-              className="flex items-center space-x-1.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs px-3 py-2 rounded-lg font-bold shadow-md transition-all active:scale-95"
+              className="flex items-center space-x-1 sm:space-x-1.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg font-bold shadow-md transition-all active:scale-95"
             >
               <Receipt className="w-3.5 h-3.5" />
               <span>+ Расход</span>
@@ -121,11 +121,11 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Notification Bell */}
             <button
               onClick={onOpenNotifications}
-              className="relative p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors"
+              className="relative p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white ring-2 ring-slate-900 animate-pulse">
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-red-600 text-[9px] sm:text-[10px] font-bold text-white ring-2 ring-slate-900 animate-pulse">
                   {unreadCount}
                 </span>
               )}
@@ -133,8 +133,55 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
+        {/* Mobile City Selector (Scrollable Strip with momentum touch) */}
+        <div className="md:hidden flex items-center space-x-1.5 overflow-x-auto py-2 border-t border-slate-800/80 no-scrollbar">
+          <button
+            onClick={() => onSelectCity("ALL")}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all shrink-0 whitespace-nowrap ${
+              selectedCity === "ALL"
+                ? "bg-amber-500 text-slate-950 shadow"
+                : "bg-slate-800/90 text-slate-300 hover:text-white border border-slate-700/60"
+            }`}
+          >
+            Все города
+          </button>
+          <button
+            onClick={() => onSelectCity("TBS")}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
+              selectedCity === "TBS"
+                ? "bg-amber-500 text-slate-950 shadow"
+                : "bg-slate-800/90 text-amber-300 hover:text-white border border-slate-700/60"
+            }`}
+          >
+            <span>🏛️</span>
+            <span>Тбилиси (TBS)</span>
+          </button>
+          <button
+            onClick={() => onSelectCity("BUS")}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
+              selectedCity === "BUS"
+                ? "bg-cyan-400 text-slate-950 shadow"
+                : "bg-slate-800/90 text-cyan-300 hover:text-white border border-slate-700/60"
+            }`}
+          >
+            <span>🌊</span>
+            <span>Батуми (BUS)</span>
+          </button>
+          <button
+            onClick={() => onSelectCity("KUT")}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
+              selectedCity === "KUT"
+                ? "bg-emerald-500 text-slate-950 shadow"
+                : "bg-slate-800/90 text-emerald-300 hover:text-white border border-slate-700/60"
+            }`}
+          >
+            <span>🌿</span>
+            <span>Кутаиси (KUT)</span>
+          </button>
+        </div>
+
         {/* Tab Navigation */}
-        <div className="flex space-x-2 pt-1 pb-3 overflow-x-auto text-sm border-t border-slate-800/60 mt-1">
+        <div className="flex space-x-2 pt-1 pb-3 overflow-x-auto no-scrollbar text-sm border-t border-slate-800/60 mt-1">
           <button
             onClick={() => setActiveTab("timeline")}
             className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${

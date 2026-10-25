@@ -192,54 +192,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const stats = data?.stats || { totalCars: 0, rentedToday: 0, availableToday: 0, oneWayActiveCount: 0, occupancyRate: 0 };
 
   return (
-    <div className="space-y-5">
-      {/* Top Header & Fleet Stats */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2">
-            <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              Интерактивная Шахматка
-            </span>
-            <span className="text-xs text-slate-400">
-              Цветовая карта городов: 🏛️ Тбилиси • 🌊 Батуми • 🌿 Кутаиси
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black text-white mt-1">
-            Календарь занятости & Дислокация автопарка
-          </h1>
-        </div>
-
-        {/* City Legend Chips in Header for Instant Recognition */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          {/* Tbilisi chip */}
-          <div className="bg-amber-950/60 border border-amber-500/60 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 shadow">
-            <span className="text-sm">🏛️</span>
-            <div>
-              <span className="font-bold text-amber-300 block text-[11px] leading-tight">Тбилиси (TBS)</span>
-              <span className="text-[9px] text-amber-400/80">Оранжевый</span>
-            </div>
-          </div>
-
-          {/* Batumi chip */}
-          <div className="bg-cyan-950/60 border border-cyan-400/60 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 shadow">
-            <span className="text-sm">🌊</span>
-            <div>
-              <span className="font-bold text-cyan-300 block text-[11px] leading-tight">Батуми (BUS)</span>
-              <span className="text-[9px] text-cyan-400/80">Бирюзовый</span>
-            </div>
-          </div>
-
-          {/* Kutaisi chip */}
-          <div className="bg-emerald-950/60 border border-emerald-500/60 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 shadow">
-            <span className="text-sm">🌿</span>
-            <div>
-              <span className="font-bold text-emerald-300 block text-[11px] leading-tight">Кутаиси (KUT)</span>
-              <span className="text-[9px] text-emerald-400/80">Зеленый</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {/* Controls Bar: Navigation, Date jump, Search & Period */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-md">
         {/* Date Navigator */}
