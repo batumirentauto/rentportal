@@ -19,6 +19,9 @@ import {
   PlusCircle,
   HelpCircle,
   Percent,
+  FileSpreadsheet,
+  ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { getCityTheme } from "./FleetTimelineGrid";
 
@@ -42,6 +45,36 @@ export const FleetPricingRegistry: React.FC = () => {
   const [editOwnerId, setEditOwnerId] = useState<string>("");
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+
+  // Google Sheets Sync State
+  const [isSyncingSheets, setIsSyncingSheets] = useState<boolean>(false);
+  const [sheetsSyncResult, setSheetsSyncResult] = useState<any | null>(null);
+  const [sheetsSyncError, setSheetsSyncError] = useState<string | null>(null);
+
+  const handleSyncSheets = async () => {
+    setIsSyncingSheets(true);
+    setSheetsSyncError(null);
+    setSheetsSyncResult(null);
+    try {
+      const res = await fetch("/api/fleet/sync-sheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSheetsSyncResult(json);
+        await fetchPricing();
+        setTimeout(() => setSheetsSyncResult(null), 8000);
+      } else {
+        setSheetsSyncError(json.error || "Ошибка синхронизации");
+      }
+    } catch (e: any) {
+      setSheetsSyncError(e.message || "Сетевая ошибка при синхронизации");
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
 
   const fetchPricing = async () => {
     setLoading(true);
@@ -201,15 +234,65 @@ export const FleetPricingRegistry: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="https://docs.google.com/spreadsheets/d/1ubi7CJ4PvUyN4rnZda5UfAiVJaVriOcLrqBMtwF-MNA/edit?usp=sharing"
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700/80 transition active:scale-95 flex items-center space-x-1.5"
+              title="Открыть Google Таблицу"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+              <span>Таблица Google</span>
+            </a>
+
+            <button
+              onClick={handleSyncSheets}
+              disabled={isSyncingSheets}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition active:scale-95 flex items-center space-x-1.5 shadow-md shadow-emerald-950"
+            >
+              <FileSpreadsheet className={`w-3.5 h-3.5 ${isSyncingSheets ? "animate-spin" : ""}`} />
+              <span>{isSyncingSheets ? "Синхронизация..." : "Синхронизировать с Google"}</span>
+            </button>
+
             <button
               onClick={fetchPricing}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition active:scale-95 flex items-center space-x-1.5"
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition active:scale-95 flex items-center space-x-1.5"
             >
-              <span>Обновить данные</span>
+              <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+              <span>Обновить</span>
             </button>
           </div>
         </div>
+
+        {/* Sync Status Banners */}
+        {sheetsSyncResult && (
+          <div className="mt-4 p-3.5 bg-emerald-950/80 border border-emerald-500/40 rounded-xl flex items-center justify-between text-xs text-emerald-200 animate-fadeIn">
+            <div className="flex items-center space-x-2">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>
+                <strong>Успешно синхронизировано:</strong> Обработано {sheetsSyncResult.totalRowsProcessed} строк. Добавлено новых авто: {sheetsSyncResult.createdCount}, обновлено: {sheetsSyncResult.updatedCount}.
+              </span>
+            </div>
+            <button onClick={() => setSheetsSyncResult(null)} className="text-emerald-400 hover:text-white">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {sheetsSyncError && (
+          <div className="mt-4 p-3.5 bg-rose-950/80 border border-rose-500/40 rounded-xl flex items-center justify-between text-xs text-rose-200 animate-fadeIn">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>
+                <strong>Ошибка синхронизации:</strong> {sheetsSyncError}
+              </span>
+            </div>
+            <button onClick={() => setSheetsSyncError(null)} className="text-rose-400 hover:text-white">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* 4 Summary Metric Cards */}
         {data?.summary && (
