@@ -1,18 +1,44 @@
 import React, { useEffect, useState } from "react";
-import { DollarSign, Landmark, CreditCard, Coins, CheckCircle, ArrowDownRight, RefreshCcw } from "lucide-react";
+import {
+  DollarSign,
+  Landmark,
+  CreditCard,
+  Coins,
+  CheckCircle,
+  ArrowDownRight,
+  RefreshCcw,
+  Receipt,
+  Fuel,
+  Sparkles,
+  Wrench,
+  ParkingMeter,
+  Package,
+  PlusCircle,
+  User,
+  Building2,
+} from "lucide-react";
+import { RecordExpenseModal } from "./RecordExpenseModal";
 
 export const FinanceView: React.FC = () => {
+  const [activeFinanceTab, setActiveFinanceTab] = useState<"payments" | "expenses">("payments");
   const [financeData, setFinanceData] = useState<any>(null);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
 
-  const fetchFinance = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/finance");
-      const data = await res.json();
-      if (data.success) {
-        setFinanceData(data);
-      }
+      const [finRes, expRes] = await Promise.all([
+        fetch("/api/finance"),
+        fetch("/api/expenses"),
+      ]);
+
+      const finJson = await finRes.json();
+      const expJson = await expRes.json();
+
+      if (finJson.success) setFinanceData(finJson);
+      if (expJson.success) setExpenses(expJson.expenses || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -21,14 +47,14 @@ export const FinanceView: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchFinance();
+    fetchData();
   }, []);
 
   if (loading) {
     return (
       <div className="p-12 text-center text-slate-400">
         <RefreshCcw className="w-8 h-8 animate-spin mx-auto mb-2 text-amber-400" />
-        <p>Загрузка кассы смены...</p>
+        <p>Загрузка кассы и расходов...</p>
       </div>
     );
   }
@@ -36,195 +62,433 @@ export const FinanceView: React.FC = () => {
   const summary = financeData?.summary || {};
   const payments = financeData?.payments || [];
 
+  // Expenses calculations
+  const totalExpensesGEL = expenses
+    .filter((e) => e.currency === "GEL")
+    .reduce((acc, e) => acc + (e.amount || 0), 0);
+  const totalExpensesUSD = expenses
+    .filter((e) => e.currency === "USD")
+    .reduce((acc, e) => acc + (e.amount || 0), 0);
+
+  const fuelExpenses = expenses
+    .filter((e) => e.category === "FUEL")
+    .reduce((acc, e) => acc + (e.amount || 0), 0);
+
+  const washExpenses = expenses
+    .filter((e) => e.category === "WASHING")
+    .reduce((acc, e) => acc + (e.amount || 0), 0);
+
+  const maintExpenses = expenses
+    .filter((e) => e.category === "MAINTENANCE")
+    .reduce((acc, e) => acc + (e.amount || 0), 0);
+
+  const getCategoryBadge = (cat: string) => {
+    switch (cat) {
+      case "FUEL":
+        return { label: "Заправка / Топливо", icon: Fuel, color: "text-amber-400 bg-amber-500/10 border-amber-500/30" };
+      case "WASHING":
+        return { label: "Мойка / Химчистка", icon: Sparkles, color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/30" };
+      case "MAINTENANCE":
+        return { label: "ТО / Ремонт", icon: Wrench, color: "text-rose-400 bg-rose-500/10 border-rose-500/30" };
+      case "PARKING_FINES":
+        return { label: "Парковка / Штраф", icon: ParkingMeter, color: "text-blue-400 bg-blue-500/10 border-blue-500/30" };
+      case "OFFICE_RENT":
+        return { label: "Офис / Связь", icon: Building2, color: "text-purple-400 bg-purple-500/10 border-purple-500/30" };
+      default:
+        return { label: "Прочее", icon: Package, color: "text-slate-300 bg-slate-800 border-slate-700" };
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
+      {/* Top Banner & Tab Controls */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center space-x-2">
+          <h2 className="text-xl font-black text-white flex items-center space-x-2">
             <DollarSign className="w-5 h-5 text-emerald-400" />
-            <span>Финансовый отчёт и касса менеджера</span>
+            <span>Касса смены & Учёт расходов</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Все платежи за аренду, полученные залоги и учет сдачи при возврате авто
+            Прием оплат за аренду, залоги клиентов и операционные расходы сотрудников (топливо, мойка, ТО)
           </p>
         </div>
+
+        <div className="flex items-center space-x-2">
+          {/* Action: Record Expense Button */}
+          <button
+            onClick={() => setIsExpenseModalOpen(true)}
+            className="px-4 py-2.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-xl text-xs font-black shadow-lg shadow-rose-950 transition active:scale-95 flex items-center space-x-1.5"
+          >
+            <Receipt className="w-4 h-4" />
+            <span>+ Записать расход</span>
+          </button>
+
+          <button
+            onClick={fetchData}
+            className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition border border-slate-700"
+            title="Обновить данные"
+          >
+            <RefreshCcw className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Switcher: Payments vs Expenses */}
+      <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800 max-w-md">
         <button
-          onClick={fetchFinance}
-          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition"
+          onClick={() => setActiveFinanceTab("payments")}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 ${
+            activeFinanceTab === "payments"
+              ? "bg-amber-500 text-slate-950 shadow-md font-black"
+              : "text-slate-400 hover:text-white"
+          }`}
         >
-          <RefreshCcw className="w-4 h-4" />
+          <DollarSign className="w-4 h-4" />
+          <span>Поступления & Залоги ({payments.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveFinanceTab("expenses")}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 ${
+            activeFinanceTab === "expenses"
+              ? "bg-rose-600 text-white shadow-md font-black"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <Receipt className="w-4 h-4" />
+          <span>Журнал расходов ({expenses.length})</span>
         </button>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Total Revenue */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-          <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
-            Поступления за аренду:
-          </span>
-          <div className="text-3xl font-black text-amber-400 font-mono mt-1">
-            ${summary.totalUSD || 0}
+      {/* TAB 1: PAYMENTS */}
+      {activeFinanceTab === "payments" && (
+        <div className="space-y-6">
+          {/* Summary KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                Поступления за аренду:
+              </span>
+              <div className="text-3xl font-black text-amber-400 font-mono mt-1">
+                ${summary.totalUSD || 0}
+              </div>
+              <span className="text-xs text-slate-500 mt-1 block">
+                + {summary.totalGEL || 0} GEL
+              </span>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                Депозиты (Залоги на удержании):
+              </span>
+              <div className="text-3xl font-black text-emerald-400 font-mono mt-1">
+                ${summary.depositsUSD || 0}
+              </div>
+              <span className="text-xs text-emerald-500/80 mt-1 block">
+                Подлежат возврату при приёмке авто
+              </span>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                Сдача к возврату клиентам:
+              </span>
+              <div className="text-3xl font-black text-rose-400 font-mono mt-1">
+                ${summary.pendingRefundsUSD || 0}
+              </div>
+              <span className="text-xs text-rose-400/80 mt-1 block">
+                Сумма сдачи при возврате машины
+              </span>
+            </div>
           </div>
-          <span className="text-xs text-slate-500 mt-1 block">
-            + {summary.totalGEL || 0} GEL
-          </span>
+
+          {/* Breakdown by Payment Channels */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="font-bold text-white text-sm uppercase tracking-wider text-slate-300">
+              Разбивка поступлений по каналам оплат:
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                <span className="text-slate-400 block mb-1">💵 Наличные</span>
+                <span className="text-base font-bold text-white font-mono">
+                  ${summary.byMethod?.CASH || 0}
+                </span>
+              </div>
+
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                <span className="text-slate-400 block mb-1">💳 Терминал</span>
+                <span className="text-base font-bold text-white font-mono">
+                  ${summary.byMethod?.CARD_POS || 0}
+                </span>
+              </div>
+
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                <span className="text-slate-400 block mb-1">🏦 Bank of Georgia</span>
+                <span className="text-base font-bold text-amber-400 font-mono">
+                  ${summary.byMethod?.BOG_BANK || 0}
+                </span>
+              </div>
+
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                <span className="text-slate-400 block mb-1">🏦 TBC Bank</span>
+                <span className="text-base font-bold text-blue-400 font-mono">
+                  ${summary.byMethod?.TBC_BANK || 0}
+                </span>
+              </div>
+
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                <span className="text-slate-400 block mb-1">🏦 Credo Bank</span>
+                <span className="text-base font-bold text-red-400 font-mono">
+                  ${summary.byMethod?.CREDO_BANK || 0}
+                </span>
+              </div>
+
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                <span className="text-slate-400 block mb-1">💎 Крипто (USDT)</span>
+                <span className="text-base font-bold text-emerald-400 font-mono">
+                  ${summary.byMethod?.CRYPTO || 0}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Transactions List */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="font-bold text-white text-base">
+              Журнал финансовых операций по выдачам
+            </h3>
+
+            {payments.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 text-xs">
+                Транзакций пока нет. Проведите выдачу авто через вкладку «План выдач», чтобы появилась первая проводка.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                    <tr>
+                      <th className="py-3 px-4">Время</th>
+                      <th className="py-3 px-4">Бронь / Авто</th>
+                      <th className="py-3 px-4">Клиент</th>
+                      <th className="py-3 px-4">Тип</th>
+                      <th className="py-3 px-4">Способ</th>
+                      <th className="py-3 px-4">Сумма</th>
+                      <th className="py-3 px-4">Сдача при сдаче</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {payments.map((p: any) => (
+                      <tr key={p.id} className="hover:bg-slate-800/40">
+                        <td className="py-3 px-4 text-slate-400 font-mono">
+                          {new Date(p.createdAt).toLocaleTimeString("ru-RU", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-bold text-white block">
+                            {p.booking?.car?.brand} {p.booking?.car?.model}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {p.booking?.car?.plateNumber} • {p.booking?.bookingNumber}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-300">
+                          {p.booking?.customer?.fullName}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              p.type === "DEPOSIT"
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                            }`}
+                          >
+                            {p.type === "DEPOSIT" ? "ДЕПОЗИТ" : "АРЕНДА"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-slate-300">
+                          {p.method}
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-amber-400 text-sm">
+                          ${p.amount} {p.currency}
+                        </td>
+                        <td className="py-3 px-4">
+                          {p.changeOnReturn && p.changeOnReturn > 0 ? (
+                            <span className="text-rose-400 font-mono font-bold">
+                              ${p.changeOnReturn} {p.currency}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
+      )}
 
-        {/* Deposits Held */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-          <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
-            Депозиты (Залоги на удержании):
-          </span>
-          <div className="text-3xl font-black text-emerald-400 font-mono mt-1">
-            ${summary.depositsUSD || 0}
+      {/* TAB 2: EXPENSES JOURNAL */}
+      {activeFinanceTab === "expenses" && (
+        <div className="space-y-6">
+          {/* Expenses KPI Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+                Всего расходов:
+              </span>
+              <div className="text-2xl font-black text-rose-400 font-mono mt-1">
+                {totalExpensesGEL} ₾
+              </div>
+              <span className="text-xs text-slate-500 mt-0.5 block">
+                + ${totalExpensesUSD} USD
+              </span>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+                Заправка топлива:
+              </span>
+              <div className="text-2xl font-black text-amber-400 font-mono mt-1">
+                {fuelExpenses} ₾
+              </div>
+              <span className="text-xs text-slate-500 mt-0.5 block">
+                Бензин / дизель для выдач
+              </span>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+                Мойки и химчистки:
+              </span>
+              <div className="text-2xl font-black text-cyan-400 font-mono mt-1">
+                {washExpenses} ₾
+              </div>
+              <span className="text-xs text-slate-500 mt-0.5 block">
+                Подготовка к выдачам
+              </span>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+                ТО, масло и шины:
+              </span>
+              <div className="text-2xl font-black text-purple-400 font-mono mt-1">
+                {maintExpenses} ₾
+              </div>
+              <span className="text-xs text-slate-500 mt-0.5 block">
+                Сервисные расходы
+              </span>
+            </div>
           </div>
-          <span className="text-xs text-emerald-500/80 mt-1 block">
-            Подлежат возврату при приёмке авто
-          </span>
+
+          {/* Expenses Table */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-white text-base">
+                  Журнал операционных расходов сотрудников
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Все зафиксированные траты с указанием ответственного, автомобиля и счёта списания
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsExpenseModalOpen(true)}
+                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Добавить расход</span>
+              </button>
+            </div>
+
+            {expenses.length === 0 ? (
+              <div className="p-12 text-center text-slate-500 text-xs">
+                Расходов пока не зафиксировано. Нажмите кнопку «Записать расход», чтобы внести первую трату на бензин, мойку или ТО.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                    <tr>
+                      <th className="py-3 px-4">Дата / Время</th>
+                      <th className="py-3 px-4">Категория</th>
+                      <th className="py-3 px-4">Назначение / Описание</th>
+                      <th className="py-3 px-4">Автомобиль</th>
+                      <th className="py-3 px-4">Касса / Счёт</th>
+                      <th className="py-3 px-4">Сотрудник</th>
+                      <th className="py-3 px-4 text-right">Сумма</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {expenses.map((exp: any) => {
+                      const badge = getCategoryBadge(exp.category);
+                      const Icon = badge.icon;
+                      return (
+                        <tr key={exp.id} className="hover:bg-slate-800/40 transition">
+                          <td className="py-3 px-4 text-slate-400 font-mono">
+                            {new Date(exp.date || exp.createdAt).toLocaleDateString("ru-RU", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border text-[10px] font-bold ${badge.color}`}>
+                              <Icon className="w-3 h-3 shrink-0" />
+                              <span>{badge.label}</span>
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-slate-200 font-medium max-w-xs">
+                            {exp.description}
+                          </td>
+                          <td className="py-3 px-4">
+                            {exp.car ? (
+                              <div>
+                                <span className="font-bold text-white block">
+                                  {exp.car.brand} {exp.car.model}
+                                </span>
+                                <span className="text-[10px] font-mono text-amber-400">
+                                  {exp.car.plateNumber}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-500">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-slate-300">
+                            {exp.account?.name || "Касса"}
+                          </td>
+                          <td className="py-3 px-4 text-slate-300 flex items-center space-x-1.5">
+                            <User className="w-3 h-3 text-slate-500" />
+                            <span>{exp.managerName || "Менеджер"}</span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-rose-400 text-sm">
+                            -{exp.amount} {exp.currency}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
+      )}
 
-        {/* Change on Return */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-          <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
-            Сдача к возврату клиентам:
-          </span>
-          <div className="text-3xl font-black text-rose-400 font-mono mt-1">
-            ${summary.pendingRefundsUSD || 0}
-          </div>
-          <span className="text-xs text-rose-400/80 mt-1 block">
-            Сумма сдачи при возврате машины
-          </span>
-        </div>
-      </div>
-
-      {/* Breakdown by Payment Channels */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-        <h3 className="font-bold text-white text-sm uppercase tracking-wider text-slate-300">
-          Разбивка по каналам оплат:
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
-          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1">💵 Наличные</span>
-            <span className="text-base font-bold text-white font-mono">
-              ${summary.byMethod?.CASH || 0}
-            </span>
-          </div>
-
-          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1">💳 Терминал</span>
-            <span className="text-base font-bold text-white font-mono">
-              ${summary.byMethod?.CARD_POS || 0}
-            </span>
-          </div>
-
-          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1">🏦 Bank of Georgia</span>
-            <span className="text-base font-bold text-amber-400 font-mono">
-              ${summary.byMethod?.BOG_BANK || 0}
-            </span>
-          </div>
-
-          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1">🏦 TBC Bank</span>
-            <span className="text-base font-bold text-blue-400 font-mono">
-              ${summary.byMethod?.TBC_BANK || 0}
-            </span>
-          </div>
-
-          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1">🏦 Credo Bank</span>
-            <span className="text-base font-bold text-red-400 font-mono">
-              ${summary.byMethod?.CREDO_BANK || 0}
-            </span>
-          </div>
-
-          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block mb-1">💎 Крипто (USDT)</span>
-            <span className="text-base font-bold text-emerald-400 font-mono">
-              ${summary.byMethod?.CRYPTO || 0}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Transactions List */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-        <h3 className="font-bold text-white text-base">
-          Журнал финансовых операций по выдачам
-        </h3>
-
-        {payments.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-xs">
-            Транзакций пока нет. Проведите выдачу авто через вкладку «План выдач», чтобы появилась первая проводка.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
-                <tr>
-                  <th className="py-3 px-4">Время</th>
-                  <th className="py-3 px-4">Бронь / Авто</th>
-                  <th className="py-3 px-4">Клиент</th>
-                  <th className="py-3 px-4">Тип</th>
-                  <th className="py-3 px-4">Способ</th>
-                  <th className="py-3 px-4">Сумма</th>
-                  <th className="py-3 px-4">Сдача при сдаче</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {payments.map((p: any) => (
-                  <tr key={p.id} className="hover:bg-slate-800/40">
-                    <td className="py-3 px-4 text-slate-400 font-mono">
-                      {new Date(p.createdAt).toLocaleTimeString("ru-RU", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="font-bold text-white block">
-                        {p.booking?.car?.brand} {p.booking?.car?.model}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {p.booking?.car?.plateNumber} • {p.booking?.bookingNumber}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-300">
-                      {p.booking?.customer?.fullName}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          p.type === "DEPOSIT"
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                            : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                        }`}
-                      >
-                        {p.type === "DEPOSIT" ? "ДЕПОЗИТ" : "АРЕНДА"}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 font-semibold text-slate-300">
-                      {p.method}
-                    </td>
-                    <td className="py-3 px-4 font-mono font-bold text-amber-400 text-sm">
-                      ${p.amount} {p.currency}
-                    </td>
-                    <td className="py-3 px-4">
-                      {p.changeOnReturn && p.changeOnReturn > 0 ? (
-                        <span className="text-rose-400 font-mono font-bold">
-                          ${p.changeOnReturn} {p.currency}
-                        </span>
-                      ) : (
-                        <span className="text-slate-600">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Record Expense Modal */}
+      <RecordExpenseModal
+        isOpen={isExpenseModalOpen}
+        onClose={() => setIsExpenseModalOpen(false)}
+        onExpenseCreated={fetchData}
+      />
     </div>
   );
 };

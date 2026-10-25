@@ -20,6 +20,7 @@ import { NotificationsModal } from "@/components/NotificationsModal";
 import { KnowledgeBaseView } from "@/components/KnowledgeBaseView";
 import { CustomerCrmHub } from "@/components/CustomerCrmHub";
 import { AiAssistantModal } from "@/components/AiAssistantModal";
+import { RecordExpenseModal } from "@/components/RecordExpenseModal";
 import { RefreshCw } from "lucide-react";
 
 export default function Home() {
@@ -41,6 +42,7 @@ export default function Home() {
   const [contractBooking, setContractBooking] = useState<any | null>(null);
   const [handoverBooking, setHandoverBooking] = useState<any | null>(null);
   const [returnBooking, setReturnBooking] = useState<any | null>(null);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
 
   // Fetch bookings based on city filter
   const fetchBookings = useCallback(async () => {
@@ -156,6 +158,7 @@ export default function Home() {
         unreadCount={unreadCount}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
         onSimulateNewBooking={handleSimulateNewBooking}
+        onOpenRecordExpense={() => setIsExpenseModalOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isSimulating={isSimulating}
@@ -280,6 +283,15 @@ export default function Home() {
 
       {/* Floating Interactive AI Assistant (Copilot) */}
       <AiAssistantModal />
+
+      {/* Global Quick Record Expense Modal */}
+      <RecordExpenseModal
+        isOpen={isExpenseModalOpen}
+        onClose={() => setIsExpenseModalOpen(false)}
+        onExpenseCreated={() => {
+          fetchBookings();
+        }}
+      />
     </div>
   );
 }

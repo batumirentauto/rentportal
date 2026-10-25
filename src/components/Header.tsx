@@ -1,5 +1,5 @@
 import React from "react";
-import { Car, Building2, Bell, RefreshCw, PlusCircle, CheckCircle2 } from "lucide-react";
+import { Car, Building2, Bell, RefreshCw, PlusCircle, CheckCircle2, Receipt } from "lucide-react";
 
 interface HeaderProps {
   selectedCity: string;
@@ -7,6 +7,7 @@ interface HeaderProps {
   unreadCount: number;
   onOpenNotifications: () => void;
   onSimulateNewBooking: () => void;
+  onOpenRecordExpense?: () => void;
   activeTab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm";
   setActiveTab: (tab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm") => void;
   isSimulating: boolean;
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   unreadCount,
   onOpenNotifications,
   onSimulateNewBooking,
+  onOpenRecordExpense,
   activeTab,
   setActiveTab,
   isSimulating,
@@ -95,6 +97,16 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Actions: Notification bell & Demo simulation */}
           <div className="flex items-center space-x-3">
+            {/* Record Expense Button */}
+            <button
+              onClick={onOpenRecordExpense}
+              title="Зафиксировать расход (топливо, мойка, ТО, парковка)"
+              className="flex items-center space-x-1.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs px-3 py-2 rounded-lg font-bold shadow-md transition-all active:scale-95"
+            >
+              <Receipt className="w-3.5 h-3.5" />
+              <span>+ Расход</span>
+            </button>
+
             {/* Simulation button */}
             <button
               onClick={onSimulateNewBooking}

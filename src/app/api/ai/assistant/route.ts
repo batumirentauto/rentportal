@@ -87,6 +87,25 @@ const assistantTools = [
       },
     },
   },
+  {
+    name: "record_expense",
+    description: "Record an operational expense (fuel, wash, maintenance, parking, fine, office, other) spent by a manager or director.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        amount: { type: "NUMBER", description: "Expense amount" },
+        currency: { type: "STRING", description: "Currency: GEL or USD (default GEL)" },
+        category: {
+          type: "STRING",
+          description: "Category: FUEL (топливо/заправка), WASHING (мойка), MAINTENANCE (ТО/ремонт/масло), PARKING_FINES (парковка/штраф), OFFICE_RENT (офис), OTHER (прочее)",
+        },
+        description: { type: "STRING", description: "Purpose or details of the expense" },
+        carPlate: { type: "STRING", description: "Plate number of car if expense is vehicle-related (e.g. 'YY-779-NN')" },
+        managerName: { type: "STRING", description: "Employee who spent the money" },
+      },
+      required: ["amount", "description"],
+    },
+  },
 ];
 
 // Tool execution logic
@@ -311,6 +330,70 @@ async function executeAssistantTool(name: string, args: any) {
           carsCount: o.cars.length,
           cars: o.cars.map((c) => `${c.brand} ${c.model} (${c.plateNumber}) [Ставка: $${c.defaultOwnerDailyRate}/д]`),
         })),
+      };
+    }
+
+    if (name === "record_expense") {
+      const numAmount = Number(args.amount);
+      const currency = args.currency?.toUpperCase() === "USD" ? "USD" : "GEL";
+      const category = args.category || "OTHER";
+
+      let carId: string | undefined;
+      let cityId: string | undefined;
+      if (args.carPlate) {
+        const clean = String(args.carPlate).toUpperCase().replace(/\s+/g, "");
+        const car = await prisma.car.findFirst({
+          where: {
+            OR: [{ plateNumber: clean }, { plateNumber: { contains: clean } }],
+          },
+        });
+        if (car) {
+          carId = car.id;
+          cityId = car.cityId;
+        }
+      }
+
+      // Default account
+      const account = (await prisma.financialAccount.findFirst({
+        where: { currency },
+      })) || (await prisma.financialAccount.findFirst());
+
+      if (!account) {
+        return { error: "Не найден финансовый счёт для списания" };
+      }
+
+      const expense = await prisma.expense.create({
+        data: {
+          accountId: account.id,
+          amount: numAmount,
+          currency,
+          category,
+          description: args.description,
+          carId,
+          cityId,
+          managerName: args.managerName || "Менеджер",
+        },
+        include: { car: true, account: true },
+      });
+
+      // Decrement account balance
+      await prisma.financialAccount.update({
+        where: { id: account.id },
+        data: { currentBalance: { decrement: numAmount } },
+      });
+
+      return {
+        success: true,
+        message: `Расход ${numAmount} ${currency} успешно зафиксирован и списан со счёта ${account.name}!`,
+        expense: {
+          id: expense.id,
+          amount: expense.amount,
+          currency: expense.currency,
+          category: expense.category,
+          description: expense.description,
+          car: expense.car ? `${expense.car.brand} ${expense.car.model} (${expense.car.plateNumber})` : null,
+          account: expense.account.name,
+        },
       };
     }
 
