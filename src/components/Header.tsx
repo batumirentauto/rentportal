@@ -1,5 +1,5 @@
 import React from "react";
-import { Car, Building2, Bell, RefreshCw, PlusCircle, CheckCircle2, Receipt } from "lucide-react";
+import { Car, Building2, Bell, RefreshCw, PlusCircle, CheckCircle2, Receipt, MessageSquare } from "lucide-react";
 
 interface HeaderProps {
   selectedCity: string;
@@ -8,8 +8,8 @@ interface HeaderProps {
   onOpenNotifications: () => void;
   onSimulateNewBooking: () => void;
   onOpenRecordExpense?: () => void;
-  activeTab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team";
-  setActiveTab: (tab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team") => void;
+  activeTab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats";
+  setActiveTab: (tab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats") => void;
   isSimulating: boolean;
 }
 
@@ -116,6 +116,20 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <PlusCircle className={`w-3.5 h-3.5 ${isSimulating ? "animate-spin" : ""}`} />
               <span>{isSimulating ? "Добавляем..." : "+ Новая бронь днем"}</span>
+            </button>
+
+            {/* Team Chat Quick Launcher */}
+            <button
+              onClick={() => setActiveTab("chats")}
+              className={`relative p-1.5 sm:p-2 rounded-xl transition-colors ${
+                activeTab === "chats"
+                  ? "bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400"
+                  : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
+              }`}
+              title="Внутренние чаты команды VSL"
+            >
+              <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-900 animate-pulse" />
             </button>
 
             {/* Notification Bell */}
@@ -323,6 +337,17 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <span>👥 Команда & Доступ</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("chats")}
+            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+              activeTab === "chats"
+                ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-black shadow-lg"
+                : "text-indigo-300 hover:text-white hover:bg-indigo-950/40 border border-indigo-500/30"
+            }`}
+          >
+            <span>💬 Чат команды (Мессенджер)</span>
           </button>
 
           <button

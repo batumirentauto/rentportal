@@ -20,14 +20,15 @@ import { NotificationsModal } from "@/components/NotificationsModal";
 import { KnowledgeBaseView } from "@/components/KnowledgeBaseView";
 import { CustomerCrmHub } from "@/components/CustomerCrmHub";
 import { TeamAccessHub } from "@/components/TeamAccessHub";
+import { TeamMessengerHub } from "@/components/TeamMessengerHub";
 import { AiAssistantModal } from "@/components/AiAssistantModal";
 import { RecordExpenseModal } from "@/components/RecordExpenseModal";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, MessageSquare } from "lucide-react";
 
 export default function Home() {
   const [selectedCity, setSelectedCity] = useState<string>("ALL");
   const [activeTab, setActiveTab] = useState<
-    "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "crm" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "team"
+    "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "crm" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "team" | "chats"
   >("timeline");
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -249,6 +250,8 @@ export default function Home() {
                 }}
               />
             )}
+
+            {activeTab === "chats" && <TeamMessengerHub />}
           </>
         )}
       </main>
@@ -301,6 +304,21 @@ export default function Home() {
         }}
         onOpenHandover={(b) => setHandoverBooking(b)}
       />
+
+      {/* Floating Quick Team Chat Button */}
+      {activeTab !== "chats" && (
+        <button
+          onClick={() => setActiveTab("chats")}
+          className="fixed bottom-6 right-24 z-40 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white p-3.5 rounded-2xl shadow-2xl flex items-center space-x-2 transition-all active:scale-95 group border border-indigo-400/30"
+          title="Открыть корпоративный чат сотрудников"
+        >
+          <div className="relative">
+            <MessageSquare className="w-5 h-5" />
+            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse ring-2 ring-indigo-900" />
+          </div>
+          <span className="font-bold text-xs pr-1 hidden sm:inline-block">Чат команды</span>
+        </button>
+      )}
 
       {/* Floating Interactive AI Assistant (Copilot) */}
       <AiAssistantModal />

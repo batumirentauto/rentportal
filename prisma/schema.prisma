@@ -18,6 +18,7 @@ model City {
   expenses  Expense[]
   managerTasks ManagerTask[]
   users     User[]
+  chatRooms ChatRoom[]
   createdAt DateTime   @default(now())
 }
 
@@ -435,6 +436,8 @@ model User {
   ownerId           String?   // Привязка к CarOwner если роль OWNER
   owner             CarOwner? @relation(fields: [ownerId], references: [id])
   financialAccounts FinancialAccount[] // Персональные кассы менеджера
+  chatMembers       ChatMember[]       // Участие в корпоративных чатах
+  chatMessages      ChatMessage[]      // Отправленные сообщения
   avatarUrl         String?
   notes       String?
   createdAt   DateTime  @default(now())
@@ -558,3 +561,46 @@ model ManagerTask {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
+
+// Внутренние корпоративные чаты сотрудников (Общий чат, чаты филиалов, сервисные группы)
+model ChatRoom {
+  id          String        @id @default(cuid())
+  name        String        // "📢 Общий чат VSL", "🌊 Филиал Батуми", "🏛️ Филиал Тбилиси", "🛠️ Сервис и ТО"
+  icon        String        @default("💬") // Эмодзи иконка чата
+  type        String        @default("GROUP") // "GENERAL", "BRANCH", "GROUP", "DIRECT"
+  cityId      String?
+  city        City?         @relation(fields: [cityId], references: [id])
+  isPrivate   Boolean       @default(false)
+  description String?       // Описание чата / назначение
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  members     ChatMember[]
+  messages    ChatMessage[]
+}
+
+model ChatMember {
+  id         String    @id @default(cuid())
+  roomId     String
+  room       ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt   DateTime  @default(now())
+  lastReadAt DateTime  @default(now())
+
+  @@unique([roomId, userId])
+}
+
+model ChatMessage {
+  id         String    @id @default(cuid())
+  roomId     String
+  room       ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderId   String?
+  sender     User?     @relation(fields: [senderId], references: [id])
+  senderName String    // Имя отправителя
+  senderRole String    @default("MANAGER") // "EXECUTIVE", "MANAGER", "TECHNICIAN"
+  content    String    // Текст сообщения
+  carPlate   String?   // Связанный автомобиль (если обсуждается конкретное авто)
+  bookingId  String?   // Связанная бронь
+  createdAt  DateTime  @default(now())
+}
+
