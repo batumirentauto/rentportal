@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Plus, Car as CarIcon, MapPin, Check, AlertTriangle } from "lucide-react";
+import { X, Plus, Car as CarIcon, MapPin, Check, AlertTriangle, Sparkles, Upload, Loader2, FileText, Camera } from "lucide-react";
 
 interface NewCarModalProps {
   isOpen: boolean;
@@ -43,6 +43,72 @@ export const NewCarModal: React.FC<NewCarModalProps> = ({
   const [hasGpsTracker, setHasGpsTracker] = useState<boolean>(true);
   const [isGpsFeeChargedToOwner, setIsGpsFeeChargedToOwner] = useState<boolean>(true);
   const [pricingNotes, setPricingNotes] = useState("");
+
+  // Tech Passport state & AI OCR
+  const [techPassportNumber, setTechPassportNumber] = useState("");
+  const [techPassportFrontUrl, setTechPassportFrontUrl] = useState<string | null>(null);
+  const [techPassportBackUrl, setTechPassportBackUrl] = useState<string | null>(null);
+  const [isUploadingTpSlot, setIsUploadingTpSlot] = useState<string | null>(null);
+  const [isRecognizingTp, setIsRecognizingTp] = useState(false);
+  const [tpOcrNotice, setTpOcrNotice] = useState<string | null>(null);
+
+  const handleUploadTp = async (file: File, slot: "front" | "back") => {
+    try {
+      setIsUploadingTpSlot(slot);
+      setTpOcrNotice(null);
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "tech_passports");
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const json = await res.json();
+      if (json.success && json.url) {
+        if (slot === "front") setTechPassportFrontUrl(json.url);
+        if (slot === "back") setTechPassportBackUrl(json.url);
+      }
+    } catch (e: any) {
+      setErrorMsg("Ошибка загрузки фото: " + e.message);
+    } finally {
+      setIsUploadingTpSlot(null);
+    }
+  };
+
+  const handleRecognizeTp = async () => {
+    if (!techPassportFrontUrl && !techPassportBackUrl) {
+      alert("Сначала прикрепите фото техпаспорта (лицевую или оборотную сторону)!");
+      return;
+    }
+    try {
+      setIsRecognizingTp(true);
+      setTpOcrNotice(null);
+      const res = await fetch("/api/ai/recognize-tech-passport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          frontUrl: techPassportFrontUrl,
+          backUrl: techPassportBackUrl,
+          autoSave: false,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success || !json.extractedData) {
+        throw new Error(json.error || "Не удалось считать техпаспорт");
+      }
+      const d = json.extractedData;
+      if (d.vin) setVin(d.vin);
+      if (d.year) setYear(d.year);
+      if (d.plateNumber) setPlateNumber(d.plateNumber);
+      if (d.techPassportNumber) setTechPassportNumber(d.techPassportNumber);
+      if (d.brand) setBrand(d.brand);
+      if (d.model) setModel(d.model);
+      if (d.color) setColor(d.color);
+
+      setTpOcrNotice(`✓ Распознано ИИ: ${d.brand || ""} ${d.model || ""} (${d.plateNumber || ""}), VIN: ${d.vin || "—"}, Год: ${d.year || "—"}`);
+    } catch (e: any) {
+      setErrorMsg("Ошибка считывания: " + e.message);
+    } finally {
+      setIsRecognizingTp(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -104,6 +170,9 @@ export const NewCarModal: React.FC<NewCarModalProps> = ({
           batumiParkingPermitNumber: batumiParkingPermitNumber || null,
           hasGpsTracker,
           isGpsFeeChargedToOwner,
+          techPassportNumber: techPassportNumber || null,
+          techPassportFrontUrl: techPassportFrontUrl || null,
+          techPassportBackUrl: techPassportBackUrl || null,
           pricingNotes: pricingNotes || null,
         }),
       });
@@ -175,6 +244,114 @@ export const NewCarModal: React.FC<NewCarModalProps> = ({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* AI Tech Passport OCR Scanner Block */}
+          <div className="bg-gradient-to-r from-purple-950/30 via-slate-900 to-indigo-950/30 p-3.5 rounded-2xl border-2 border-purple-500/40 space-y-2.5 shadow-lg">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-purple-200 flex items-center space-x-1.5">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Быстрое заполнение по техпаспорту (ИИ OCR):</span>
+              </span>
+              <span className="text-[10px] text-purple-300 font-bold bg-purple-950/60 px-2 py-0.5 rounded border border-purple-500/30">
+                ОПЦИОНАЛЬНО
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400">
+              Прикрепите фото техпаспорта — нейросеть автоматически заполнит VIN-код, год, госномер, марку и номер техпаспорта.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {/* Front Slot */}
+              <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 text-center space-y-1">
+                <span className="text-[10px] text-slate-300 font-semibold block">Лицевая сторона</span>
+                {techPassportFrontUrl ? (
+                  <div className="flex items-center justify-center space-x-1 text-[10px] text-emerald-400 font-bold">
+                    <span>✓ Загружено</span>
+                    <button
+                      type="button"
+                      onClick={() => setTechPassportFrontUrl(null)}
+                      className="text-red-400 hover:underline ml-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <label className="text-[10px] text-purple-400 hover:text-purple-300 font-bold cursor-pointer block">
+                    {isUploadingTpSlot === "front" ? "..." : "+ Фото (Лицевая)"}
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={Boolean(isUploadingTpSlot)}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUploadTp(f, "front");
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Back Slot */}
+              <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 text-center space-y-1">
+                <span className="text-[10px] text-slate-300 font-semibold block">Оборотная сторона</span>
+                {techPassportBackUrl ? (
+                  <div className="flex items-center justify-center space-x-1 text-[10px] text-emerald-400 font-bold">
+                    <span>✓ Загружено</span>
+                    <button
+                      type="button"
+                      onClick={() => setTechPassportBackUrl(null)}
+                      className="text-red-400 hover:underline ml-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <label className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold cursor-pointer block">
+                    {isUploadingTpSlot === "back" ? "..." : "+ Фото (Оборот)"}
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={Boolean(isUploadingTpSlot)}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUploadTp(f, "back");
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {(techPassportFrontUrl || techPassportBackUrl) && (
+              <div className="pt-1 flex items-center justify-between">
+                <button
+                  type="button"
+                  disabled={isRecognizingTp}
+                  onClick={handleRecognizeTp}
+                  className="px-3 py-1.5 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white flex items-center space-x-1.5 transition active:scale-95 shadow"
+                >
+                  {isRecognizingTp ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Считывание...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>✨ Считать техпаспорт ИИ</span>
+                    </>
+                  )}
+                </button>
+                {tpOcrNotice && (
+                  <span className="text-[10px] text-emerald-400 font-bold max-w-[260px] truncate">
+                    {tpOcrNotice}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Plate, Brand, Model */}

@@ -23,6 +23,8 @@ import {
   Layers,
   ChevronRight,
   ClipboardList,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { getCityTheme } from "./FleetTimelineGrid";
 
@@ -80,6 +82,11 @@ export const FleetMaintenanceHub: React.FC = () => {
   const [docsTechPassportNumber, setDocsTechPassportNumber] = useState<string>("");
   const [docsTechPassportFrontUrl, setDocsTechPassportFrontUrl] = useState<string | null>(null);
   const [docsTechPassportBackUrl, setDocsTechPassportBackUrl] = useState<string | null>(null);
+  const [docsVin, setDocsVin] = useState<string>("");
+  const [docsYear, setDocsYear] = useState<number>(2020);
+  const [docsPlateNumber, setDocsPlateNumber] = useState<string>("");
+  const [isRecognizingDocsTp, setIsRecognizingDocsTp] = useState<boolean>(false);
+  const [docsTpOcrNotice, setDocsTpOcrNotice] = useState<string | null>(null);
   const [docsInsurancePolicyPhotoUrl, setDocsInsurancePolicyPhotoUrl] = useState<string | null>(null);
   const [docsInspectionDate, setDocsInspectionDate] = useState<string>("");
   const [docsInspectionExpiryDate, setDocsInspectionExpiryDate] = useState<string>("");
@@ -317,6 +324,10 @@ export const FleetMaintenanceHub: React.FC = () => {
     setDocsTechPassportNumber(car.techPassport?.number || car.techPassportNumber || "");
     setDocsTechPassportFrontUrl(car.techPassport?.frontUrl || car.techPassportFrontUrl || null);
     setDocsTechPassportBackUrl(car.techPassport?.backUrl || car.techPassportBackUrl || null);
+    setDocsVin(car.vin || "");
+    setDocsYear(car.year || 2020);
+    setDocsPlateNumber(car.plateNumber || "");
+    setDocsTpOcrNotice(null);
     setDocsInsurancePolicyPhotoUrl(car.insurance?.photoUrl || car.insurancePolicyPhotoUrl || null);
     setDocsInspectionDate(car.inspection?.inspectionDate ? car.inspection.inspectionDate.split("T")[0] : car.inspectionDate ? car.inspectionDate.split("T")[0] : "");
     setDocsInspectionExpiryDate(car.inspection?.expiryDate ? car.inspection.expiryDate.split("T")[0] : car.inspectionExpiryDate ? car.inspectionExpiryDate.split("T")[0] : "");
@@ -335,6 +346,42 @@ export const FleetMaintenanceHub: React.FC = () => {
     setIsDocsModalOpen(true);
   };
 
+  // AI OCR считывание техпаспорта в модальном окне документов
+  const handleRecognizeDocsTp = async () => {
+    if (!docsTechPassportFrontUrl && !docsTechPassportBackUrl) {
+      alert("Сначала прикрепите фото лицевой или оборотной стороны техпаспорта!");
+      return;
+    }
+    try {
+      setIsRecognizingDocsTp(true);
+      setDocsTpOcrNotice(null);
+      const res = await fetch("/api/ai/recognize-tech-passport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          carId: docsCar?.id,
+          frontUrl: docsTechPassportFrontUrl,
+          backUrl: docsTechPassportBackUrl,
+          autoSave: false,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success || !json.extractedData) {
+        throw new Error(json.error || "Не удалось распознать данные техпаспорта");
+      }
+      const d = json.extractedData;
+      if (d.vin) setDocsVin(d.vin);
+      if (d.year) setDocsYear(d.year);
+      if (d.plateNumber) setDocsPlateNumber(d.plateNumber);
+      if (d.techPassportNumber) setDocsTechPassportNumber(d.techPassportNumber);
+      setDocsTpOcrNotice(`✓ Распознано ИИ: VIN ${d.vin || "—"}, Год ${d.year || "—"}, Госномер ${d.plateNumber || "—"}, № техпаспорта ${d.techPassportNumber || "—"}`);
+    } catch (e: any) {
+      alert("Ошибка распознавания: " + e.message);
+    } finally {
+      setIsRecognizingDocsTp(false);
+    }
+  };
+
   // Submit Docs Update
   const handleSubmitDocs = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -350,6 +397,9 @@ export const FleetMaintenanceHub: React.FC = () => {
           techPassportNumber: docsTechPassportNumber,
           techPassportFrontUrl: docsTechPassportFrontUrl || null,
           techPassportBackUrl: docsTechPassportBackUrl || null,
+          vin: docsVin || undefined,
+          year: docsYear || undefined,
+          plateNumber: docsPlateNumber || undefined,
           insurancePolicyPhotoUrl: docsInsurancePolicyPhotoUrl || null,
           inspectionDate: docsInspectionDate || undefined,
           inspectionExpiryDate: docsInspectionExpiryDate || undefined,
@@ -1846,6 +1896,88 @@ export const FleetMaintenanceHub: React.FC = () => {
                         />
                       </label>
                     )}
+                  </div>
+                </div>
+
+                {/* AI OCR Trigger Bar for Tech Passport */}
+                <div className="p-2.5 bg-purple-900/30 border border-purple-500/30 rounded-xl flex items-center justify-between flex-wrap gap-2">
+                  <div className="space-y-0.5">
+                    <span className="text-[11px] font-black text-purple-200 flex items-center space-x-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Интеллектуальное считывание техпаспорта (ИИ OCR)</span>
+                    </span>
+                    <p className="text-[9px] text-slate-400">
+                      Считывает VIN-код, год выпуска, госномер и номер техпаспорта с фото.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isRecognizingDocsTp || (!docsTechPassportFrontUrl && !docsTechPassportBackUrl)}
+                    onClick={handleRecognizeDocsTp}
+                    className={`px-3 py-1.5 rounded-xl font-bold text-[11px] flex items-center space-x-1 transition shrink-0 ${
+                      isRecognizingDocsTp
+                        ? "bg-purple-700 text-white cursor-wait"
+                        : !docsTechPassportFrontUrl && !docsTechPassportBackUrl
+                        ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                        : "bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white font-black shadow-md active:scale-95"
+                    }`}
+                  >
+                    {isRecognizingDocsTp ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Считывание...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>✨ Считать через ИИ</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {docsTpOcrNotice && (
+                  <div className="p-2 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-emerald-200 text-[10px] font-bold">
+                    {docsTpOcrNotice}
+                  </div>
+                )}
+
+                {/* 4 Core Parameters from Tech Passport */}
+                <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                  <span className="text-[10px] font-bold text-amber-300 block">
+                    Реквизиты из техпаспорта (заносятся в базу):
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-slate-400 text-[9px] block mb-0.5">Гос. номер машины:</label>
+                      <input
+                        type="text"
+                        value={docsPlateNumber}
+                        onChange={(e) => setDocsPlateNumber(e.target.value)}
+                        placeholder="YY-779-NN"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-[11px] font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-slate-400 text-[9px] block mb-0.5">VIN-код (17 символов):</label>
+                      <input
+                        type="text"
+                        value={docsVin}
+                        onChange={(e) => setDocsVin(e.target.value)}
+                        placeholder="1FA6P8CF4..."
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-[11px] font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-slate-400 text-[9px] block mb-0.5">Год выпуска:</label>
+                      <input
+                        type="number"
+                        value={docsYear}
+                        onChange={(e) => setDocsYear(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-[11px] font-bold"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

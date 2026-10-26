@@ -24,6 +24,7 @@ import {
   Camera,
   FileCheck,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 
 interface CarDetailsModalProps {
@@ -76,6 +77,13 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
   const [insurancePolicyPhotoUrl, setInsurancePolicyPhotoUrl] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
 
+  // Passport & Car parameters extracted via AI OCR
+  const [vin, setVin] = useState<string>("");
+  const [year, setYear] = useState<number>(2020);
+  const [plateNumber, setPlateNumber] = useState<string>("");
+  const [isRecognizingTp, setIsRecognizingTp] = useState<boolean>(false);
+  const [tpOcrNotice, setTpOcrNotice] = useState<string | null>(null);
+
   // Technical Inspection (PTI Dates)
   const [inspectionDate, setInspectionDate] = useState<string>("");
   const [inspectionExpiryDate, setInspectionExpiryDate] = useState<string>("");
@@ -124,6 +132,10 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
         setTechPassportFrontUrl(data.car.techPassportFrontUrl || null);
         setTechPassportBackUrl(data.car.techPassportBackUrl || null);
         setInsurancePolicyPhotoUrl(data.car.insurancePolicyPhotoUrl || null);
+
+        setVin(data.car.vin || "");
+        setYear(data.car.year || 2020);
+        setPlateNumber(data.car.plateNumber || "");
 
         setInspectionDate(data.car.inspectionDate ? data.car.inspectionDate.split("T")[0] : "");
         setInspectionExpiryDate(data.car.inspectionExpiryDate ? data.car.inspectionExpiryDate.split("T")[0] : "");
@@ -238,6 +250,46 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
     }
   };
 
+  // Интеллектуальное считывание техпаспорта через ИИ OCR
+  const handleRecognizeTechPassport = async () => {
+    if (!techPassportFrontUrl && !techPassportBackUrl) {
+      alert("Сначала прикрепите фото лицевой или оборотной стороны техпаспорта!");
+      return;
+    }
+    try {
+      setIsRecognizingTp(true);
+      setTpOcrNotice(null);
+      setErrorMsg(null);
+      const res = await fetch("/api/ai/recognize-tech-passport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          carId,
+          frontUrl: techPassportFrontUrl,
+          backUrl: techPassportBackUrl,
+          autoSave: true,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success || !json.extractedData) {
+        throw new Error(json.error || "Не удалось распознать техпаспорт");
+      }
+      const d = json.extractedData;
+      if (d.vin) setVin(d.vin);
+      if (d.year) setYear(d.year);
+      if (d.plateNumber) setPlateNumber(d.plateNumber);
+      if (d.techPassportNumber) setTechPassportNumber(d.techPassportNumber);
+
+      setTpOcrNotice(`✓ Распознано и сохранено: VIN ${d.vin || "—"}, Год ${d.year || "—"}, Госномер ${d.plateNumber || "—"}, № техпаспорта ${d.techPassportNumber || "—"}`);
+      setSuccessMsg("Данные техпаспорта успешно считаны нейросетью и занесены в базу!");
+      if (onUpdated) onUpdated();
+    } catch (e: any) {
+      setErrorMsg(e.message || "Ошибка считывания техпаспорта");
+    } finally {
+      setIsRecognizingTp(false);
+    }
+  };
+
   // Сохранение общих параметров
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,6 +319,9 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           techPassportNumber,
           techPassportFrontUrl,
           techPassportBackUrl,
+          vin: vin || null,
+          year: year || null,
+          plateNumber: plateNumber || null,
           insurancePolicyPhotoUrl,
           inspectionDate: inspectionDate || null,
           inspectionExpiryDate: inspectionExpiryDate || null,
@@ -819,17 +874,96 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                       </span>
                     </div>
 
-                    <div>
-                      <label className="text-slate-300 text-[10px] font-semibold block mb-1">
-                        Номер техпаспорта (свидетельства):
-                      </label>
-                      <input
-                        type="text"
-                        value={techPassportNumber}
-                        onChange={(e) => setTechPassportNumber(e.target.value)}
-                        placeholder="например: AA1298412 или BVA2040481"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-amber-500"
-                      />
+                    {/* AI OCR Trigger Bar */}
+                    <div className="p-3 bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between flex-wrap gap-2">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-black text-amber-300 flex items-center space-x-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Интеллектуальное считывание техпаспорта (ИИ OCR)</span>
+                        </span>
+                        <p className="text-[10px] text-slate-400">
+                          Автоматически извлечёт и занесёт в базу: VIN-код, год выпуска, госномер и номер техпаспорта.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={isRecognizingTp || (!techPassportFrontUrl && !techPassportBackUrl)}
+                        onClick={handleRecognizeTechPassport}
+                        className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 transition shrink-0 ${
+                          isRecognizingTp
+                            ? "bg-amber-600 text-white cursor-wait"
+                            : !techPassportFrontUrl && !techPassportBackUrl
+                            ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                            : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black shadow-md active:scale-95"
+                        }`}
+                      >
+                        {isRecognizingTp ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Считывание...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>✨ Считать через ИИ</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {tpOcrNotice && (
+                      <div className="p-2.5 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-emerald-200 text-[11px] font-bold">
+                        {tpOcrNotice}
+                      </div>
+                    )}
+
+                    {/* Extracted 4 parameters from Tech Passport */}
+                    <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                      <span className="text-[11px] font-bold text-amber-300 block">
+                        Ключевые реквизиты ТС из техпаспорта (заносятся в базу):
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                        <div>
+                          <label className="text-slate-400 text-[10px] block mb-0.5">Гос. номер машины:</label>
+                          <input
+                            type="text"
+                            value={plateNumber}
+                            onChange={(e) => setPlateNumber(e.target.value)}
+                            placeholder="YY-779-NN"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-xs font-bold"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="text-slate-400 text-[10px] block mb-0.5">VIN-код (17 символов):</label>
+                          <input
+                            type="text"
+                            value={vin}
+                            onChange={(e) => setVin(e.target.value)}
+                            placeholder="1FA6P8CF4..."
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-xs font-bold tracking-wider"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-slate-400 text-[10px] block mb-0.5">Год выпуска:</label>
+                          <input
+                            type="number"
+                            value={year}
+                            onChange={(e) => setYear(Number(e.target.value))}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-xs font-bold"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-slate-400 text-[10px] block mb-0.5">Номер бланка техпаспорта:</label>
+                        <input
+                          type="text"
+                          value={techPassportNumber}
+                          onChange={(e) => setTechPassportNumber(e.target.value)}
+                          placeholder="например: AA1298412 или BVA2040481"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-xs"
+                        />
+                      </div>
                     </div>
 
                     {/* TWO PHOTO CARDS: FRONT & BACK */}

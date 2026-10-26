@@ -108,6 +108,9 @@ export async function POST(request: Request) {
         batumiParkingExpiresAt: batumiParkingExpiresAt ? new Date(batumiParkingExpiresAt) : null,
         hasGpsTracker: hasGpsTracker !== false,
         isGpsFeeChargedToOwner: isGpsFeeChargedToOwner !== false,
+        techPassportNumber: body.techPassportNumber || null,
+        techPassportFrontUrl: body.techPassportFrontUrl || null,
+        techPassportBackUrl: body.techPassportBackUrl || null,
         status: "AVAILABLE",
       },
       include: {

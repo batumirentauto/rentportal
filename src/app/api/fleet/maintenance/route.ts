@@ -400,6 +400,11 @@ export async function POST(request: Request) {
       if (techPassportNumber !== undefined) updateData.techPassportNumber = techPassportNumber;
       if (techPassportFrontUrl !== undefined) updateData.techPassportFrontUrl = techPassportFrontUrl || null;
       if (techPassportBackUrl !== undefined) updateData.techPassportBackUrl = techPassportBackUrl || null;
+      if (body.vin !== undefined && body.vin) updateData.vin = body.vin.toUpperCase().trim();
+      if (body.year !== undefined && !isNaN(Number(body.year))) updateData.year = Number(body.year);
+      if (body.plateNumber !== undefined && body.plateNumber) updateData.plateNumber = body.plateNumber.toUpperCase().trim();
+      if (body.brand !== undefined && body.brand) updateData.brand = body.brand.trim();
+      if (body.model !== undefined && body.model) updateData.model = body.model.trim();
       if (inspectionDate !== undefined) updateData.inspectionDate = inspectionDate ? new Date(inspectionDate) : null;
       if (inspectionExpiryDate !== undefined) {
         updateData.inspectionExpiryDate = inspectionExpiryDate ? new Date(inspectionExpiryDate) : null;

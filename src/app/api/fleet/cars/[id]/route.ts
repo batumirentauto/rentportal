@@ -130,6 +130,14 @@ export async function PATCH(
     if (body.techPassportBackUrl !== undefined) updateData.techPassportBackUrl = body.techPassportBackUrl || null;
     if (body.techPassportNumber !== undefined) updateData.techPassportNumber = body.techPassportNumber || null;
 
+    // 11. Паспортные реквизиты ТС (VIN, год, госномер)
+    if (body.vin !== undefined && body.vin) updateData.vin = body.vin.toUpperCase().trim();
+    if (body.year !== undefined && !isNaN(Number(body.year))) updateData.year = Number(body.year);
+    if (body.plateNumber !== undefined && body.plateNumber) updateData.plateNumber = body.plateNumber.toUpperCase().trim();
+    if (body.brand !== undefined && body.brand) updateData.brand = body.brand.trim();
+    if (body.model !== undefined && body.model) updateData.model = body.model.trim();
+    if (body.color !== undefined && body.color) updateData.color = body.color.trim();
+
     const updatedCar = await prisma.car.update({
       where: { id },
       data: updateData,
