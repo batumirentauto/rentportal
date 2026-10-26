@@ -6,6 +6,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       customerId,
+      customerName,
+      customerPhone,
       carId,
       startDate,
       startTime = "10:00",
@@ -13,31 +15,62 @@ export async function POST(request: Request) {
       pickupLocationId,
       returnLocationId,
       selectedExtras = [],
+      isClassUpgraded = false,
+      upgradeFromClass,
+      appliedDailyRate,
       customerNotes,
     } = body;
 
-    if (!customerId || !carId || !startDate || !pickupLocationId || !returnLocationId) {
+    if (!carId || !startDate || !pickupLocationId || !returnLocationId) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields for self-service booking" },
+        { success: false, error: "Не заполнены обязательные поля бронирования" },
         { status: 400 }
       );
     }
 
-    // 1. Fetch car & customer
+    // 1. Fetch car
     const car = await prisma.car.findUnique({
       where: { id: carId },
       include: { city: true },
     });
 
-    const customer = await prisma.customer.findUnique({
-      where: { id: customerId },
-    });
-
-    if (!car || !customer) {
+    if (!car) {
       return NextResponse.json(
-        { success: false, error: "Car or Customer not found" },
+        { success: false, error: "Автомобиль не найден" },
         { status: 404 }
       );
+    }
+
+    // 2. Fetch or create Customer
+    let customer = null;
+    if (customerId && customerId !== "vip-guest-default") {
+      customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    }
+
+    if (!customer) {
+      // Find existing customer by phone or create default VIP customer
+      const targetPhone = customerPhone || "+995 599 000 111";
+      customer = await prisma.customer.findFirst({
+        where: { phone: targetPhone },
+      });
+
+      if (!customer) {
+        customer = await prisma.customer.create({
+          data: {
+            fullName: customerName || "Постоянный VIP клиент",
+            phone: targetPhone,
+            whatsapp: targetPhone,
+            email: "vip@vslrent.ge",
+            passportNumber: "VIP-PASSPORT",
+            driverLicenseNumber: "VIP-LICENSE",
+            isLoyalClient: true,
+            discountPercent: 15,
+            loyaltyTier: "GOLD_VIP",
+            trustRating: 100,
+            notes: "Постоянный клиент, бронирует через персональное приложение",
+          },
+        });
+      }
     }
 
     const pickupLocation = await prisma.location.findUnique({
@@ -54,11 +87,13 @@ export async function POST(request: Request) {
     const oneWayFee = isOneWay ? 50 : 0;
 
     // Rates calculation
-    const baseDailyRate = 65; // fallback
-    const discountPercent = customer.discountPercent || 10;
-    const vipDailyRate = Math.round(baseDailyRate * (1 - discountPercent / 100));
+    const baseDailyRate = appliedDailyRate || car.clientStandardDailyRate || 60;
+    const discountPercent = customer.discountPercent || 15;
+    const dailyRate = isClassUpgraded
+      ? Math.round(baseDailyRate)
+      : Math.round(baseDailyRate * (1 - discountPercent / 100));
 
-    const rentalTotal = vipDailyRate * Number(rentalDays);
+    const rentalTotal = dailyRate * Number(rentalDays);
     const extrasTotal = selectedExtras.length * 10 * Number(rentalDays);
     const totalAmount = rentalTotal + oneWayFee + extrasTotal;
 
@@ -69,14 +104,14 @@ export async function POST(request: Request) {
 
     // Booking number
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const bookingNumber = `GEO-VIP-${randomSuffix}`;
+    const bookingNumber = `VIP-${randomSuffix}`;
 
     // Create booking
     const booking = await prisma.booking.create({
       data: {
         bookingNumber,
         carId,
-        customerId,
+        customerId: customer.id,
         startDate: startDateTime,
         endDate: endDateTime,
         rentalDays: Number(rentalDays),
@@ -84,17 +119,20 @@ export async function POST(request: Request) {
         pickupType: "OFFICE",
         returnLocationId,
         returnType: "OFFICE",
-        dailyRate: vipDailyRate,
+        dailyRate,
         rentalTotal,
         deliveryFee: oneWayFee,
         extrasTotal,
         totalAmount,
-        depositAmount: 300,
+        depositAmount: 0, // 0 GEL deposit for loyal VIP clients
         currency: "GEL",
         status: "CONFIRMED",
         isAddedDuringDay: true, // Urgent notification for dispatcher/manager
         isSelfServiceBooking: true,
         notifiedManager: false,
+        overdueDecisionNotes: isClassUpgraded
+          ? `🎁 Бесплатный апгрейд класса: повышен с ${upgradeFromClass || "эконом"} до ${car.carClass} без доплаты.`
+          : undefined,
       },
     });
 
@@ -106,8 +144,8 @@ export async function POST(request: Request) {
         status: "PENDING",
         priority: "URGENT",
         washType: "FULL",
-        cost: 25,
-        notes: `Подготовка к выдаче постоянному клиенту (${customer.fullName})`,
+        cost: 20,
+        notes: `Подготовка к выдаче постоянному VIP клиенту (${customer.fullName})${isClassUpgraded ? " [АПГРЕЙД КЛАССА]" : ""}`,
       },
     });
 
@@ -128,7 +166,7 @@ export async function POST(request: Request) {
     }
     console.error("POST /api/client-app/bookings error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to create client booking" },
+      { success: false, error: "Ошибка при оформлении бронирования" },
       { status: 500 }
     );
   }
