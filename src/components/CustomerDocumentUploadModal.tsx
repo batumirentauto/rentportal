@@ -124,7 +124,7 @@ export const CustomerDocumentUploadModal: React.FC<CustomerDocumentUploadModalPr
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerId: customer.id,
+          customerId: customer?.id || null,
           bookingId: bookingId || null,
           passportPhotoUrl: passportUrl,
           driverLicensePhotoUrl: licenseFrontUrl,
@@ -229,7 +229,7 @@ export const CustomerDocumentUploadModal: React.FC<CustomerDocumentUploadModalPr
             </div>
             <h2 className="text-lg font-black text-white mt-1 flex items-center space-x-2">
               <span>🪪 Документы клиента:</span>
-              <span className="text-amber-400">{customer.fullName}</span>
+              <span className="text-amber-400">{customer?.fullName || fullName || "Клиент"}</span>
             </h2>
             <p className="text-xs text-slate-400">
               Загрузите фото паспорта и водительских прав с 2-х сторон. ИИ автоматически распознает данные и внесёт их в CRM.

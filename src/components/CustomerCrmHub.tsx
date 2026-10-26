@@ -31,6 +31,7 @@ import {
   Building,
   Copy,
 } from "lucide-react";
+import { CustomerDocumentUploadModal } from "./CustomerDocumentUploadModal";
 
 export interface CustomerItem {
   id: string;
@@ -79,6 +80,7 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
   const [selectedCustomerDossier, setSelectedCustomerDossier] = useState<CustomerItem | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [editingCustomer, setEditingCustomer] = useState<CustomerItem | null>(null);
+  const [selectedCustomerForDocs, setSelectedCustomerForDocs] = useState<CustomerItem | null>(null);
 
   // Form State for Create/Edit
   const [formFullName, setFormFullName] = useState<string>("");
@@ -664,8 +666,8 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                       </button>
                     </div>
 
-                    {(c.passportPhotoUrl || c.driverLicensePhotoUrl || c.driverLicenseBackPhotoUrl) && (
-                      <div className="flex items-center space-x-1.5 pt-1 flex-wrap">
+                    {(c.passportPhotoUrl || c.driverLicensePhotoUrl || c.driverLicenseBackPhotoUrl) ? (
+                      <div className="flex items-center space-x-1.5 pt-1 flex-wrap gap-y-1">
                         {c.passportPhotoUrl && (
                           <a
                             href={c.passportPhotoUrl}
@@ -699,6 +701,27 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                             📷 Права (оборот)
                           </a>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCustomerForDocs(c)}
+                          className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 flex items-center space-x-1 transition shadow-sm"
+                          title="Распознать документы через нейросеть / Загрузить новые"
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          <span>ИИ OCR</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCustomerForDocs(c)}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-600/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 flex items-center space-x-1.5 transition active:scale-95 shadow-sm"
+                          title="Загрузить сканы паспорта и прав и распознать данные нейросетью"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Загрузить документы & ИИ OCR</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -751,6 +774,16 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                   </div>
 
                   <div className="flex items-center space-x-2">
+                    {/* Document Upload & AI OCR */}
+                    <button
+                      onClick={() => setSelectedCustomerForDocs(c)}
+                      className="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-md transition flex items-center space-x-1.5 active:scale-95 shrink-0"
+                      title="Загрузить фото паспорта/прав и распознать данные через нейросеть"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+                      <span>Документы & ИИ</span>
+                    </button>
+
                     {/* Edit */}
                     <button
                       onClick={() => openEditModal(c)}
@@ -833,12 +866,23 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedCustomerDossier(null)}
-                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCustomerForDocs(selectedCustomerDossier)}
+                  className="px-3 py-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-md transition flex items-center space-x-1.5 active:scale-95 shrink-0"
+                  title="Загрузить сканы паспорта/прав и распознать данные нейросетью"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+                  <span>Документы & ИИ OCR</span>
+                </button>
+                <button
+                  onClick={() => setSelectedCustomerDossier(null)}
+                  className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Dossier Stats */}
@@ -864,6 +908,84 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                 <span className="text-lg font-black text-emerald-400">
                   {selectedCustomerDossier.discountPercent}%
                 </span>
+              </div>
+            </div>
+
+            {/* Documents & Scans Block in Dossier */}
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
+                  <FileText className="w-4 h-4 text-amber-400" />
+                  <span>Документы для договора:</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCustomerForDocs(selectedCustomerDossier)}
+                  className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center space-x-1 active:scale-95"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <span>Управление & ИИ OCR</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                {/* 1. Passport */}
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                  <span className="text-[10px] text-slate-400 block font-semibold">Паспорт:</span>
+                  <div className="font-mono text-white font-bold">{selectedCustomerDossier.passportNumber || "Не указан"}</div>
+                  <div className="text-[10px] text-slate-400">{selectedCustomerDossier.passportCountry || "Грузия / Международный"}</div>
+                  {selectedCustomerDossier.passportPhotoUrl ? (
+                    <a
+                      href={selectedCustomerDossier.passportPhotoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-blue-400 hover:underline block font-bold pt-1"
+                    >
+                      📷 Скан паспорта ➔
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 block pt-1">Фото не загружено</span>
+                  )}
+                </div>
+
+                {/* 2. License Front */}
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                  <span className="text-[10px] text-slate-400 block font-semibold">Водительские права:</span>
+                  <div className="font-mono text-white font-bold">{selectedCustomerDossier.driverLicenseNumber || "Не указаны"}</div>
+                  <div className="text-[10px] text-slate-400">{selectedCustomerDossier.birthDate ? `Д.Р: ${selectedCustomerDossier.birthDate}` : "Дата рожд. не указана"}</div>
+                  {selectedCustomerDossier.driverLicensePhotoUrl ? (
+                    <a
+                      href={selectedCustomerDossier.driverLicensePhotoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-purple-400 hover:underline block font-bold pt-1"
+                    >
+                      📷 Права (лицо) ➔
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 block pt-1">Фото не загружено</span>
+                  )}
+                </div>
+
+                {/* 3. License Back */}
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                  <span className="text-[10px] text-slate-400 block font-semibold">Права (оборотная сторона):</span>
+                  <div className="text-[11px] text-slate-300 font-mono font-medium">
+                    {selectedCustomerDossier.driverLicenseExpiry ? `Действ. до: ${selectedCustomerDossier.driverLicenseExpiry}` : "Срок не указан"}
+                  </div>
+                  {selectedCustomerDossier.driverLicenseBackPhotoUrl ? (
+                    <a
+                      href={selectedCustomerDossier.driverLicenseBackPhotoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-cyan-400 hover:underline block font-bold pt-1"
+                    >
+                      📷 Права (оборот) ➔
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 block pt-1">Фото не загружено</span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1093,7 +1215,26 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                 </div>
               </div>
 
-              {/* Documents */}
+              {/* Documents Header with AI Recognition trigger */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                <span className="text-slate-300 font-bold block text-xs">
+                  Документы для договора:
+                </span>
+                {editingCustomer && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditModalOpen(false);
+                      setSelectedCustomerForDocs(editingCustomer);
+                    }}
+                    className="px-2.5 py-1 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-600/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center space-x-1 active:scale-95 shadow-sm"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Прикрепить сканы & Считать через ИИ</span>
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-slate-300 font-bold block mb-1">
@@ -1277,6 +1418,25 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Customer Document Upload & AI OCR Modal */}
+      {selectedCustomerForDocs && (
+        <CustomerDocumentUploadModal
+          isOpen={!!selectedCustomerForDocs}
+          onClose={() => setSelectedCustomerForDocs(null)}
+          customer={selectedCustomerForDocs}
+          onCustomerUpdated={(updatedCust) => {
+            setCustomers((prev) =>
+              prev.map((c) => (c.id === updatedCust.id ? { ...c, ...updatedCust } : c))
+            );
+            if (selectedCustomerDossier?.id === updatedCust.id) {
+              setSelectedCustomerDossier((prev) => (prev ? { ...prev, ...updatedCust } : null));
+            }
+            setSelectedCustomerForDocs(null);
+            fetchCustomers();
+          }}
+        />
       )}
     </div>
   );
