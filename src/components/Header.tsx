@@ -180,229 +180,232 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Mobile City Selector (Scrollable Strip with momentum touch) */}
-        <div className="md:hidden flex items-center space-x-1.5 overflow-x-auto py-2 border-t border-slate-800/80 no-scrollbar">
+        {/* Mobile City Selector (4-button grid: fits 100% on any screen without horizontal cutoff) */}
+        <div className="md:hidden grid grid-cols-4 gap-1 py-1.5 border-t border-slate-800/80">
           <button
             onClick={() => onSelectCity("ALL")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all shrink-0 whitespace-nowrap ${
+            className={`py-1 text-[11px] font-bold rounded-lg transition-all text-center ${
               selectedCity === "ALL"
-                ? "bg-amber-500 text-slate-950 shadow"
+                ? "bg-amber-500 text-slate-950 shadow font-black"
                 : "bg-slate-800/90 text-slate-300 hover:text-white border border-slate-700/60"
             }`}
           >
-            Все города
+            Все
           </button>
           <button
             onClick={() => onSelectCity("TBS")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
+            className={`py-1 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center space-x-0.5 ${
               selectedCity === "TBS"
-                ? "bg-amber-500 text-slate-950 shadow"
+                ? "bg-amber-500 text-slate-950 shadow font-black"
                 : "bg-slate-800/90 text-amber-300 hover:text-white border border-slate-700/60"
             }`}
           >
             <span>🏛️</span>
-            <span>Тбилиси (TBS)</span>
+            <span>Тбилиси</span>
           </button>
           <button
             onClick={() => onSelectCity("BUS")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
+            className={`py-1 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center space-x-0.5 ${
               selectedCity === "BUS"
-                ? "bg-cyan-400 text-slate-950 shadow"
+                ? "bg-cyan-400 text-slate-950 shadow font-black"
                 : "bg-slate-800/90 text-cyan-300 hover:text-white border border-slate-700/60"
             }`}
           >
             <span>🌊</span>
-            <span>Батуми (BUS)</span>
+            <span>Батуми</span>
           </button>
           <button
             onClick={() => onSelectCity("KUT")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
+            className={`py-1 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center space-x-0.5 ${
               selectedCity === "KUT"
-                ? "bg-emerald-500 text-slate-950 shadow"
+                ? "bg-emerald-500 text-slate-950 shadow font-black"
                 : "bg-slate-800/90 text-emerald-300 hover:text-white border border-slate-700/60"
             }`}
           >
             <span>🌿</span>
-            <span>Кутаиси (KUT)</span>
+            <span>Кутаиси</span>
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex space-x-2 pt-1 pb-3 overflow-x-auto no-scrollbar text-sm border-t border-slate-800/60 mt-1">
+        {/* Tab Navigation (Clean compact horizontal scroll with momentum) */}
+        <div className="flex space-x-1.5 pt-1 pb-2 overflow-x-auto no-scrollbar text-xs sm:text-sm border-t border-slate-800/60 mt-0.5">
           <button
             onClick={() => setActiveTab("timeline")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "timeline"
-                ? "bg-amber-500 text-slate-950 shadow-md"
+                ? "bg-amber-500 text-slate-950 shadow-md font-black"
                 : "text-amber-400 hover:text-amber-300 hover:bg-slate-800/50 border border-amber-500/20"
             }`}
           >
-            <span>📅 Шахматка занятости</span>
+            <span>📅 Шахматка</span>
+            <span className="hidden sm:inline">занятости</span>
           </button>
 
           <button
             onClick={() => setActiveTab("catalog")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "catalog"
                 ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow-lg"
                 : "text-amber-400 hover:text-amber-300 hover:bg-slate-800/50 border border-amber-500/20"
             }`}
           >
-            <span>🚗 База авто (Каталог)</span>
+            <span>🚗 Автопарк</span>
+            <span className="hidden sm:inline">(Каталог)</span>
           </button>
 
           <button
             onClick={() => setActiveTab("pricing")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "pricing"
                 ? "bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-slate-950 font-black shadow-lg"
                 : "text-amber-300 hover:text-white hover:bg-amber-950/40 border border-amber-500/40"
             }`}
           >
-            <span>🏷️ База цен & Тарифы</span>
+            <span>🏷️ Тарифы & Цены</span>
           </button>
 
           <button
             onClick={() => setActiveTab("handover")}
-            className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "handover"
-                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
             }`}
           >
-            <span>📋 План выдач (утро & день)</span>
+            <span>📋 Выдачи</span>
+            <span className="hidden sm:inline">(утро & день)</span>
           </button>
 
           <button
             onClick={() => setActiveTab("mobileapp")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "mobileapp"
                 ? "bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black shadow-lg"
                 : "text-amber-400 hover:text-amber-200 hover:bg-amber-950/40 border border-amber-500/30"
             }`}
           >
-            <span>📱 VIP Приложение клиентов</span>
+            <span>📱 VIP Приложение</span>
           </button>
 
           <button
             onClick={() => setActiveTab("techpassports")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "techpassports"
                 ? "bg-red-500/20 text-red-300 border border-red-500/40 shadow-md font-black"
                 : "text-red-400 hover:text-red-300 hover:bg-slate-800/50 border border-red-500/20"
             }`}
           >
-            <span>📑 Техпаспорта & Штрафы (protocol.ge)</span>
+            <span>📑 Техпаспорта & Штрафы</span>
           </button>
 
           <button
             onClick={() => setActiveTab("owners")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "owners"
-                ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black shadow-lg"
-                : "text-emerald-400 hover:text-emerald-200 hover:bg-emerald-950/40 border border-emerald-500/30"
+                ? "bg-emerald-500 text-slate-950 font-black shadow-lg"
+                : "text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50 border border-emerald-500/20"
             }`}
           >
-            <span>💼 Кабинет владельцев авто</span>
+            <span>💼 Кабинет инвесторов</span>
           </button>
 
           <button
             onClick={() => setActiveTab("crm")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "crm"
                 ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black shadow-lg"
                 : "text-purple-400 hover:text-purple-200 hover:bg-purple-950/40 border border-purple-500/30"
             }`}
           >
-            <span>👥 База клиентов (CRM)</span>
+            <span>👥 Клиенты (CRM)</span>
           </button>
 
           <button
             onClick={() => setActiveTab("maintenance")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "maintenance"
                 ? "bg-gradient-to-r from-red-600 to-rose-600 text-white font-black shadow-lg"
                 : "text-rose-400 hover:text-rose-200 hover:bg-rose-950/40 border border-rose-500/30"
             }`}
           >
-            <span>🛠️ ТО & Сервис (Масло / СТО)</span>
+            <span>🛠️ ТО & Сервис</span>
           </button>
 
           <button
             onClick={() => setActiveTab("washing")}
-            className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "washing"
                 ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
             }`}
           >
-            <span>🧼 Мойка и подготовка</span>
+            <span>🧼 Мойка</span>
           </button>
 
           <button
             onClick={() => setActiveTab("finance")}
-            className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "finance"
                 ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
             }`}
           >
-            <span>💰 Касса смены и платежи</span>
+            <span>💰 Касса смены</span>
           </button>
 
           <button
             onClick={() => setActiveTab("reports")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "reports"
                 ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow-lg"
                 : "text-amber-400 hover:text-amber-200 hover:bg-amber-950/40 border border-amber-500/30"
             }`}
           >
-            <span>📊 Управленческая & Финансовая отчетность</span>
+            <span>📊 Отчетность</span>
           </button>
 
           <button
             onClick={() => setActiveTab("executive")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "executive"
                 ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/50 shadow-md"
                 : "text-indigo-400 hover:text-indigo-200 hover:bg-indigo-950/40 border border-indigo-500/20"
             }`}
           >
-            <span>👔 Кабинет Руководителя & Мультикасса</span>
+            <span>👔 Руководство</span>
           </button>
 
           <button
             onClick={() => setActiveTab("team")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "team"
                 ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black shadow-lg"
                 : "text-purple-300 hover:text-white hover:bg-purple-950/40 border border-purple-500/30"
             }`}
           >
-            <span>👥 Команда & Доступ</span>
+            <span>👥 Команда</span>
           </button>
 
           <button
             onClick={() => setActiveTab("chats")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "chats"
                 ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-black shadow-lg"
                 : "text-indigo-300 hover:text-white hover:bg-indigo-950/40 border border-indigo-500/30"
             }`}
           >
-            <span>💬 Чат команды (Мессенджер)</span>
+            <span>💬 Мессенджер</span>
           </button>
 
           <button
             onClick={() => setActiveTab("knowledge")}
-            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
               activeTab === "knowledge"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black shadow-lg"
                 : "text-blue-300 hover:text-white hover:bg-blue-950/40 border border-blue-500/30"
             }`}
           >
-            <span>📚 База знаний & Памятки (vslrentcar.com)</span>
+            <span>📚 База знаний</span>
           </button>
         </div>
       </div>

@@ -170,15 +170,15 @@ export const AiAssistantModal: React.FC = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 group flex items-center space-x-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white rounded-full shadow-2xl shadow-purple-900/50 hover:shadow-purple-700/60 transition-all duration-300 transform hover:scale-105 active:scale-95 border border-purple-400/30"
+          className="fixed bottom-4 sm:bottom-6 right-3 sm:right-6 z-40 group flex items-center space-x-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white rounded-full shadow-xl shadow-purple-900/50 hover:shadow-purple-700/60 transition-all duration-300 transform hover:scale-105 active:scale-95 border border-purple-400/30 text-xs sm:text-sm"
           title="Открыть ИИ-Ассистент (⌘K)"
         >
           <div className="relative">
-            <Sparkles className="w-5 h-5 animate-pulse text-amber-200" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900 animate-ping" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900" />
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse text-amber-200" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900 animate-ping" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900" />
           </div>
-          <span className="text-sm font-bold tracking-wide">ИИ Ассистент</span>
+          <span className="font-bold tracking-wide">ИИ Ассистент</span>
           <span className="hidden sm:inline-block text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-mono text-purple-100">
             ⌘K
           </span>

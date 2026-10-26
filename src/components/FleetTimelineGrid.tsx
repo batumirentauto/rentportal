@@ -693,14 +693,14 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
           <div className="w-max min-w-full pb-24">
             {/* Header row: Cars column + Day columns - Sticky at top of the grid */}
             <div className="flex border-b border-slate-800 bg-slate-950 sticky top-0 z-30 shadow-md">
-              <div className="w-[140px] sm:w-[240px] shrink-0 p-2 sm:p-3 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-40 bg-slate-950 shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
+              <div className="w-[130px] sm:w-[220px] shrink-0 p-2 sm:p-3 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-40 bg-slate-950 shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                 <div className="flex items-center space-x-1.5 truncate">
                   <span className="truncate">Автомобиль</span>
                   <span className="text-[10px] text-slate-500 hidden sm:inline">({filteredCars.length})</span>
                 </div>
                 <button
                   onClick={() => handleOpenNewBooking()}
-                  className="flex items-center space-x-1 px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 text-[10px] font-black rounded-lg shadow transition active:scale-95 shrink-0"
+                  className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 text-[10px] font-black rounded-lg shadow transition active:scale-95 shrink-0"
                   title="Быстро создать новую бронь (всегда зафиксировано)"
                 >
                   <PlusCircle className="w-3 h-3" />
@@ -712,15 +712,15 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
               <div
                 className="grid flex-1"
                 style={{
-                  gridTemplateColumns: `repeat(${days.length}, minmax(48px, 1fr))`,
-                  minWidth: `${days.length * 48}px`,
+                  gridTemplateColumns: `repeat(${days.length}, minmax(84px, 1fr))`,
+                  minWidth: `${days.length * 84}px`,
                 }}
               >
                 {days.map((day: any) => {
                   return (
                     <div
                       key={day.dateStr}
-                      className={`p-2 text-center border-r border-slate-800/80 transition-colors ${
+                      className={`p-1.5 sm:p-2 text-center border-r border-slate-800/80 transition-colors ${
                         day.isToday
                           ? "bg-amber-500/15 border-b-2 border-b-amber-500"
                           : day.isWeekend
@@ -733,9 +733,9 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                       </span>
                       <div className="flex items-center justify-center space-x-1 mt-0.5">
                         <span
-                          className={`text-sm font-black font-mono ${
+                          className={`text-xs sm:text-sm font-black font-mono ${
                             day.isToday
-                              ? "bg-amber-500 text-slate-950 w-6 h-6 rounded-full flex items-center justify-center shadow"
+                              ? "bg-amber-500 text-slate-950 w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center shadow text-xs"
                               : "text-white"
                           }`}
                         >
@@ -781,7 +781,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                             setCarModalTab("general");
                           }
                         }}
-                        className={`w-[140px] sm:w-[240px] shrink-0 sticky left-0 z-20 p-2 sm:p-3 border-r border-slate-800 bg-slate-900 shadow-[4px_0_12px_rgba(0,0,0,0.6)] flex items-center space-x-1.5 sm:space-x-2.5 transition-colors cursor-pointer hover:bg-slate-850 group/car ${
+                        className={`w-[130px] sm:w-[220px] shrink-0 sticky left-0 z-20 p-2 sm:p-3 border-r border-slate-800 bg-slate-900 shadow-[4px_0_12px_rgba(0,0,0,0.6)] flex items-center space-x-1.5 sm:space-x-2.5 transition-colors cursor-pointer hover:bg-slate-850 group/car ${
                           isSelected ? "bg-purple-950/40 ring-1 ring-purple-500/70" : ""
                         } ${cityTheme.borderL}`}
                         title="Нажмите, чтобы открыть карточку автомобиля, сменить город присутствия или закрыть доступность"
@@ -804,13 +804,13 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                         <div className="flex-1 space-y-1 sm:space-y-1.5 min-w-0">
                           {/* Brand & City badge */}
                           <div className="flex items-center justify-between gap-1">
-                            <h4 className="font-extrabold text-white text-[11px] sm:text-xs truncate max-w-[80px] sm:max-w-[140px] group-hover/car:text-amber-400 transition-colors" title={`${car.brand} ${car.model}`}>
+                            <h4 className="font-extrabold text-white text-[11px] sm:text-xs truncate max-w-[75px] sm:max-w-[130px] group-hover/car:text-amber-400 transition-colors" title={`${car.brand} ${car.model}`}>
                               {car.brand} {car.model}
                             </h4>
                             
                             {/* Prominent City Badge with Distinct Color */}
                             <span
-                              className={`text-[9px] sm:text-[10px] px-1 sm:px-2 py-0.5 rounded font-black border flex items-center space-x-0.5 shrink-0 ${cityTheme.badgeBg}`}
+                              className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded font-black border flex items-center space-x-0.5 shrink-0 ${cityTheme.badgeBg}`}
                               title={`Город дислокации: ${cityTheme.name}`}
                             >
                               <span>{cityTheme.icon}</span>
@@ -819,13 +819,13 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                           </div>
 
                           {/* Plate & Status */}
-                          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-                            <span className="text-[9px] sm:text-[11px] font-mono font-bold text-amber-400 bg-slate-950 px-1 py-0.5 rounded border border-slate-800">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="text-[9px] sm:text-[10px] font-mono font-bold text-amber-400 bg-slate-950 px-1 py-0.5 rounded border border-slate-800 shrink-0">
                               {car.plateNumber}
                             </span>
                             {car.isArchived ? (
-                              <span className="text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-500/50 shadow">
-                                📦 В архиве
+                              <span className="text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-500/50 shadow truncate">
+                                В архиве
                               </span>
                             ) : car.isStopBlocked ? (
                               <span className="text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full bg-red-600 text-white animate-pulse shadow-sm shadow-red-900">
@@ -907,16 +907,16 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
                       {/* Right: Days Timeline with Booking Bars */}
                       <div
-                        className="relative flex-1 min-h-[80px] sm:min-h-[96px] bg-slate-950/40"
+                        className="relative flex-1 min-h-[76px] sm:min-h-[88px] bg-slate-950/40"
                         style={{
-                          minWidth: `${days.length * 48}px`,
+                          minWidth: `${days.length * 84}px`,
                         }}
                       >
                         {/* Day vertical grid lines & clickable slots */}
                         <div
                           className="grid h-full absolute inset-0"
                           style={{
-                            gridTemplateColumns: `repeat(${days.length}, minmax(48px, 1fr))`,
+                            gridTemplateColumns: `repeat(${days.length}, minmax(84px, 1fr))`,
                           }}
                         >
                           {days.map((day: any) => (
@@ -973,7 +973,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                                   left: `${leftPercent}%`,
                                   width: `${widthPercent}%`,
                                 }}
-                                className="absolute h-16 rounded-xl p-2 cursor-pointer pointer-events-auto transition-all hover:scale-[1.01] hover:z-30 flex flex-col justify-between overflow-hidden bg-gradient-to-r from-red-950 via-rose-950 to-red-900 border-2 border-red-500/80 text-white shadow-lg shadow-red-950/60"
+                                className="absolute h-[68px] rounded-xl p-1.5 cursor-pointer pointer-events-auto transition-all hover:scale-[1.01] hover:z-30 flex flex-col justify-between overflow-hidden bg-gradient-to-r from-red-950 via-rose-950 to-red-900 border-2 border-red-500/80 text-white shadow-lg shadow-red-950/60"
                                 title={`Доступность закрыта: ${block.reasonText || block.reason}. Нажмите для управления.`}
                               >
                                 <div className="flex items-center justify-between text-[11px] font-bold leading-tight">
@@ -1027,6 +1027,40 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                             const isCompleted = booking.status === "COMPLETED";
                             const isOneWay = booking.isOneWay;
 
+                            // Format times (Выдача и возврат)
+                            const startTime = bStart.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+                            const returnTime = bEnd.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+                            const isTimeDifferent = startTime !== returnTime;
+                            const timeLabel = isTimeDifferent ? `${startTime} → ${returnTime}` : startTime;
+
+                            // Location checks: Airport vs Delivery
+                            const pName = (booking.pickupLocation?.name || "").toLowerCase();
+                            const rName = (booking.returnLocation?.name || "").toLowerCase();
+                            const isAirport =
+                              booking.pickupType === "AIRPORT" ||
+                              booking.pickupLocation?.type === "AIRPORT" ||
+                              pName.includes("аэропорт") ||
+                              pName.includes("airport") ||
+                              booking.returnType === "AIRPORT" ||
+                              booking.returnLocation?.type === "AIRPORT" ||
+                              rName.includes("аэропорт") ||
+                              rName.includes("airport");
+
+                            const isDelivery =
+                              !isAirport &&
+                              (booking.pickupType === "DELIVERY" ||
+                                booking.pickupLocation?.type === "CUSTOM" ||
+                                pName.includes("доставк") ||
+                                pName.includes("отель") ||
+                                pName.includes("delivery") ||
+                                Boolean(booking.pickupAddress) ||
+                                booking.returnType === "DELIVERY" ||
+                                booking.returnLocation?.type === "CUSTOM" ||
+                                rName.includes("доставк") ||
+                                rName.includes("отель") ||
+                                rName.includes("delivery") ||
+                                Boolean(booking.returnAddress));
+
                             let barStyle = "bg-gradient-to-r from-blue-600 to-indigo-700 border-blue-400 text-white shadow-blue-900/40";
                             
                             if (isCompleted) {
@@ -1051,33 +1085,51 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                                   left: `${leftPercent}%`,
                                   width: `${widthPercent}%`,
                                 }}
-                                className={`absolute h-16 rounded-xl p-2 cursor-pointer pointer-events-auto transition-all hover:scale-[1.02] hover:z-30 flex flex-col justify-between overflow-hidden ${barStyle}`}
+                                className={`absolute h-[68px] rounded-xl p-1.5 cursor-pointer pointer-events-auto transition-all hover:scale-[1.02] hover:z-30 flex flex-col justify-between overflow-hidden shadow-lg ${barStyle}`}
+                                title={`Бронь ${booking.bookingNumber}: ${booking.customer.fullName}. Выдача: ${startTime}${isTimeDifferent ? `, Возврат: ${returnTime}` : ''}`}
                               >
-                                <div className="flex items-center justify-between text-[11px] font-bold leading-tight">
-                                  <span className="truncate max-w-[75%] flex items-center space-x-1">
-                                    {booking.isSelfServiceBooking && <span title="Забронировано через VIP приложение">📱</span>}
-                                    <span className="truncate">{booking.customer.fullName}</span>
+                                {/* Line 1: Time badge + Airport/Delivery badge */}
+                                <div className="flex items-center justify-between gap-1 leading-tight">
+                                  <span
+                                    className="px-1 py-0.5 rounded text-[10px] font-mono font-black bg-black/60 text-amber-300 border border-amber-400/40 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none"
+                                    title={`Время выдачи: ${startTime}${isTimeDifferent ? ` / Возврат: ${returnTime}` : ''}`}
+                                  >
+                                    <span>⏰</span>
+                                    <span>{timeLabel}</span>
                                   </span>
-                                  <span className="font-mono font-black">{booking.totalAmount} ₾</span>
+
+                                  {isAirport ? (
+                                    <span className="px-1 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-sky-400 text-slate-950 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none">
+                                      <span>✈️</span>
+                                      <span>Аэропорт</span>
+                                    </span>
+                                  ) : isDelivery ? (
+                                    <span className="px-1 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none">
+                                      <span>🚚</span>
+                                      <span>Доставка</span>
+                                    </span>
+                                  ) : isOneWay ? (
+                                    <span className="px-1 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-fuchsia-400 text-slate-950 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none">
+                                      <span>⇄</span>
+                                      <span>{booking.toCityCode}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-bold opacity-75 shrink-0 leading-none">
+                                      {booking.rentalDays}д
+                                    </span>
+                                  )}
                                 </div>
 
-                                {/* Route info badge on the bar */}
-                                {isOneWay ? (
-                                  <div className="bg-black/50 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] font-black flex items-center space-x-1.5 self-start text-amber-200 border border-amber-300/30">
-                                    <Repeat className="w-3 h-3 text-amber-300 animate-spin-slow" />
-                                    <span>
-                                      {booking.fromCityCode} ➔ {booking.toCityCode} ({booking.toCityName})
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="text-[10px] opacity-90 truncate font-semibold">
-                                    {isCompleted ? "🏁 Завершена (архив)" : isActive ? "🚗 В поездке" : isPreparing ? "🧼 Подготовка" : "📅 Локальная бронь"}
-                                  </div>
-                                )}
+                                {/* Line 2: Customer Name */}
+                                <div className="font-extrabold text-[11px] text-white truncate flex items-center space-x-1 drop-shadow leading-snug my-0.5">
+                                  <span className="opacity-75 text-[10px]">👤</span>
+                                  <span className="truncate">{booking.customer.fullName}</span>
+                                </div>
 
-                                <div className="flex items-center justify-between text-[9px] opacity-80 leading-none">
-                                  <span className="font-mono">{booking.bookingNumber}</span>
-                                  <span>{booking.rentalDays} дн.</span>
+                                {/* Line 3: Booking number + Days */}
+                                <div className="flex items-center justify-between text-[9px] opacity-90 leading-none">
+                                  <span className="font-mono truncate max-w-[65%]">{booking.bookingNumber}</span>
+                                  <span className="font-bold shrink-0">{booking.rentalDays} дн.</span>
                                 </div>
                               </div>
                             );
@@ -2017,10 +2069,10 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       {/* Floating Action Button (FAB) - Always fixed on screen */}
       <button
         onClick={() => handleOpenNewBooking()}
-        className="fixed bottom-6 left-6 z-40 flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-2xl shadow-2xl shadow-amber-500/30 border-2 border-amber-300/60 active:scale-95 transition-all text-xs sm:text-sm group hover:scale-105"
-        title="Создать новую бронь (всегда под рукой на экране)"
+        className="fixed bottom-4 sm:bottom-6 left-3 sm:left-6 z-40 flex items-center space-x-1.5 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl sm:rounded-2xl shadow-xl shadow-amber-500/30 border border-amber-300/60 active:scale-95 transition-all text-xs sm:text-sm group hover:scale-105"
+        title="Создать новую бронь"
       >
-        <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 text-slate-950 transition-transform group-hover:rotate-90 duration-300" />
+        <PlusCircle className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-slate-950 transition-transform group-hover:rotate-90 duration-300" />
         <span className="tracking-tight font-black">+ Новая бронь</span>
       </button>
     </div>
