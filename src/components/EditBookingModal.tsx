@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   RefreshCw,
   ArrowRight,
+  User,
 } from "lucide-react";
 
 interface EditBookingModalProps {
@@ -76,9 +77,17 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   const [dailyRate, setDailyRate] = useState<number>(booking?.dailyRate || 65);
   const [deliveryFee, setDeliveryFee] = useState<number>(booking?.deliveryFee || 0);
   const [extrasTotal, setExtrasTotal] = useState<number>(booking?.extrasTotal || 0);
-  const [depositAmount, setDepositAmount] = useState<number>(booking?.depositAmount || 300);
+  const [depositAmount, setDepositAmount] = useState<number>(
+    booking?.depositAmount !== undefined ? Number(booking.depositAmount) : 0
+  );
   const [totalAmount, setTotalAmount] = useState<number>(booking?.totalAmount || 195);
   const [ownerDailyRate, setOwnerDailyRate] = useState<number>(booking?.ownerDailyRate || 25);
+  const [bookingSource, setBookingSource] = useState<string>(booking?.source || "WHATSAPP");
+
+  const handleStartTimeChange = (val: string) => {
+    setStartTimeStr(val);
+    setReturnTimeStr(val);
+  };
 
   // Status & Notes
   const [status, setStatus] = useState<string>(booking?.status || "CONFIRMED");
@@ -196,6 +205,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         extrasTotal,
         totalAmount,
         depositAmount,
+        source: bookingSource,
         ownerDailyRate,
         ownerTotalPayout: ownerDailyRate * rentalDays,
         status,
@@ -259,6 +269,65 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           
+          {/* 0. CUSTOMER & SOURCE (Клиент и канал обращения) */}
+          <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-bold text-slate-200 flex items-center space-x-1.5">
+                <User className="w-4 h-4 text-amber-400" />
+                <span>Клиент: {booking.customer?.fullName}</span>
+              </span>
+              <div className="flex items-center space-x-2 text-slate-300 font-mono text-[11px]">
+                <span>📞 {booking.customer?.phone}</span>
+                {booking.customer?.telegram && <span className="text-sky-400">@{booking.customer.telegram}</span>}
+                {booking.customer?.instagram && <span className="text-pink-400">@{booking.customer.instagram}</span>}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-slate-400 font-semibold block mb-1">
+                Канал обращения (источник):
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setBookingSource("WHATSAPP")}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1 border ${
+                    bookingSource === "WHATSAPP"
+                      ? "bg-emerald-600 text-white border-emerald-400 shadow"
+                      : "bg-slate-950 text-slate-300 border-slate-700 hover:border-emerald-500"
+                  }`}
+                >
+                  <span>🟢</span>
+                  <span>WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBookingSource("TELEGRAM")}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1 border ${
+                    bookingSource === "TELEGRAM"
+                      ? "bg-sky-600 text-white border-sky-400 shadow"
+                      : "bg-slate-950 text-slate-300 border-slate-700 hover:border-sky-500"
+                  }`}
+                >
+                  <span>🔷</span>
+                  <span>Telegram</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBookingSource("INSTAGRAM")}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1 border ${
+                    bookingSource === "INSTAGRAM"
+                      ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white border-pink-400 shadow"
+                      : "bg-slate-950 text-slate-300 border-slate-700 hover:border-pink-500"
+                  }`}
+                >
+                  <span>📸</span>
+                  <span>Instagram</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* 1. CAR SELECTION (Замена автомобиля) */}
           <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
             <div className="flex items-center justify-between">
@@ -334,7 +403,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                   <input
                     type="time"
                     value={startTimeStr}
-                    onChange={(e) => setStartTimeStr(e.target.value)}
+                    onChange={(e) => handleStartTimeChange(e.target.value)}
                     className="bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-center"
                     required
                   />

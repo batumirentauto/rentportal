@@ -124,7 +124,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [isNewBookingOpen, setIsNewBookingOpen] = useState<boolean>(false);
   const [bookingInitialCarId, setBookingInitialCarId] = useState<string>("");
   const [bookingInitialDate, setBookingInitialDate] = useState<string>("");
-  const [bookingInitialDays, setBookingInitialDays] = useState<number>(3);
+  const [bookingInitialDays, setBookingInitialDays] = useState<number>(1);
 
   // Availability Search & Matcher Modal state
   const [isAvailabilitySearchOpen, setIsAvailabilitySearchOpen] = useState<boolean>(false);
@@ -132,7 +132,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const handleOpenNewBooking = (carId?: string, dateStr?: string, days?: number) => {
     setBookingInitialCarId(carId || "");
     setBookingInitialDate(dateStr || "");
-    if (days) setBookingInitialDays(days);
+    setBookingInitialDays(days || 1);
     setIsNewBookingOpen(true);
   };
 
@@ -1211,6 +1211,23 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-normal">
                       Карточка клиента →
                     </span>
+                    {selectedBooking.source && (
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${
+                          selectedBooking.source === "TELEGRAM"
+                            ? "bg-sky-500/20 text-sky-300 border-sky-500/40"
+                            : selectedBooking.source === "INSTAGRAM"
+                            ? "bg-pink-500/20 text-pink-300 border-pink-500/40"
+                            : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                        }`}
+                      >
+                        {selectedBooking.source === "TELEGRAM"
+                          ? "🔷 Telegram"
+                          : selectedBooking.source === "INSTAGRAM"
+                          ? "📸 Instagram"
+                          : "🟢 WhatsApp"}
+                      </span>
+                    )}
                   </button>
                   <span className="text-[11px] text-slate-400 font-mono">
                     {selectedBooking.customer.phone}

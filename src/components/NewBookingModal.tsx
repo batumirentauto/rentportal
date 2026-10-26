@@ -159,7 +159,17 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [startTime, setStartTime] = useState<string>("10:00");
   const [returnTime, setReturnTime] = useState<string>("10:00");
   
-  const [rentalDays, setRentalDays] = useState<number>(initialDays || 3);
+  const [rentalDays, setRentalDays] = useState<number>(initialDays || 1);
+
+  // Source & Channel of customer contact
+  const [bookingSource, setBookingSource] = useState<"WHATSAPP" | "TELEGRAM" | "INSTAGRAM">("WHATSAPP");
+  const [newCustomerInstagram, setNewCustomerInstagram] = useState<string>("");
+  const [newCustomerTelegram, setNewCustomerTelegram] = useState<string>("");
+
+  const handleStartTimeChange = (val: string) => {
+    setStartTime(val);
+    setReturnTime(val); // Автоматически выставляем время возврата равным времени выдачи
+  };
 
   const computedEndDate = useMemo(() => {
     const d = new Date(startDate);
@@ -178,7 +188,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
   const [dailyRate, setDailyRate] = useState<number>(65);
   const [ownerDailyRate, setOwnerDailyRate] = useState<number>(25);
-  const [depositAmount, setDepositAmount] = useState<number>(300);
+  const [depositAmount, setDepositAmount] = useState<number>(0);
   const [acknowledgedRelocation, setAcknowledgedRelocation] = useState<boolean>(false);
   const [acknowledgedStopBlock, setAcknowledgedStopBlock] = useState<boolean>(false);
   const [acknowledgedBlacklist, setAcknowledgedBlacklist] = useState<boolean>(false);
@@ -238,7 +248,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
     loadData();
     if (initialDate) setStartDate(initialDate);
-    if (initialDays) setRentalDays(initialDays);
+    setRentalDays(initialDays || 1);
+    setDepositAmount(0);
     if (initialCarId) setCarId(initialCarId);
   }, [isOpen, initialCarId, initialDate, initialDays]);
 
@@ -373,6 +384,9 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             fullName: newCustomerName.trim(),
             phone: newCustomerPhone.trim(),
             whatsapp: newCustomerPhone.trim(),
+            telegram: newCustomerTelegram.trim() || null,
+            instagram: newCustomerInstagram.trim() || null,
+            source: bookingSource,
             passportNumber: newCustomerPassport.trim() || "Не указан",
             driverLicenseNumber: newCustomerLicense.trim() || "Не указаны",
             passportCountry: newCustomerCountry.trim() || "Грузия / Международный",
@@ -423,7 +437,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           deliveryFee: oneWayFee,
           extrasTotal: 0,
           totalAmount,
-          depositAmount,
+          depositAmount: Number(depositAmount),
+          source: bookingSource,
           currency: "GEL",
           ownerDailyRate,
           isAddedDuringDay: true,
@@ -606,6 +621,64 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                       </span>
                     </div>
                   )}
+
+                  {/* Customer Contact & Source Selector */}
+                  {selectedCustomer && (
+                    <div className="mt-2.5 p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                        <span className="text-slate-400">Контакты клиента:</span>
+                        <div className="flex items-center space-x-2 font-mono text-white text-xs">
+                          <span>📞 {selectedCustomer.phone}</span>
+                          {selectedCustomer.telegram && <span className="text-sky-400">@{selectedCustomer.telegram}</span>}
+                          {selectedCustomer.instagram && <span className="text-pink-400">@{selectedCustomer.instagram}</span>}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-slate-400 font-semibold block mb-1">
+                          Канал обращения (источник):
+                        </label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setBookingSource("WHATSAPP")}
+                            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1 border ${
+                              bookingSource === "WHATSAPP"
+                                ? "bg-emerald-600 text-white border-emerald-400 shadow"
+                                : "bg-slate-950 text-slate-300 border-slate-700 hover:border-emerald-500"
+                            }`}
+                          >
+                            <span>🟢</span>
+                            <span>WhatsApp</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBookingSource("TELEGRAM")}
+                            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1 border ${
+                              bookingSource === "TELEGRAM"
+                                ? "bg-sky-600 text-white border-sky-400 shadow"
+                                : "bg-slate-950 text-slate-300 border-slate-700 hover:border-sky-500"
+                            }`}
+                          >
+                            <span>🔷</span>
+                            <span>Telegram</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBookingSource("INSTAGRAM")}
+                            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1 border ${
+                              bookingSource === "INSTAGRAM"
+                                ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white border-pink-400 shadow"
+                                : "bg-slate-950 text-slate-300 border-slate-700 hover:border-pink-500"
+                            }`}
+                          >
+                            <span>📸</span>
+                            <span>Instagram</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* NEW CUSTOMER INPUT FORM */
@@ -775,7 +848,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                     </div>
                     <div>
                       <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">
-                        Телефон (WhatsApp/Telegram) <span className="text-red-400">*</span>:
+                        Телефон клиента <span className="text-red-400">*</span>:
                       </label>
                       <input
                         type="tel"
@@ -786,6 +859,83 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                         required={isNewCustomerMode}
                       />
                     </div>
+                  </div>
+
+                  {/* Channel / Source Selector for New Customer */}
+                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 space-y-2">
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-semibold block mb-1">
+                        Канал обращения (источник):
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setBookingSource("WHATSAPP")}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1 border ${
+                            bookingSource === "WHATSAPP"
+                              ? "bg-emerald-600 text-white border-emerald-400 shadow"
+                              : "bg-slate-950 text-slate-300 border-slate-700 hover:border-emerald-500"
+                          }`}
+                        >
+                          <span>🟢</span>
+                          <span>WhatsApp</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBookingSource("TELEGRAM")}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1 border ${
+                            bookingSource === "TELEGRAM"
+                              ? "bg-sky-600 text-white border-sky-400 shadow"
+                              : "bg-slate-950 text-slate-300 border-slate-700 hover:border-sky-500"
+                          }`}
+                        >
+                          <span>🔷</span>
+                          <span>Telegram</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBookingSource("INSTAGRAM")}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1 border ${
+                            bookingSource === "INSTAGRAM"
+                              ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white border-pink-400 shadow"
+                              : "bg-slate-950 text-slate-300 border-slate-700 hover:border-pink-500"
+                          }`}
+                        >
+                          <span>📸</span>
+                          <span>Instagram</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {bookingSource === "INSTAGRAM" && (
+                      <div>
+                        <label className="text-[10px] text-pink-400 font-semibold block mb-0.5">
+                          Instagram клиента (@username или ссылка на профиль):
+                        </label>
+                        <input
+                          type="text"
+                          value={newCustomerInstagram}
+                          onChange={(e) => setNewCustomerInstagram(e.target.value)}
+                          placeholder="@batumi_client"
+                          className="w-full bg-slate-950 border border-pink-500/50 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-pink-400"
+                        />
+                      </div>
+                    )}
+
+                    {bookingSource === "TELEGRAM" && (
+                      <div>
+                        <label className="text-[10px] text-sky-400 font-semibold block mb-0.5">
+                          Telegram клиента (@username):
+                        </label>
+                        <input
+                          type="text"
+                          value={newCustomerTelegram}
+                          onChange={(e) => setNewCustomerTelegram(e.target.value)}
+                          placeholder="@username"
+                          className="w-full bg-slate-950 border border-sky-500/50 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-sky-400 font-mono"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -865,7 +1015,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <input
                   type="time"
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white font-mono focus:outline-none focus:border-amber-500"
                   required
                 />

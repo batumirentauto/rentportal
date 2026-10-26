@@ -82,6 +82,8 @@ export async function PATCH(
           ...(c.phone !== undefined && { phone: c.phone.trim() }),
           ...(c.whatsapp !== undefined && { whatsapp: c.whatsapp?.trim() || null }),
           ...(c.telegram !== undefined && { telegram: c.telegram?.trim() || null }),
+          ...(c.instagram !== undefined && { instagram: c.instagram?.trim() || null }),
+          ...(c.source !== undefined && { source: c.source }),
           ...(c.email !== undefined && { email: c.email?.trim() || null }),
           ...(c.passportNumber !== undefined && { passportNumber: c.passportNumber.trim() }),
           ...(c.passportCountry !== undefined && { passportCountry: c.passportCountry?.trim() || null }),
@@ -146,6 +148,9 @@ export async function PATCH(
     }
     if (body.depositAmount !== undefined) {
       bookingUpdateData.depositAmount = Number(body.depositAmount);
+    }
+    if (body.source !== undefined) {
+      bookingUpdateData.source = body.source;
     }
     if (body.currency) {
       bookingUpdateData.currency = body.currency;

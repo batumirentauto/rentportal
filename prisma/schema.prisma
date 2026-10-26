@@ -151,6 +151,8 @@ model Customer {
   phone              String
   whatsapp           String?
   telegram           String?
+  instagram          String?
+  source             String?   @default("WHATSAPP") // "WHATSAPP", "TELEGRAM", "INSTAGRAM", "PHONE", "WEBSITE"
   email              String?
   passportNumber     String
   passportCountry    String?
@@ -204,7 +206,8 @@ model Booking {
   deliveryFee         Float           @default(0) // Стоимость доставки
   extrasTotal         Float           @default(0) // Доп. оборудование
   totalAmount         Float           // Общая сумма к оплате
-  depositAmount       Float           @default(300) // Залог/депозит
+  depositAmount       Float           @default(0) // Залог/депозит (по умолчанию 0 GEL)
+  source              String?         @default("WHATSAPP") // Источник заявки: "WHATSAPP", "TELEGRAM", "INSTAGRAM", "PHONE", "WEBSITE"
   currency            String          @default("GEL") // Базовая валюта расчёта: GEL / USD / EUR
   ownerDailyRate      Float?          // Фиксированная/скорректированная ставка владельца за день
   ownerTotalPayout    Float?          // Итоговая сумма к выплате владельцу за аренду

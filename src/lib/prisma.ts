@@ -109,6 +109,28 @@ function ensureSchema(dbFilePath: string) {
     if (!colNames.has("archiveNotes")) {
       db.exec("ALTER TABLE Car ADD COLUMN archiveNotes TEXT");
     }
+
+    // Check Booking table for source column
+    try {
+      const bookingColumns = db.prepare("PRAGMA table_info(Booking)").all();
+      const bookingColNames = new Set(bookingColumns.map((c: any) => c.name));
+      if (!bookingColNames.has("source")) {
+        db.exec("ALTER TABLE Booking ADD COLUMN source TEXT DEFAULT 'WHATSAPP'");
+      }
+    } catch {}
+
+    // Check Customer table for instagram and source
+    try {
+      const customerColumns = db.prepare("PRAGMA table_info(Customer)").all();
+      const customerColNames = new Set(customerColumns.map((c: any) => c.name));
+      if (!customerColNames.has("instagram")) {
+        db.exec("ALTER TABLE Customer ADD COLUMN instagram TEXT");
+      }
+      if (!customerColNames.has("source")) {
+        db.exec("ALTER TABLE Customer ADD COLUMN source TEXT DEFAULT 'WHATSAPP'");
+      }
+    } catch {}
+
     db.close();
   } catch (e) {
     console.warn("[Database] Schema check/migration notice:", e);
