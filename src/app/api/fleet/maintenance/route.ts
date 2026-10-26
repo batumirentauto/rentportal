@@ -148,6 +148,21 @@ export async function GET(request: Request) {
           status: insuranceStatus,
           daysRemaining: insuranceDaysRemaining,
         },
+        batumiParking: {
+          hasParking: car.hasBatumiParking,
+          permitNumber: car.batumiParkingPermitNumber,
+          expiresAt: car.batumiParkingExpiresAt,
+          cost: car.batumiParkingCost || 40,
+          daysRemaining: car.batumiParkingExpiresAt
+            ? Math.ceil((new Date(car.batumiParkingExpiresAt).getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+            : null,
+          isValid: Boolean(car.hasBatumiParking && (!car.batumiParkingExpiresAt || new Date(car.batumiParkingExpiresAt) > now)),
+        },
+        gps: {
+          hasGps: car.hasGpsTracker,
+          monthlyFee: car.gpsMonthlyFee || 10,
+          isChargedToOwner: car.isGpsFeeChargedToOwner,
+        },
         issues: {
           all: car.issues,
           active: activeIssues,
@@ -339,7 +354,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // 4. Update PTI inspection or Insurance details
+    // 4. Update PTI inspection, Insurance, Batumi Parking, and GPS details
     if (action === "UPDATE_DOCS") {
       const {
         carId,
@@ -349,6 +364,14 @@ export async function POST(request: Request) {
         insurancePolicyNumber,
         insuranceExpiryDate,
         insuranceDeductible,
+        hasBatumiParking,
+        batumiParkingPermitNumber,
+        batumiParkingExpiresAt,
+        batumiParkingCost,
+        recordParkingExpense,
+        hasGpsTracker,
+        gpsMonthlyFee,
+        isGpsFeeChargedToOwner,
       } = body;
 
       if (!carId) {
@@ -369,14 +392,46 @@ export async function POST(request: Request) {
       }
       if (insuranceDeductible !== undefined) updateData.insuranceDeductible = Number(insuranceDeductible);
 
+      if (hasBatumiParking !== undefined) updateData.hasBatumiParking = Boolean(hasBatumiParking);
+      if (batumiParkingPermitNumber !== undefined) updateData.batumiParkingPermitNumber = batumiParkingPermitNumber;
+      if (batumiParkingExpiresAt) updateData.batumiParkingExpiresAt = new Date(batumiParkingExpiresAt);
+      if (batumiParkingCost !== undefined) updateData.batumiParkingCost = Number(batumiParkingCost);
+
+      if (hasGpsTracker !== undefined) updateData.hasGpsTracker = Boolean(hasGpsTracker);
+      if (gpsMonthlyFee !== undefined) updateData.gpsMonthlyFee = Number(gpsMonthlyFee);
+      if (isGpsFeeChargedToOwner !== undefined) updateData.isGpsFeeChargedToOwner = Boolean(isGpsFeeChargedToOwner);
+
       const updatedCar = await prisma.car.update({
         where: { id: carId },
         data: updateData,
+        include: { owner: true },
       });
+
+      // Зафиксировать расход на парковочное разрешение для владельца, если запрошено
+      if (recordParkingExpense && updatedCar.ownerId) {
+        const defaultAcc = await prisma.financialAccount.findFirst({ where: { currency: "GEL" } }) || await prisma.financialAccount.findFirst();
+        if (defaultAcc) {
+          const cost = Number(batumiParkingCost || 40);
+          await prisma.expense.create({
+            data: {
+              accountId: defaultAcc.id,
+              ownerId: updatedCar.ownerId,
+              carId: updatedCar.id,
+              category: "BATUMI_PARKING",
+              amount: cost,
+              currency: "GEL",
+              description: `Парковочный абонемент Батуми (Batumi Parking) на ${updatedCar.brand} ${updatedCar.model} (${updatedCar.plateNumber})`,
+              isOwnerExpense: true,
+              managerName: "Менеджер автопарка",
+              date: new Date(),
+            },
+          });
+        }
+      }
 
       return NextResponse.json({
         success: true,
-        message: `Документы техосмотра и страховки для ${updatedCar.brand} ${updatedCar.model} обновлены!`,
+        message: `Параметры документов, парковки Батуми и GPS для ${updatedCar.brand} ${updatedCar.model} обновлены!`,
         car: updatedCar,
       });
     }

@@ -83,6 +83,14 @@ export const FleetMaintenanceHub: React.FC = () => {
   const [docsInsurancePolicy, setDocsInsurancePolicy] = useState<string>("");
   const [docsInsuranceExpiry, setDocsInsuranceExpiry] = useState<string>("");
   const [docsInsuranceDeductible, setDocsInsuranceDeductible] = useState<number>(300);
+  const [docsHasBatumiParking, setDocsHasBatumiParking] = useState<boolean>(false);
+  const [docsBatumiParkingNumber, setDocsBatumiParkingNumber] = useState<string>("");
+  const [docsBatumiParkingExpiresAt, setDocsBatumiParkingExpiresAt] = useState<string>("");
+  const [docsBatumiParkingCost, setDocsBatumiParkingCost] = useState<number>(40);
+  const [docsRecordParkingExpense, setDocsRecordParkingExpense] = useState<boolean>(false);
+  const [docsHasGpsTracker, setDocsHasGpsTracker] = useState<boolean>(true);
+  const [docsGpsMonthlyFee, setDocsGpsMonthlyFee] = useState<number>(10);
+  const [docsIsGpsFeeChargedToOwner, setDocsIsGpsFeeChargedToOwner] = useState<boolean>(true);
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -307,6 +315,14 @@ export const FleetMaintenanceHub: React.FC = () => {
     setDocsInsurancePolicy(car.insurance.policyNumber || "");
     setDocsInsuranceExpiry(car.insurance.expiryDate ? car.insurance.expiryDate.split("T")[0] : "");
     setDocsInsuranceDeductible(car.insurance.deductible || 300);
+    setDocsHasBatumiParking(Boolean(car.batumiParking?.hasParking));
+    setDocsBatumiParkingNumber(car.batumiParking?.permitNumber || "");
+    setDocsBatumiParkingExpiresAt(car.batumiParking?.expiresAt ? car.batumiParking.expiresAt.split("T")[0] : "");
+    setDocsBatumiParkingCost(car.batumiParking?.cost || 40);
+    setDocsRecordParkingExpense(false);
+    setDocsHasGpsTracker(car.gps?.hasGps !== false);
+    setDocsGpsMonthlyFee(car.gps?.monthlyFee || 10);
+    setDocsIsGpsFeeChargedToOwner(car.gps?.isChargedToOwner !== false);
     setIsDocsModalOpen(true);
   };
 
@@ -328,6 +344,14 @@ export const FleetMaintenanceHub: React.FC = () => {
           insurancePolicyNumber: docsInsurancePolicy,
           insuranceExpiryDate: docsInsuranceExpiry || undefined,
           insuranceDeductible: docsInsuranceDeductible,
+          hasBatumiParking: docsHasBatumiParking,
+          batumiParkingPermitNumber: docsBatumiParkingNumber,
+          batumiParkingExpiresAt: docsBatumiParkingExpiresAt || undefined,
+          batumiParkingCost: docsBatumiParkingCost,
+          recordParkingExpense: docsRecordParkingExpense,
+          hasGpsTracker: docsHasGpsTracker,
+          gpsMonthlyFee: docsGpsMonthlyFee,
+          isGpsFeeChargedToOwner: docsIsGpsFeeChargedToOwner,
         }),
       });
       const json = await res.json();
@@ -933,6 +957,8 @@ export const FleetMaintenanceHub: React.FC = () => {
                   <th className="py-3.5 px-3">Страховая компания & Полис</th>
                   <th className="py-3.5 px-3">Срок действия КАСКО</th>
                   <th className="py-3.5 px-3">Франшиза</th>
+                  <th className="py-3.5 px-3">Парковка Батуми</th>
+                  <th className="py-3.5 px-3">GPS Мониторинг</th>
                   <th className="py-3.5 px-4 text-center">Действие</th>
                 </tr>
               </thead>
@@ -1018,8 +1044,64 @@ export const FleetMaintenanceHub: React.FC = () => {
                       {/* Deductible */}
                       <td className="py-3.5 px-3">
                         <span className="font-mono font-bold text-emerald-400 text-xs">
-                          ${ins.deductible} USD
+                          {ins.deductible} ₾
                         </span>
+                      </td>
+
+                      {/* Batumi Parking */}
+                      <td className="py-3.5 px-3">
+                        {car.batumiParking?.hasParking ? (
+                          <div className="space-y-0.5">
+                            <div className="flex items-center space-x-1">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                🅿️ Батуми
+                              </span>
+                              {car.batumiParking.permitNumber && (
+                                <span className="font-mono text-[10px] text-slate-400">
+                                  #{car.batumiParking.permitNumber}
+                                </span>
+                              )}
+                            </div>
+                            <div className="font-mono text-[10px]">
+                              {car.batumiParking.expiresAt ? (
+                                car.batumiParking.isValid ? (
+                                  <span className="text-emerald-400">
+                                    до {new Date(car.batumiParking.expiresAt).toLocaleDateString("ru-RU")}
+                                    {car.batumiParking.daysRemaining !== null && ` (${car.batumiParking.daysRemaining}д)`}
+                                  </span>
+                                ) : (
+                                  <span className="text-red-400 font-bold flex items-center space-x-0.5">
+                                    <AlertTriangle className="w-3 h-3 text-red-400 inline" />
+                                    <span>ПРОСРОЧЕНО!</span>
+                                  </span>
+                                )
+                              ) : (
+                                <span className="text-slate-400">Бессрочно</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-500">Нет</span>
+                        )}
+                      </td>
+
+                      {/* GPS */}
+                      <td className="py-3.5 px-3">
+                        {car.gps?.hasGps ? (
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                              <span>🛰️ GPS</span>
+                            </span>
+                            <div className="text-[10px] text-slate-400">
+                              {car.gps?.monthlyFee || 10} ₾/мес
+                              <span className="text-slate-500 block text-[9px]">
+                                {car.gps?.isChargedToOwner ? "владелец" : "автопрокат"}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-500">Нет</span>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
@@ -1027,7 +1109,7 @@ export const FleetMaintenanceHub: React.FC = () => {
                           onClick={() => handleOpenDocsModal(car)}
                           className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition"
                         >
-                          Изменить полис / ТО
+                          Изменить данные
                         </button>
                       </td>
                     </tr>
@@ -1526,10 +1608,10 @@ export const FleetMaintenanceHub: React.FC = () => {
       {/* MODAL 5: PTI & INSURANCE UPDATE */}
       {isDocsModalOpen && docsCar && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
               <div>
-                <span className="text-xs text-purple-400 font-bold uppercase">Техосмотр & Страхование</span>
+                <span className="text-xs text-purple-400 font-bold uppercase">Документы, Парковка & GPS</span>
                 <h3 className="text-base font-black text-white mt-0.5">
                   {docsCar.brand} {docsCar.model} ({docsCar.plateNumber})
                 </h3>
@@ -1580,7 +1662,7 @@ export const FleetMaintenanceHub: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-slate-400 text-[10px] block mb-1">Франшиза ($):</label>
+                    <label className="text-slate-400 text-[10px] block mb-1">Франшиза (₾ GEL):</label>
                     <input
                       type="number"
                       value={docsInsuranceDeductible}
@@ -1607,6 +1689,112 @@ export const FleetMaintenanceHub: React.FC = () => {
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono"
                   />
                 </div>
+              </div>
+
+              {/* Batumi Parking Section */}
+              <div className="bg-amber-950/20 p-3 rounded-xl border border-amber-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-amber-300 font-bold block">🅿️ Парковочное разрешение (Батуми):</span>
+                  <label className="flex items-center space-x-1.5 text-[11px] text-amber-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={docsHasBatumiParking}
+                      onChange={(e) => setDocsHasBatumiParking(e.target.checked)}
+                      className="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0"
+                    />
+                    <span>Разрешение активно</span>
+                  </label>
+                </div>
+
+                {docsHasBatumiParking && (
+                  <div className="space-y-2 pt-2 border-t border-amber-500/20">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-slate-400 text-[10px] block mb-1">Номер стикера / абонемента:</label>
+                        <input
+                          type="text"
+                          value={docsBatumiParkingNumber}
+                          onChange={(e) => setDocsBatumiParkingNumber(e.target.value)}
+                          placeholder="BAT-2026-..."
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-slate-400 text-[10px] block mb-1">Действует до:</label>
+                        <input
+                          type="date"
+                          value={docsBatumiParkingExpiresAt}
+                          onChange={(e) => setDocsBatumiParkingExpiresAt(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 items-center">
+                      <div>
+                        <label className="text-slate-400 text-[10px] block mb-1">Стоимость (₾ GEL):</label>
+                        <input
+                          type="number"
+                          value={docsBatumiParkingCost}
+                          onChange={(e) => setDocsBatumiParkingCost(Number(e.target.value))}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-xs"
+                        />
+                      </div>
+                      <div className="pt-3">
+                        <label className="flex items-center space-x-1.5 text-[11px] text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={docsRecordParkingExpense}
+                            onChange={(e) => setDocsRecordParkingExpense(e.target.checked)}
+                            className="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0"
+                          />
+                          <span>Списать в расходы владельца</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* GPS Tracking Section */}
+              <div className="bg-cyan-950/20 p-3 rounded-xl border border-cyan-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-cyan-300 font-bold block">🛰️ GPS Мониторинг & Трекер:</span>
+                  <label className="flex items-center space-x-1.5 text-[11px] text-cyan-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={docsHasGpsTracker}
+                      onChange={(e) => setDocsHasGpsTracker(e.target.checked)}
+                      className="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0"
+                    />
+                    <span>Трекер установлен</span>
+                  </label>
+                </div>
+
+                {docsHasGpsTracker && (
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-cyan-500/20 items-center">
+                    <div>
+                      <label className="text-slate-400 text-[10px] block mb-1">Абонентская плата (₾/мес):</label>
+                      <input
+                        type="number"
+                        value={docsGpsMonthlyFee}
+                        onChange={(e) => setDocsGpsMonthlyFee(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-xs"
+                      />
+                    </div>
+                    <div className="pt-3">
+                      <label className="flex items-center space-x-1.5 text-[11px] text-slate-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={docsIsGpsFeeChargedToOwner}
+                          onChange={(e) => setDocsIsGpsFeeChargedToOwner(e.target.checked)}
+                          className="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0"
+                        />
+                        <span>Списывать с владельца авто</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-2 flex justify-end space-x-2 border-t border-slate-800">

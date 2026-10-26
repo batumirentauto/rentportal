@@ -766,7 +766,7 @@ export const FleetPricingRegistry: React.FC = () => {
                   rows={2}
                   value={editPricingNotes}
                   onChange={(e) => setEditPricingNotes(e.target.value)}
-                  placeholder="Например: популярный для Казбеги, ниже $48 не торговаться, на 20+ дней отдаем за $40..."
+                  placeholder="Например: популярный для Казбеги, ниже 120 ₾ не торговаться, на 20+ дней отдаем за 100 ₾..."
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -775,7 +775,7 @@ export const FleetPricingRegistry: React.FC = () => {
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
                 <span className="text-slate-400">Плановая маржа при стандарте:</span>
                 <span className="font-mono font-black text-cyan-300">
-                  +${Math.max(0, editClientStandardRate - editOwnerDailyRate)} USD/день (
+                  +{Math.max(0, editClientStandardRate - editOwnerDailyRate)} ₾/день (
                   {editClientStandardRate > 0
                     ? Math.round(((editClientStandardRate - editOwnerDailyRate) / editClientStandardRate) * 100)
                     : 0}

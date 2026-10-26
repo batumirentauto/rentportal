@@ -94,6 +94,17 @@ model Car {
   stopReason            String?         // Причина постановки на СТОП (техосмотр, страховка, критический дефект)
   stopBlockedAt         DateTime?       // Время автоматической блокировки
   stopNotes             String?         // Примечания и инструкции для менеджера
+
+  // Парковочные разрешения по Батуми (Batumi Parking)
+  hasBatumiParking           Boolean         @default(false) // Наличие парковочного разрешения в Батуми
+  batumiParkingPermitNumber  String?         // Номер абонемента/квитанции (напр: "BP-2026-8812")
+  batumiParkingExpiresAt     DateTime?       // Срок действия абонемента парковки Батуми
+  batumiParkingCost          Float?          @default(40)    // Стоимость абонемента в GEL
+
+  // Абонентская плата за GPS (10 лари в месяц на 1 автомобиль)
+  hasGpsTracker              Boolean         @default(true)  // Установлен ли GPS-трекер
+  gpsMonthlyFee              Float           @default(10)    // Ежемесячная абонплата за GPS (10 GEL)
+  isGpsFeeChargedToOwner     Boolean         @default(true)  // Опция: удерживать ли с владельца авто
   
   cityId          String
   city            City             @relation(fields: [cityId], references: [id])
@@ -417,6 +428,7 @@ model CarOwner {
   bankName        String?       // "Bank of Georgia", "TBC Bank"
   bankIban        String?       // "GE29BG0000000123456789"
   payoutCurrency  String        @default("GEL") // "GEL" или "USD"
+  chargeGpsMonthly Boolean      @default(true)  // Опционально: списывать 10 GEL/мес за GPS на каждый автомобиль
   cars            Car[]
   payouts         OwnerPayout[]
   expenses        Expense[]     // Расходы на автомобили владельца (ТО, ремонты, страховки)

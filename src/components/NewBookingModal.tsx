@@ -7,15 +7,36 @@ import {
   User,
   MapPin,
   Clock,
-  DollarSign,
+  Wallet,
   Repeat,
   Check,
   CheckCircle2,
   Compass,
   ShieldAlert,
   Crown,
+  UserPlus,
 } from "lucide-react";
 import { getCityTheme } from "./FleetTimelineGrid";
+
+const DEFAULT_LOCATIONS = [
+  // Tbilisi
+  { id: "cmvm9rndl0003987mlxa6fb1n", name: "🏢 Офис Тбилиси (пр. Руставели, 24)", type: "OFFICE", address: "пр. Руставели, 24", city: { code: "TBS", nameRu: "Тбилиси" } },
+  { id: "cmvm9rndm0004987m53jzk5i5", name: "✈️ Аэропорт Тбилиси (TBS им. Шота Руставели)", type: "AIRPORT", address: "Аэропорт Тбилиси", city: { code: "TBS", nameRu: "Тбилиси" } },
+  { id: "loc-tbs-delivery", name: "🏨 Доставка по адресу / Отель (Тбилиси)", type: "CUSTOM", address: "Адрес в Тбилиси", city: { code: "TBS", nameRu: "Тбилиси" } },
+  { id: "loc-tbs-railway", name: "🚆 Ж/д вокзал Тбилиси (Центральный)", type: "OFFICE", address: "Вокзальная пл., 1", city: { code: "TBS", nameRu: "Тбилиси" } },
+
+  // Batumi
+  { id: "cmvm9rndo0005987m86bj6j2j", name: "🏢 Офис Батуми (ул. Зураба Горгиладзе, 54)", type: "OFFICE", address: "ул. Горгиладзе, 54", city: { code: "BUS", nameRu: "Батуми" } },
+  { id: "cmvm9rndq0006987mek4queb1", name: "✈️ Аэропорт Батуми (BUS Александр Картвели)", type: "AIRPORT", address: "Аэропорт Батуми", city: { code: "BUS", nameRu: "Батуми" } },
+  { id: "loc-bus-delivery", name: "🏨 Доставка по адресу / Отель (Батуми)", type: "CUSTOM", address: "Адрес в Батуми", city: { code: "BUS", nameRu: "Батуми" } },
+  { id: "loc-bus-railway", name: "🚆 Ж/д вокзал Батуми (Центральный)", type: "OFFICE", address: "шоссе Маяковского, 1", city: { code: "BUS", nameRu: "Батуми" } },
+
+  // Kutaisi
+  { id: "cmvm9rndv0008987mma17vehw", name: "✈️ Аэропорт Кутаиси (KUT Давид Строитель / Копитнари)", type: "AIRPORT", address: "Аэропорт Кутаиси", city: { code: "KUT", nameRu: "Кутаиси" } },
+  { id: "cmvm9rndt0007987mgofng31w", name: "🏢 Офис Кутаиси (ул. Церетели, 12 / Центр)", type: "OFFICE", address: "ул. Церетели, 12", city: { code: "KUT", nameRu: "Кутаиси" } },
+  { id: "loc-kut-delivery", name: "🏨 Доставка по адресу / Отель (Кутаиси)", type: "CUSTOM", address: "Адрес в Кутаиси", city: { code: "KUT", nameRu: "Кутаиси" } },
+  { id: "loc-kut-railway", name: "🚆 Ж/д вокзал Кутаиси", type: "OFFICE", address: "пр. Ильи Чавчавадзе", city: { code: "KUT", nameRu: "Кутаиси" } },
+];
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -33,7 +54,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   initialDate,
 }) => {
   const [cars, setCars] = useState<any[]>([]);
-  const [locations, setLocations] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>(DEFAULT_LOCATIONS);
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -42,11 +63,14 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [carId, setCarId] = useState<string>(initialCarId || "");
   const [customerId, setCustomerId] = useState<string>("");
   
-  // Quick Customer inputs if creating new
+  // New Customer creation mode
+  const [isNewCustomerMode, setIsNewCustomerMode] = useState<boolean>(false);
   const [newCustomerName, setNewCustomerName] = useState<string>("");
   const [newCustomerPhone, setNewCustomerPhone] = useState<string>("");
   const [newCustomerPassport, setNewCustomerPassport] = useState<string>("");
   const [newCustomerLicense, setNewCustomerLicense] = useState<string>("");
+  const [newCustomerCountry, setNewCustomerCountry] = useState<string>("Грузия / Международный");
+  const [newCustomerNotes, setNewCustomerNotes] = useState<string>("");
 
   const [startDate, setStartDate] = useState<string>(
     initialDate || new Date().toISOString().split("T")[0]
@@ -61,6 +85,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     d.setDate(d.getDate() + rentalDays);
     return d.toISOString().split("T")[0];
   }, [startDate, rentalDays]);
+
   const [pickupCityCode, setPickupCityCode] = useState<string>("TBS");
   const [pickupLocationId, setPickupLocationId] = useState<string>("");
   const [pickupType, setPickupType] = useState<string>("OFFICE");
@@ -84,16 +109,16 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     const loadData = async () => {
       setLoading(true);
       try {
-        const [carsRes, custRes, bRes] = await Promise.all([
+        const [carsRes, custRes, locRes] = await Promise.all([
           fetch("/api/fleet/timeline?days=30"),
           fetch("/api/customers"),
-          fetch("/api/bookings"),
+          fetch("/api/locations"),
         ]);
 
-        const [carsJson, custJson, bJson] = await Promise.all([
+        const [carsJson, custJson, locJson] = await Promise.all([
           carsRes.json(),
           custRes.json(),
-          bRes.json(),
+          locRes.json(),
         ]);
 
         if (carsJson.success) {
@@ -108,32 +133,20 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           if (custJson.customers.length > 0 && !customerId) {
             setCustomerId(custJson.customers[0].id);
           }
-        } else if (bJson.success && bJson.bookings) {
-          const custMap = new Map();
-          bJson.bookings.forEach((b: any) => {
-            if (b.customer) custMap.set(b.customer.id, b.customer);
-          });
-          const custList = Array.from(custMap.values());
-          setCustomers(custList);
-          if (custList.length > 0 && !customerId) {
-            setCustomerId(custList[0].id);
-          }
         }
 
-        if (bJson.success && bJson.bookings) {
-          const locMap = new Map();
-          bJson.bookings.forEach((b: any) => {
-            if (b.pickupLocation) locMap.set(b.pickupLocation.id, b.pickupLocation);
-            if (b.returnLocation) locMap.set(b.returnLocation.id, b.returnLocation);
-          });
-          const locList = Array.from(locMap.values());
-          setLocations(locList);
-
-          if (locList.length > 0) {
-            const defaultPickup = locList.find((l: any) => l.city?.code === pickupCityCode) || locList[0];
+        if (locJson.success && locJson.locations?.length > 0) {
+          setLocations(locJson.locations);
+          const defaultPickup = locJson.locations.find((l: any) => l.city?.code === pickupCityCode) || locJson.locations[0];
+          if (defaultPickup) {
             setPickupLocationId(defaultPickup.id);
             setReturnLocationId(defaultPickup.id);
           }
+        } else {
+          // Использовать надежные дефолтные локации
+          const defaultPickup = DEFAULT_LOCATIONS.find((l: any) => l.city?.code === pickupCityCode) || DEFAULT_LOCATIONS[0];
+          setPickupLocationId(defaultPickup.id);
+          setReturnLocationId(defaultPickup.id);
         }
       } catch (e) {
         console.error(e);
@@ -261,10 +274,45 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
       let targetCustomerId = customerId;
 
-      // If new customer details provided
-      if (!targetCustomerId && newCustomerName) {
-        // Fallback or use existing
-        targetCustomerId = customers[0]?.id;
+      // Если выбран режим создания нового клиента
+      if (isNewCustomerMode || customerId === "NEW_CUSTOMER") {
+        if (!newCustomerName.trim() || !newCustomerPhone.trim()) {
+          alert("Пожалуйста, заполните обязательные поля: ФИО и телефон нового клиента!");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const custRes = await fetch("/api/customers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fullName: newCustomerName.trim(),
+            phone: newCustomerPhone.trim(),
+            whatsapp: newCustomerPhone.trim(),
+            passportNumber: newCustomerPassport.trim() || "Не указан",
+            driverLicenseNumber: newCustomerLicense.trim() || "Не указаны",
+            passportCountry: newCustomerCountry.trim() || "Грузия / Международный",
+            notes: newCustomerNotes.trim() || "Создан из формы бронирования",
+            isLoyalClient: true,
+            discountPercent: 10,
+            loyaltyTier: "GOLD_VIP",
+          }),
+        });
+
+        const custJson = await custRes.json();
+        if (custJson.success && custJson.customer) {
+          targetCustomerId = custJson.customer.id;
+          // Добавляем в локальный стейт
+          setCustomers((prev) => [custJson.customer, ...prev]);
+        } else {
+          alert("Ошибка при сохранении клиента: " + (custJson.error || "Проверьте данные"));
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      if (!targetCustomerId && customers.length > 0) {
+        targetCustomerId = customers[0].id;
       }
 
       const res = await fetch("/api/bookings", {
@@ -272,7 +320,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           carId,
-          customerId: targetCustomerId || customers[0]?.id,
+          customerId: targetCustomerId,
           startDate: startDateTime,
           endDate: endDateTime,
           rentalDays,
@@ -298,11 +346,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
         onBookingCreated();
         onClose();
       } else {
-        alert("Ошибка: " + resJson.error);
+        alert("Ошибка создания брони: " + resJson.error);
       }
     } catch (err: any) {
       console.error(err);
-      alert("Ошибка при создании бронирования");
+      alert("Ошибка сети при создании бронирования");
     } finally {
       setIsSubmitting(false);
     }
@@ -364,63 +412,209 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
 
             <div>
-              <label className="text-slate-300 font-bold block mb-1">
-                Клиент:
-              </label>
-              <select
-                value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-                className={`w-full bg-slate-950 border rounded-xl p-2.5 text-white font-medium focus:outline-none ${
-                  selectedCustomer?.isBlacklisted
-                    ? "border-red-500 bg-red-950/30 text-red-200"
-                    : "border-slate-700 focus:border-amber-500"
-                }`}
-              >
-                {customers.map((cust: any) => (
-                  <option key={cust.id} value={cust.id}>
-                    {cust.isBlacklisted
-                      ? `⛔ [ЧЁРНЫЙ СПИСОК] ${cust.fullName} (${cust.phone})`
-                      : cust.loyaltyTier && cust.loyaltyTier !== "STANDARD"
-                      ? `👑 [${cust.loyaltyTier}] ${cust.fullName} (${cust.phone})`
-                      : `${cust.fullName} (${cust.phone})`}
-                  </option>
-                ))}
-              </select>
-
-              {/* Customer Warning or Loyalty Banner */}
-              {selectedCustomer?.isBlacklisted && (
-                <div className="mt-2.5 p-3 bg-red-950/90 border-2 border-red-500 rounded-xl space-y-2">
-                  <div className="flex items-center space-x-2 text-red-300 font-black text-sm">
-                    <ShieldAlert className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
-                    <span>ВНИМАНИЕ: КЛИЕНТ В ЧЁРНОМ СПИСКЕ!</span>
-                  </div>
-                  <p className="text-xs text-red-200 leading-relaxed">
-                    <strong>Причина блокировки:</strong>{" "}
-                    {selectedCustomer.blacklistReason || "Грубое нарушение договора / повреждение авто / задолженность."}
-                  </p>
-                  <label className="flex items-start space-x-2 pt-1.5 border-t border-red-800/80 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={acknowledgedBlacklist}
-                      onChange={(e) => setAcknowledgedBlacklist(e.target.checked)}
-                      className="mt-0.5 rounded text-red-600 focus:ring-red-500"
-                    />
-                    <span className="text-xs text-red-300 font-semibold">
-                      Подтверждаю согласование брони для черного списка с генеральным директором / СБ
-                    </span>
-                  </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-slate-300 font-bold block">
+                  Клиент:
+                </label>
+                <div className="flex space-x-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsNewCustomerMode(false);
+                      if (customerId === "NEW_CUSTOMER" && customers.length > 0) {
+                        setCustomerId(customers[0].id);
+                      }
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                      !isNewCustomerMode
+                        ? "bg-amber-500 text-slate-950 font-black shadow"
+                        : "bg-slate-800 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    👥 Из базы ({customers.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsNewCustomerMode(true);
+                      setCustomerId("NEW_CUSTOMER");
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition flex items-center space-x-1 ${
+                      isNewCustomerMode
+                        ? "bg-emerald-500 text-slate-950 font-black shadow"
+                        : "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900"
+                    }`}
+                  >
+                    <UserPlus className="w-3 h-3" />
+                    <span>+ Новый клиент</span>
+                  </button>
                 </div>
-              )}
+              </div>
 
-              {selectedCustomer && !selectedCustomer.isBlacklisted && selectedCustomer.loyaltyTier && selectedCustomer.loyaltyTier !== "STANDARD" && (
-                <div className="mt-2 px-3 py-1.5 bg-purple-950/40 border border-purple-500/40 rounded-xl flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-1.5 text-purple-300 font-bold">
-                    <Crown className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Статус: {selectedCustomer.loyaltyTier}</span>
+              {!isNewCustomerMode ? (
+                <div>
+                  <select
+                    value={customerId}
+                    onChange={(e) => {
+                      if (e.target.value === "NEW_CUSTOMER") {
+                        setIsNewCustomerMode(true);
+                        setCustomerId("NEW_CUSTOMER");
+                      } else {
+                        setCustomerId(e.target.value);
+                      }
+                    }}
+                    className={`w-full bg-slate-950 border rounded-xl p-2.5 text-white font-medium focus:outline-none ${
+                      selectedCustomer?.isBlacklisted
+                        ? "border-red-500 bg-red-950/30 text-red-200"
+                        : "border-slate-700 focus:border-amber-500"
+                    }`}
+                  >
+                    <option value="NEW_CUSTOMER">➕ Добавить нового клиента...</option>
+                    {customers.map((cust: any) => (
+                      <option key={cust.id} value={cust.id}>
+                        {cust.isBlacklisted
+                          ? `⛔ [ЧЁРНЫЙ СПИСОК] ${cust.fullName} (${cust.phone})`
+                          : cust.loyaltyTier && cust.loyaltyTier !== "STANDARD"
+                          ? `👑 [${cust.loyaltyTier}] ${cust.fullName} (${cust.phone})`
+                          : `${cust.fullName} (${cust.phone})`}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Customer Warning or Loyalty Banner */}
+                  {selectedCustomer?.isBlacklisted && (
+                    <div className="mt-2.5 p-3 bg-red-950/90 border-2 border-red-500 rounded-xl space-y-2">
+                      <div className="flex items-center space-x-2 text-red-300 font-black text-sm">
+                        <ShieldAlert className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
+                        <span>ВНИМАНИЕ: КЛИЕНТ В ЧЁРНОМ СПИСКЕ!</span>
+                      </div>
+                      <p className="text-xs text-red-200 leading-relaxed">
+                        <strong>Причина блокировки:</strong>{" "}
+                        {selectedCustomer.blacklistReason || "Грубое нарушение договора / повреждение авто / задолженность."}
+                      </p>
+                      <label className="flex items-start space-x-2 pt-1.5 border-t border-red-800/80 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={acknowledgedBlacklist}
+                          onChange={(e) => setAcknowledgedBlacklist(e.target.checked)}
+                          className="mt-0.5 rounded text-red-600 focus:ring-red-500"
+                        />
+                        <span className="text-xs text-red-300 font-semibold">
+                          Подтверждаю согласование брони для черного списка с генеральным директором / СБ
+                        </span>
+                      </label>
+                    </div>
+                  )}
+
+                  {selectedCustomer && !selectedCustomer.isBlacklisted && selectedCustomer.loyaltyTier && selectedCustomer.loyaltyTier !== "STANDARD" && (
+                    <div className="mt-2 px-3 py-1.5 bg-purple-950/40 border border-purple-500/40 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center space-x-1.5 text-purple-300 font-bold">
+                        <Crown className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Статус: {selectedCustomer.loyaltyTier}</span>
+                      </div>
+                      <span className="text-amber-300 font-extrabold">
+                        Скидка клиента: {selectedCustomer.discountPercent}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* NEW CUSTOMER INPUT FORM */
+                <div className="bg-slate-950 p-3 rounded-2xl border border-emerald-500/40 space-y-2 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                    <span className="text-[11px] font-bold text-emerald-400 flex items-center space-x-1">
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Быстрое добавление нового клиента в CRM:</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsNewCustomerMode(false)}
+                      className="text-[10px] text-slate-400 hover:text-white"
+                    >
+                      ✕ Отмена
+                    </button>
                   </div>
-                  <span className="text-amber-300 font-extrabold">
-                    Скидка клиента: {selectedCustomer.discountPercent}%
-                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">
+                        ФИО клиента <span className="text-red-400">*</span>:
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomerName}
+                        onChange={(e) => setNewCustomerName(e.target.value)}
+                        placeholder="Например: Иван Петров"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-amber-500 font-medium"
+                        required={isNewCustomerMode}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">
+                        Телефон (WhatsApp/Telegram) <span className="text-red-400">*</span>:
+                      </label>
+                      <input
+                        type="tel"
+                        value={newCustomerPhone}
+                        onChange={(e) => setNewCustomerPhone(e.target.value)}
+                        placeholder="+995 599 000 000"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-amber-500 font-mono font-medium"
+                        required={isNewCustomerMode}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">
+                        Загранпаспорт / ID:
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomerPassport}
+                        onChange={(e) => setNewCustomerPassport(e.target.value)}
+                        placeholder="Серия и номер"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-amber-500 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">
+                        Водительские права:
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomerLicense}
+                        onChange={(e) => setNewCustomerLicense(e.target.value)}
+                        placeholder="Номер ВУ"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-amber-500 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">
+                        Гражданство:
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomerCountry}
+                        onChange={(e) => setNewCustomerCountry(e.target.value)}
+                        placeholder="Страна"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">
+                      Заметка (отель, рейс, пожелания):
+                    </label>
+                    <input
+                      type="text"
+                      value={newCustomerNotes}
+                      onChange={(e) => setNewCustomerNotes(e.target.value)}
+                      placeholder="Рейс прибытия, особые условия и т.д."
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -550,8 +744,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="font-bold text-slate-300">Локация сдачи:</span>
                 {isOneWay && (
-                  <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1.5 py-0.2 rounded font-bold">
-                    ⇄ One-Way (+${oneWayFee})
+                  <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1.5 py-0.5 rounded font-bold">
+                    ⇄ One-Way (+{oneWayFee} ₾)
                   </span>
                 )}
               </div>
@@ -693,9 +887,9 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
               <div className="flex items-center space-x-2">
-                <DollarSign className="w-4 h-4 text-amber-400" />
+                <Wallet className="w-4 h-4 text-amber-400" />
                 <span className="font-bold text-white text-xs uppercase tracking-wide">
-                  Тарифная сетка & Стоимость аренды
+                  Тарифная сетка & Стоимость аренды (GEL ₾)
                 </span>
               </div>
               <span className="text-[11px] text-amber-300 font-medium">
@@ -780,10 +974,10 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="text-slate-300 font-bold block mb-1">
-                  Суточный тариф ($/день):
+                  Суточный тариф (₾/день):
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2 text-slate-500 font-mono font-bold">$</span>
+                  <span className="absolute left-3 top-2 text-slate-500 font-mono font-bold">₾</span>
                   <input
                     type="number"
                     min="1"
@@ -797,10 +991,10 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
               <div>
                 <label className="text-slate-300 font-bold block mb-1">
-                  Итого за аренду ($ за {rentalDays} дн.):
+                  Итого за аренду (₾ за {rentalDays} дн.):
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2 text-slate-500 font-mono font-bold">$</span>
+                  <span className="absolute left-3 top-2 text-slate-500 font-mono font-bold">₾</span>
                   <input
                     type="number"
                     min="1"
@@ -819,10 +1013,10 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
               <div>
                 <label className="text-slate-300 font-bold block mb-1">
-                  Ставка владельцу ($/день):
+                  Ставка владельцу (₾/день):
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2 text-slate-500 font-mono font-bold">$</span>
+                  <span className="absolute left-3 top-2 text-slate-500 font-mono font-bold">₾</span>
                   <input
                     type="number"
                     min="0"
@@ -840,7 +1034,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               <div className="p-2.5 bg-red-950/80 border border-red-500 rounded-xl text-red-200 text-xs flex items-center space-x-2">
                 <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
                 <span>
-                  <strong>Внимание:</strong> Вы указали суточный тариф (${dailyRate}), который ниже выплаты владельцу авто (${ownerDailyRate})! Сделка убыточна на ${ownerDailyRate - dailyRate}/день.
+                  <strong>Внимание:</strong> Вы указали суточный тариф ({dailyRate} ₾), который ниже выплаты владельцу авто ({ownerDailyRate} ₾)! Сделка убыточна на {ownerDailyRate - dailyRate} ₾/день.
                 </span>
               </div>
             )}

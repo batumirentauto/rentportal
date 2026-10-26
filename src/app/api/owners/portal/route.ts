@@ -163,6 +163,12 @@ export async function GET(request: Request) {
         earnedUSD: carEarnings,
         expensesGEL: carExpenses,
         netProfitGEL: netProfit,
+        hasBatumiParking: car.hasBatumiParking,
+        batumiParkingPermitNumber: car.batumiParkingPermitNumber,
+        batumiParkingExpiresAt: car.batumiParkingExpiresAt,
+        hasGpsTracker: car.hasGpsTracker,
+        gpsMonthlyFee: car.gpsMonthlyFee || 10,
+        isGpsFeeChargedToOwner: car.isGpsFeeChargedToOwner,
         activeBooking: activeBooking
           ? {
               bookingNumber: activeBooking.bookingNumber,
@@ -201,6 +207,7 @@ export async function GET(request: Request) {
         bankName: owner.bankName,
         bankIban: owner.bankIban,
         payoutCurrency: owner.payoutCurrency,
+        chargeGpsMonthly: owner.chargeGpsMonthly,
         notes: owner.notes,
       },
       metrics: {
@@ -370,6 +377,80 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         message: "Расход успешно удален",
+      });
+    }
+
+    // 2.5. Начисление ежемесячной абонплаты за GPS (10 лари на 1 автомобиль)
+    if (action === "CHARGE_MONTHLY_GPS") {
+      if (!ownerId) {
+        return NextResponse.json({ success: false, error: "ownerId required" }, { status: 400 });
+      }
+
+      const ownerObj = await prisma.carOwner.findUnique({
+        where: { id: ownerId },
+        include: { cars: true },
+      });
+
+      if (!ownerObj) {
+        return NextResponse.json({ success: false, error: "Owner not found" }, { status: 404 });
+      }
+
+      const defaultAcc = await prisma.financialAccount.findFirst({ where: { currency: "GEL" } }) || await prisma.financialAccount.findFirst();
+      if (!defaultAcc) {
+        return NextResponse.json({ success: false, error: "Касса не найдена" }, { status: 400 });
+      }
+
+      // Находим автомобили с включенным GPS
+      const eligibleCars = ownerObj.cars.filter((c) => c.hasGpsTracker && c.isGpsFeeChargedToOwner);
+
+      if (eligibleCars.length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: "У этого владельца нет автомобилей с активной абонплатой за GPS",
+        }, { status: 400 });
+      }
+
+      const currentMonthName = new Date().toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+      const createdExpenses = [];
+
+      for (const car of eligibleCars) {
+        const fee = car.gpsMonthlyFee || 10;
+        const exp = await prisma.expense.create({
+          data: {
+            accountId: defaultAcc.id,
+            ownerId: ownerObj.id,
+            carId: car.id,
+            category: "GPS_TRACKER",
+            amount: fee,
+            currency: "GEL",
+            description: `Абонентская плата за GPS-трекер (${currentMonthName}) — ${car.brand} ${car.model} (${car.plateNumber})`,
+            isOwnerExpense: true,
+            managerName: "Система GPS VSL",
+            date: new Date(),
+          },
+        });
+        createdExpenses.push(exp);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Успешно начислена абонплата за GPS на ${eligibleCars.length} авто на сумму ${eligibleCars.length * 10} ₾ (${currentMonthName})`,
+        count: eligibleCars.length,
+        totalGEL: eligibleCars.length * 10,
+      });
+    }
+
+    // 2.6. Опциональное включение / отключение списания GPS для владельца
+    if (action === "TOGGLE_OWNER_GPS_CHARGE") {
+      const { ownerId, chargeGpsMonthly } = body;
+      const updated = await prisma.carOwner.update({
+        where: { id: ownerId },
+        data: { chargeGpsMonthly: Boolean(chargeGpsMonthly) },
+      });
+      return NextResponse.json({
+        success: true,
+        message: "Настройки начисления GPS обновлены!",
+        owner: updated,
       });
     }
 

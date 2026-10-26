@@ -36,6 +36,8 @@ import { getCityTheme } from "./FleetTimelineGrid";
 
 const EXPENSE_CATEGORIES: { id: string; label: string; icon: string; desc: string }[] = [
   { id: "MAINTENANCE", label: "ТО / Замена масла и фильтров", icon: "🛠️", desc: "Регулярное ТО, масло 5W30/0W20, фильтры" },
+  { id: "BATUMI_PARKING", label: "Парковочное разрешение Батуми", icon: "🅿️", desc: "Муниципальный абонемент Batumi Parking" },
+  { id: "GPS_TRACKER", label: "Абонплата за GPS (10 ₾/мес)", icon: "🛰️", desc: "Ежемесячная плата за GPS-мониторинг (10 лари на 1 авто)" },
   { id: "INSURANCE", label: "Страховка КАСКО / ОСАГО", icon: "🛡️", desc: "Годовой полис, франшиза, продление" },
   { id: "PTI_INSPECTION", label: "Техосмотр PTI (гостехосмотр)", icon: "📋", desc: "Официальный техосмотр Грузии" },
   { id: "REPAIRS", label: "Ремонт деталей / СТО / Ходовая", icon: "⚙️", desc: "Колодки, подвеска, электрика, двигатель" },
@@ -155,6 +157,57 @@ export const OwnerInvestorCabinet: React.FC = () => {
         body: JSON.stringify({
           action: "DELETE_EXPENSE",
           expenseId,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await fetchPortalData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Charge monthly GPS fee (10 GEL per car)
+  const handleChargeMonthlyGps = async () => {
+    if (!selectedOwner?.id) return;
+    if (!confirm(`Начислить ежемесячную абонплату за GPS-трекинг по 10 лари на каждый автомобиль инвестора «${selectedOwner.fullName}»?`)) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/owners/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CHARGE_MONTHLY_GPS",
+          ownerId: selectedOwner.id,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert(json.message);
+        await fetchPortalData();
+      } else {
+        alert(json.error || "Ошибка списания абонплаты за GPS");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Ошибка сети");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Toggle GPS monthly charging for owner
+  const handleToggleGpsCharge = async (currentVal: boolean) => {
+    if (!selectedOwner?.id) return;
+    try {
+      const res = await fetch("/api/owners/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "TOGGLE_OWNER_GPS_CHARGE",
+          ownerId: selectedOwner.id,
+          chargeGpsMonthly: !currentVal,
         }),
       });
       const json = await res.json();
@@ -414,6 +467,21 @@ export const OwnerInvestorCabinet: React.FC = () => {
                 ₾ GEL (Грузинский Лари)
               </span>
             </div>
+            <div>
+              <span className="text-[10px] text-slate-500 block">GPS-трекинг (10 ₾/авто):</span>
+              <button
+                type="button"
+                onClick={() => handleToggleGpsCharge(Boolean(selectedOwner.chargeGpsMonthly))}
+                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border transition ${
+                  selectedOwner.chargeGpsMonthly !== false
+                    ? "bg-emerald-950 text-emerald-300 border-emerald-500/40"
+                    : "bg-slate-900 text-slate-500 border-slate-700 hover:text-slate-300"
+                }`}
+                title="Опция: взимать ли с владельца 10 лари в месяц за абонентскую плату GPS-трекера"
+              >
+                {selectedOwner.chargeGpsMonthly !== false ? "✓ Включено (10 ₾/мес)" : "✕ Отключено"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -663,6 +731,31 @@ export const OwnerInvestorCabinet: React.FC = () => {
 
                   {/* Financials & Owner Daily Rate */}
                   <div className="pt-2 border-t border-slate-800/80 space-y-2 text-xs">
+                    {/* Batumi Parking & GPS Badges */}
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                      <span className={`px-2 py-0.5 rounded-md border flex items-center space-x-1 ${
+                        car.hasBatumiParking
+                          ? "bg-blue-950/80 text-blue-300 border-blue-500/40"
+                          : "bg-slate-950 text-slate-500 border-slate-800"
+                      }`}>
+                        <span>🅿️ Парковка Батуми:</span>
+                        <strong className={car.hasBatumiParking ? "text-blue-300" : "text-slate-500"}>
+                          {car.hasBatumiParking ? `✓ Абонемент` : "Нет"}
+                        </strong>
+                      </span>
+
+                      <span className={`px-2 py-0.5 rounded-md border flex items-center space-x-1 ${
+                        car.hasGpsTracker
+                          ? "bg-indigo-950/80 text-indigo-300 border-indigo-500/40"
+                          : "bg-slate-950 text-slate-500 border-slate-800"
+                      }`}>
+                        <span>🛰️ GPS:</span>
+                        <strong className="text-indigo-300">
+                          {car.hasGpsTracker ? (car.isGpsFeeChargedToOwner !== false ? "10 ₾/мес" : "Без списания") : "Нет"}
+                        </strong>
+                      </span>
+                    </div>
+
                     {/* Utilization in period */}
                     <div className="flex justify-between items-center text-slate-300">
                       <span>Сдаваемость в периоде:</span>
@@ -745,16 +838,37 @@ export const OwnerInvestorCabinet: React.FC = () => {
                 Все затраты на ТО, замену масла, запчасти, КАСКО, техосмотр PTI и резину в одном месте
               </p>
             </div>
-            <div className="flex items-center space-x-3">
-              <span className="text-xs text-rose-300 font-mono font-bold">
-                Сумма расходов: {metrics?.totalOwnerExpensesGEL?.toLocaleString()} ₾
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-rose-300 font-mono font-bold mr-1">
+                Сумма: {metrics?.totalOwnerExpensesGEL?.toLocaleString()} ₾
               </span>
+              <button
+                type="button"
+                onClick={handleChargeMonthlyGps}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-300 rounded-xl text-xs font-bold transition shadow"
+                title="Списать ежемесячную абонплату 10 лари/авто за GPS"
+              >
+                <span>🛰️ Списать GPS (10 ₾/авто)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setExpenseCarId(cars?.[0]?.id || "");
+                  setExpenseCategory("BATUMI_PARKING");
+                  setExpenseAmount("40");
+                  setExpenseDescription("Парковочный абонемент Батуми (Batumi Parking)");
+                  setIsAddExpenseOpen(true);
+                }}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-950/80 hover:bg-blue-900 border border-blue-500/40 text-blue-300 rounded-xl text-xs font-bold transition shadow"
+              >
+                <span>🅿️ Парковка Батуми</span>
+              </button>
               <button
                 onClick={() => {
                   setExpenseCarId(cars?.[0]?.id || "");
                   setIsAddExpenseOpen(true);
                 }}
-                className="flex items-center space-x-1.5 px-3.5 py-2 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-xl text-xs font-black shadow-lg transition"
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-xl text-xs font-black shadow-lg transition"
               >
                 <Plus className="w-4 h-4" />
                 <span>+ Добавить расход</span>

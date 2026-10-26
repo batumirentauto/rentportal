@@ -101,18 +101,58 @@ export async function POST(request: Request) {
       : (car?.defaultOwnerDailyRate || 25);
     const ownerTotalPayout = effectiveOwnerDailyRate * Number(rentalDays);
 
+    // Автоматическое создание нового клиента, если данные переданы в бронировании
+    let finalCustomerId = customerId;
+    if ((!finalCustomerId || finalCustomerId === "NEW_CUSTOMER") && body.newCustomer) {
+      const { fullName, phone, passportNumber, driverLicenseNumber, passportCountry, notes } = body.newCustomer;
+      if (fullName && phone) {
+        const createdCustomer = await prisma.customer.create({
+          data: {
+            fullName: fullName.trim(),
+            phone: phone.trim(),
+            whatsapp: phone.trim(),
+            passportNumber: passportNumber?.trim() || "Не указан",
+            driverLicenseNumber: driverLicenseNumber?.trim() || "Не указаны",
+            passportCountry: passportCountry?.trim() || "Грузия / Международный",
+            notes: notes?.trim() || "Создан из формы бронирования",
+            isLoyalClient: true,
+            discountPercent: 10,
+            loyaltyTier: "GOLD_VIP",
+          },
+        });
+        finalCustomerId = createdCustomer.id;
+      }
+    }
+
+    if (!finalCustomerId) {
+      const firstCust = await prisma.customer.findFirst();
+      if (firstCust) finalCustomerId = firstCust.id;
+    }
+
+    // Защита от пустых локаций
+    let finalPickupLocId = pickupLocationId;
+    let finalReturnLocId = returnLocationId;
+
+    if (!finalPickupLocId) {
+      const loc = (car?.cityId ? await prisma.location.findFirst({ where: { cityId: car.cityId } }) : null) || await prisma.location.findFirst();
+      if (loc) finalPickupLocId = loc.id;
+    }
+    if (!finalReturnLocId) {
+      finalReturnLocId = finalPickupLocId;
+    }
+
     const newBooking = await prisma.booking.create({
       data: {
         bookingNumber,
         carId,
-        customerId,
+        customerId: finalCustomerId,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         rentalDays,
-        pickupLocationId,
+        pickupLocationId: finalPickupLocId,
         pickupType,
         pickupAddress,
-        returnLocationId,
+        returnLocationId: finalReturnLocId,
         returnType,
         returnAddress,
         dailyRate: Number(dailyRate),

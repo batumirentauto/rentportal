@@ -417,7 +417,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
               <h3 className="text-base font-extrabold text-white flex items-center justify-between">
                 <span>1. Структура доходов (Выручка)</span>
-                <span className="text-amber-400 font-mono">${pnl?.revenue?.total.toLocaleString()} USD</span>
+                <span className="text-amber-400 font-mono">{pnl?.revenue?.total.toLocaleString()} ₾</span>
               </h3>
 
               <div className="space-y-3 text-xs">
@@ -425,7 +425,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                 <div>
                   <div className="flex justify-between text-slate-300 mb-1">
                     <span>Базовый тариф аренды автомобилей:</span>
-                    <span className="font-mono font-bold text-white">${pnl?.revenue?.rental} USD</span>
+                    <span className="font-mono font-bold text-white">{pnl?.revenue?.rental} ₾</span>
                   </div>
                   <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
                     <div
@@ -444,7 +444,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                       <Repeat className="w-3.5 h-3.5 text-purple-400" />
                       <span>Сбор за междугороднюю сдачу (One-Way):</span>
                     </span>
-                    <span className="font-mono font-bold text-purple-300">${pnl?.revenue?.oneWay} USD</span>
+                    <span className="font-mono font-bold text-purple-300">{pnl?.revenue?.oneWay} ₾</span>
                   </div>
                   <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
                     <div
@@ -460,7 +460,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                 <div>
                   <div className="flex justify-between text-slate-300 mb-1">
                     <span>Дополнительное оборудование (кресла, роутеры):</span>
-                    <span className="font-mono font-bold text-emerald-300">${pnl?.revenue?.extras} USD</span>
+                    <span className="font-mono font-bold text-emerald-300">{pnl?.revenue?.extras} ₾</span>
                   </div>
                   <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
                     <div
@@ -477,7 +477,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
                 <span className="text-slate-400">Валовая прибыль (выручка минус прямые расходы):</span>
                 <span className="font-black text-emerald-400 font-mono text-sm">
-                  ${pnl?.grossProfitUSD.toLocaleString()} USD
+                  {pnl?.grossProfitUSD.toLocaleString()} ₾
                 </span>
               </div>
             </div>
@@ -486,7 +486,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
               <h3 className="text-base font-extrabold text-white flex items-center justify-between">
                 <span>2. Структура операционных расходов (OPEX)</span>
-                <span className="text-red-400 font-mono">{pnl?.opex?.totalGEL.toLocaleString()} GEL</span>
+                <span className="text-red-400 font-mono">{pnl?.opex?.totalGEL.toLocaleString()} ₾</span>
               </h3>
 
               <div className="space-y-2.5 text-xs max-h-72 overflow-y-auto pr-1">
@@ -498,8 +498,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                       <div className="flex justify-between items-center mb-1">
                         <span className="font-semibold text-slate-200">{cat.label}</span>
                         <div className="text-right font-mono">
-                          <span className="text-white font-bold">{cat.amountGEL.toLocaleString()} GEL</span>
-                          <span className="text-slate-500 text-[10px] ml-1.5">(~${cat.amountUSD})</span>
+                          <span className="text-white font-bold">{cat.amountGEL.toLocaleString()} ₾</span>
                         </div>
                       </div>
                       <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
@@ -520,7 +519,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                   <span className="text-[10px] text-emerald-400/80">Рентабельность бизнеса: {pnl?.marginPercent}%</span>
                 </div>
                 <span className="text-xl font-black text-emerald-400 font-mono">
-                  ${pnl?.netProfitUSD.toLocaleString()} USD
+                  {pnl?.netProfitUSD.toLocaleString()} ₾
                 </span>
               </div>
             </div>
@@ -534,7 +533,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                   Динамика выручки и расходов по дням
                 </h3>
                 <span className="text-xs text-slate-400">
-                  Поступления ($ USD) против расходов ($ USD)
+                  Поступления (₾ GEL) против расходов (₾ GEL)
                 </span>
               </div>
               <div className="flex items-center space-x-3 text-xs">
@@ -558,20 +557,20 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                 return (
                   <div key={item.date} className="flex flex-col items-center space-y-1 group">
                     <div className="text-[9px] font-mono text-slate-400 group-hover:text-amber-400 transition truncate max-w-full">
-                      ${item.revenueUSD}
+                      {item.revenueUSD} ₾
                     </div>
                     <div className="flex space-x-0.5 items-end h-24">
                       {/* Revenue Bar */}
                       <div
                         style={{ height: `${Math.max(4, revHeight)}%` }}
                         className="w-3 bg-amber-500 rounded-t transition-all group-hover:bg-amber-400 shadow"
-                        title={`Выручка: $${item.revenueUSD}`}
+                        title={`Выручка: ${item.revenueUSD} ₾`}
                       />
                       {/* Expense Bar */}
                       <div
                         style={{ height: `${Math.max(4, expHeight)}%` }}
                         className="w-3 bg-red-500 rounded-t transition-all group-hover:bg-red-400"
-                        title={`Расходы: $${item.expensesUSD}`}
+                        title={`Расходы: ${item.expensesUSD} ₾`}
                       />
                     </div>
                     <span className="text-[10px] text-slate-400 font-medium truncate w-full text-center">
@@ -663,17 +662,16 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono font-bold text-amber-400">
-                        ${car.revenueUSD}
+                        {car.revenueUSD} ₾
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono text-red-400">
-                        ${car.expensesUSD}
-                        <span className="text-[10px] text-slate-500 block">({car.expensesGEL} GEL)</span>
+                        {car.expensesGEL || car.expensesUSD} ₾
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono font-bold">
                         <span className={car.netProfitUSD >= 0 ? "text-emerald-400" : "text-red-400"}>
-                          ${car.netProfitUSD}
+                          {car.netProfitUSD} ₾
                         </span>
                       </td>
 
@@ -690,7 +688,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono text-slate-300">
-                        ${car.revenuePerKm}
+                        {car.revenuePerKm} ₾
                         <span className="text-[10px] text-slate-500 block">~{car.estimatedKm} км</span>
                       </td>
                     </tr>
@@ -736,21 +734,21 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                     <div className="flex justify-between items-baseline">
                       <span className="text-slate-400">Выручка филиала:</span>
                       <span className="text-xl font-black text-amber-400 font-mono">
-                        ${city.revenueUSD} USD
+                        {city.revenueUSD} ₾
                       </span>
                     </div>
 
                     <div className="flex justify-between items-baseline">
                       <span className="text-slate-400">Расходы филиала:</span>
                       <span className="font-mono text-red-400 font-bold">
-                        {city.expensesGEL} GEL (~${city.expensesUSD})
+                        {city.expensesGEL} ₾
                       </span>
                     </div>
 
                     <div className="flex justify-between items-baseline">
                       <span className="text-slate-400">Чистая прибыль филиала:</span>
                       <span className="text-base font-black text-emerald-400 font-mono">
-                        ${city.netProfitUSD} USD
+                        {city.netProfitUSD} ₾
                       </span>
                     </div>
 
@@ -807,7 +805,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                 Общая ликвидность компании
               </span>
               <span className="text-2xl font-black text-amber-400 font-mono mt-1 block">
-                ${cashFlow?.totalLiquidUSD.toLocaleString()} USD
+                {cashFlow?.totalLiquidUSD.toLocaleString()} ₾
               </span>
               <span className="text-xs text-slate-500">по всем кассам и счетам</span>
             </div>
@@ -817,7 +815,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                 Физические наличные кассы
               </span>
               <span className="text-2xl font-black text-emerald-400 font-mono mt-1 block">
-                ${cashFlow?.totalCashInRegistersUSD.toLocaleString()} USD
+                {cashFlow?.totalCashInRegistersUSD.toLocaleString()} ₾
               </span>
               <span className="text-xs text-slate-500">Тбилиси, Батуми, Кутаиси</span>
             </div>
@@ -827,7 +825,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                 Банковские счета (BOG, TBC, Credo)
               </span>
               <span className="text-2xl font-black text-cyan-400 font-mono mt-1 block">
-                ${cashFlow?.totalBankAccountsUSD.toLocaleString()} USD
+                {cashFlow?.totalBankAccountsUSD.toLocaleString()} ₾
               </span>
               <span className="text-xs text-slate-500">безналичные переводы & эквайринг</span>
             </div>
@@ -837,7 +835,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                 Криптовалютный кошелек
               </span>
               <span className="text-2xl font-black text-indigo-400 font-mono mt-1 block">
-                ${cashFlow?.totalCryptoUSD.toLocaleString()} USDT
+                {cashFlow?.totalCryptoUSD.toLocaleString()} USDT
               </span>
               <span className="text-xs text-slate-500">USDT TRC20</span>
             </div>
@@ -858,7 +856,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                     <th className="py-3 px-3 font-bold">Тип</th>
                     <th className="py-3 px-3 font-bold">Локация / Филиал</th>
                     <th className="py-3 px-3 font-bold text-right">Текущий остаток</th>
-                    <th className="py-3 px-4 font-bold text-right">Остаток в USD</th>
+                    <th className="py-3 px-4 font-bold text-right">Эквивалент в ₾</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-medium">
@@ -886,7 +884,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                         {acc.currentBalance.toLocaleString()} {acc.currency}
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-black text-amber-400">
-                        ${acc.balanceUSD.toLocaleString()} USD
+                        {acc.balanceUSD.toLocaleString()} ₾
                       </td>
                     </tr>
                   ))}
@@ -934,16 +932,16 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                   </div>
                   <div className="flex justify-between text-slate-300">
                     <span>Собранная выручка:</span>
-                    <span className="font-bold font-mono text-amber-400">${mgr.revenueUSD} USD</span>
+                    <span className="font-bold font-mono text-amber-400">{mgr.revenueUSD} ₾</span>
                   </div>
                   <div className="flex justify-between text-slate-300">
                     <span>Допродажи аксессуаров:</span>
-                    <span className="font-bold font-mono text-emerald-300">${mgr.extrasTotalUSD} USD</span>
+                    <span className="font-bold font-mono text-emerald-300">{mgr.extrasTotalUSD} ₾</span>
                   </div>
                   <div className="flex justify-between text-slate-300 pt-1.5 border-t border-slate-800">
                     <span>Средний чек выдачи:</span>
                     <span className="font-bold font-mono text-white">
-                      ${Math.round(mgr.revenueUSD / Math.max(1, mgr.bookingsCount))} USD
+                      {Math.round(mgr.revenueUSD / Math.max(1, mgr.bookingsCount))} ₾
                     </span>
                   </div>
                 </div>
