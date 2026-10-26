@@ -26,6 +26,7 @@ import {
   Send,
   ImageIcon,
   RotateCcw,
+  Edit3,
 } from "lucide-react";
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
@@ -34,6 +35,8 @@ import { CarDetailsModal } from "./CarDetailsModal";
 import { NewCarModal } from "./NewCarModal";
 import { AvailabilitySearchModal } from "./AvailabilitySearchModal";
 import { CustomerDocumentUploadModal } from "./CustomerDocumentUploadModal";
+import { CustomerDossierModal } from "./CustomerDossierModal";
+import { EditBookingModal } from "./EditBookingModal";
 
 interface FleetTimelineGridProps {
   onOpenContract?: (booking: any) => void;
@@ -109,6 +112,8 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   // Selected booking for popup details
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [isDocsUploadModalOpen, setIsDocsUploadModalOpen] = useState<boolean>(false);
+  const [isCustomerDossierOpen, setIsCustomerDossierOpen] = useState<boolean>(false);
+  const [isEditBookingOpen, setIsEditBookingOpen] = useState<boolean>(false);
 
   // New Booking Modal state
   const [isNewBookingOpen, setIsNewBookingOpen] = useState<boolean>(false);
@@ -857,12 +862,23 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                   {selectedBooking.car?.brand} {selectedBooking.car?.model} ({selectedBooking.car?.plateNumber})
                 </h3>
               </div>
-              <button
-                onClick={() => setSelectedBooking(null)}
-                className="text-slate-400 hover:text-white p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditBookingOpen(true)}
+                  className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center space-x-1.5 transition shadow-sm active:scale-95"
+                  title="Редактировать параметры бронирования, даты и автомобиль"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Редактировать</span>
+                </button>
+                <button
+                  onClick={() => setSelectedBooking(null)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* One-Way Logistical Route Banner */}
@@ -897,10 +913,18 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
               {/* Customer */}
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-300 flex items-center space-x-1.5">
-                    <User className="w-4 h-4 text-amber-400" />
-                    <span>{selectedBooking.customer.fullName}</span>
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomerDossierOpen(true)}
+                    className="font-bold text-amber-300 hover:text-amber-200 flex items-center space-x-1.5 hover:underline group text-left transition"
+                    title="Открыть карточку клиента и фото документов"
+                  >
+                    <User className="w-4 h-4 text-amber-400 group-hover:scale-110 transition shrink-0" />
+                    <span className="text-sm font-black">{selectedBooking.customer.fullName}</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-normal">
+                      Карточка клиента →
+                    </span>
+                  </button>
                   <span className="text-[11px] text-slate-400 font-mono">
                     {selectedBooking.customer.phone}
                   </span>
@@ -1098,6 +1122,16 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
             {/* Actions */}
             <div className="pt-2 flex justify-end space-x-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsEditBookingOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold transition active:scale-95"
+                title="Редактировать бронь, даты и автомобиль"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                <span>Редактировать</span>
+              </button>
+
               {onOpenContract && (
                 <button
                   onClick={() => {
@@ -1163,6 +1197,36 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
             setSelectedBooking((prev: any) =>
               prev ? { ...prev, customer: { ...prev.customer, ...updatedCust } } : null
             );
+            fetchTimeline();
+          }}
+        />
+      )}
+
+      {/* Customer Full Dossier & Documents Modal */}
+      {isCustomerDossierOpen && selectedBooking?.customer && (
+        <CustomerDossierModal
+          isOpen={isCustomerDossierOpen}
+          onClose={() => setIsCustomerDossierOpen(false)}
+          customerId={selectedBooking.customer.id}
+          bookingId={selectedBooking.id}
+          onCustomerUpdated={(updatedCust) => {
+            setSelectedBooking((prev: any) =>
+              prev ? { ...prev, customer: { ...prev.customer, ...updatedCust } } : null
+            );
+            fetchTimeline();
+          }}
+        />
+      )}
+
+      {/* Edit Booking Modal (Dates, Car, Locations, Pricing, Status) */}
+      {isEditBookingOpen && selectedBooking && (
+        <EditBookingModal
+          isOpen={isEditBookingOpen}
+          onClose={() => setIsEditBookingOpen(false)}
+          booking={selectedBooking}
+          cars={data?.cars || []}
+          onBookingUpdated={(updatedBooking) => {
+            setSelectedBooking(updatedBooking);
             fetchTimeline();
           }}
         />

@@ -80,6 +80,9 @@ export async function PATCH(
         data: {
           ...(c.fullName !== undefined && { fullName: c.fullName.trim() }),
           ...(c.phone !== undefined && { phone: c.phone.trim() }),
+          ...(c.whatsapp !== undefined && { whatsapp: c.whatsapp?.trim() || null }),
+          ...(c.telegram !== undefined && { telegram: c.telegram?.trim() || null }),
+          ...(c.email !== undefined && { email: c.email?.trim() || null }),
           ...(c.passportNumber !== undefined && { passportNumber: c.passportNumber.trim() }),
           ...(c.passportCountry !== undefined && { passportCountry: c.passportCountry?.trim() || null }),
           ...(c.passportPhotoUrl !== undefined && { passportPhotoUrl: c.passportPhotoUrl || null }),
@@ -88,7 +91,82 @@ export async function PATCH(
           ...(c.driverLicenseBackPhotoUrl !== undefined && { driverLicenseBackPhotoUrl: c.driverLicenseBackPhotoUrl || null }),
           ...(c.birthDate !== undefined && { birthDate: c.birthDate?.trim() || null }),
           ...(c.driverLicenseExpiry !== undefined && { driverLicenseExpiry: c.driverLicenseExpiry?.trim() || null }),
+          ...(c.city !== undefined && { city: c.city?.trim() || null }),
+          ...(c.notes !== undefined && { notes: c.notes?.trim() || null }),
         },
+      });
+    }
+
+    // Редактирование параметров самого бронирования
+    const bookingUpdateData: any = {};
+    if (body.carId) {
+      bookingUpdateData.carId = body.carId;
+    }
+    if (body.startDate) {
+      bookingUpdateData.startDate = new Date(body.startDate);
+    }
+    if (body.endDate) {
+      bookingUpdateData.endDate = new Date(body.endDate);
+    }
+    if (body.rentalDays !== undefined) {
+      bookingUpdateData.rentalDays = Number(body.rentalDays);
+    }
+    if (body.pickupLocationId) {
+      bookingUpdateData.pickupLocationId = body.pickupLocationId;
+    }
+    if (body.pickupType !== undefined) {
+      bookingUpdateData.pickupType = body.pickupType;
+    }
+    if (body.pickupAddress !== undefined) {
+      bookingUpdateData.pickupAddress = body.pickupAddress;
+    }
+    if (body.returnLocationId) {
+      bookingUpdateData.returnLocationId = body.returnLocationId;
+    }
+    if (body.returnType !== undefined) {
+      bookingUpdateData.returnType = body.returnType;
+    }
+    if (body.returnAddress !== undefined) {
+      bookingUpdateData.returnAddress = body.returnAddress;
+    }
+    if (body.dailyRate !== undefined) {
+      bookingUpdateData.dailyRate = Number(body.dailyRate);
+    }
+    if (body.rentalTotal !== undefined) {
+      bookingUpdateData.rentalTotal = Number(body.rentalTotal);
+    }
+    if (body.deliveryFee !== undefined) {
+      bookingUpdateData.deliveryFee = Number(body.deliveryFee);
+    }
+    if (body.extrasTotal !== undefined) {
+      bookingUpdateData.extrasTotal = Number(body.extrasTotal);
+    }
+    if (body.totalAmount !== undefined) {
+      bookingUpdateData.totalAmount = Number(body.totalAmount);
+    }
+    if (body.depositAmount !== undefined) {
+      bookingUpdateData.depositAmount = Number(body.depositAmount);
+    }
+    if (body.currency) {
+      bookingUpdateData.currency = body.currency;
+    }
+    if (body.ownerDailyRate !== undefined) {
+      bookingUpdateData.ownerDailyRate = Number(body.ownerDailyRate);
+    }
+    if (body.ownerTotalPayout !== undefined) {
+      bookingUpdateData.ownerTotalPayout = Number(body.ownerTotalPayout);
+    }
+    if (body.status) {
+      bookingUpdateData.status = body.status;
+    }
+    if (body.overdueDecisionNotes !== undefined) {
+      bookingUpdateData.overdueDecisionNotes = body.overdueDecisionNotes;
+    }
+
+    if (Object.keys(bookingUpdateData).length > 0) {
+      await prisma.booking.update({
+        where: { id },
+        data: bookingUpdateData,
       });
     }
 
