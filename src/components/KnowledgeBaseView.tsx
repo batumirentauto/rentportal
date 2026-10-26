@@ -74,7 +74,7 @@ export const KnowledgeBaseView: React.FC = () => {
 
 6. 📹 КАМЕРЫ И ШТРАФЫ:
 • На дорогах работают секционные камеры замера средней скорости. Соблюдайте скоростной режим!
-• Проверить штрафы можно на сайте: protocol.ge
+• Проверить штрафы можно на сайте: protocols.ge
 
 7. 🚨 SOS / ПРИ ДТП ИЛИ ПОЛОМКЕ (24/7):
 • Экстренная линия SOS: +995 591 181 430
@@ -124,7 +124,7 @@ export const KnowledgeBaseView: React.FC = () => {
     {
       question: "Как в Грузии работают дорожные камеры и где проверить штрафы?",
       answer:
-        "На автобанах и трассах Грузии установлены парные камеры, фиксирующие среднюю скорость движения между контрольными точками. За превышение скорости на длинном участке может прийти несколько штрафов подряд. Проверить свои штрафы можно на государственном портале protocol.ge по номеру техпаспорта и госномеру.",
+        "На автобанах и трассах Грузии установлены парные камеры, фиксирующие среднюю скорость движения между контрольными точками. За превышение скорости на длинном участке может прийти несколько штрафов подряд. Проверить свои штрафы можно на государственном портале protocols.ge по номеру техпаспорта и госномеру.",
       category: "fines",
     },
     {
@@ -371,7 +371,7 @@ export const KnowledgeBaseView: React.FC = () => {
             {/* Fines and Cameras in Georgia */}
             <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
               <span className="text-amber-400 font-bold block">
-                📹 Камеры средней скорости & protocol.ge:
+                📹 Камеры средней скорости & protocols.ge:
               </span>
               <p className="text-slate-300 leading-relaxed">
                 В Грузии действуют секционные камеры замера средней скорости. При превышении выписывается штраф за каждый сектор.
@@ -379,12 +379,12 @@ export const KnowledgeBaseView: React.FC = () => {
               <div className="flex items-center justify-between bg-slate-900 p-2 rounded-lg border border-slate-800">
                 <span className="text-[11px] text-slate-300">Проверка штрафов:</span>
                 <a
-                  href="https://protocol.ge"
+                  href="https://protocols.ge"
                   target="_blank"
                   rel="noreferrer"
                   className="text-amber-400 hover:underline font-bold text-xs flex items-center space-x-1"
                 >
-                  <span>protocol.ge</span>
+                  <span>protocols.ge</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
@@ -531,7 +531,7 @@ export const KnowledgeBaseView: React.FC = () => {
             { id: "rules", label: "📄 Требования и правила" },
             { id: "insurance", label: "🛡️ Залог и страховка" },
             { id: "roads", label: "🏔️ Дороги и перевал Тушетия" },
-            { id: "fines", label: "📹 Штрафы и protocol.ge" },
+            { id: "fines", label: "📹 Штрафы и protocols.ge" },
             { id: "sos", label: "🚨 SOS и ДТП" },
           ].map((cat) => (
             <button

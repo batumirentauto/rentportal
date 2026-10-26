@@ -107,11 +107,11 @@ export const TechPassportFinesRegistry: React.FC = () => {
     }
   };
 
-  // Open protocol.ge or videos.police.ge and copy plate number automatically
+  // Open protocols.ge or videos.police.ge and copy plate number automatically
   const handleOpenProtocolPortal = (car: any) => {
     const rawPlate = car.plateNumber.replace(/-/g, "").toUpperCase();
     handleCopy(rawPlate, `plate-${car.id}`);
-    window.open("https://police.ge/protocol", "_blank");
+    window.open("https://protocols.ge", "_blank");
   };
 
   const handleOpenVideosPolicePortal = (car: any) => {
@@ -175,7 +175,7 @@ export const TechPassportFinesRegistry: React.FC = () => {
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-xs font-black uppercase tracking-wider bg-gradient-to-r from-red-500 to-amber-500 text-slate-950 px-2.5 py-0.5 rounded shadow">
-                protocol.ge & videos.police.ge
+                protocols.ge & videos.police.ge
               </span>
               <span className="text-xs text-slate-400 font-mono">
                 Реестр техпаспортов и контроль штрафов МВД Грузии
@@ -318,7 +318,7 @@ export const TechPassportFinesRegistry: React.FC = () => {
             </div>
             <div>
               <h3 className="font-extrabold text-base text-white">
-                Хаб полуавтоматической проверки штрафов на protocol.ge & videos.police.ge
+                Хаб полуавтоматической проверки штрафов на protocols.ge & videos.police.ge
               </h3>
               <p className="text-xs text-slate-300">
                 1-клик копирование госномера и техпаспорта с моментальным переходом на порталы МВД Грузии
@@ -371,7 +371,7 @@ export const TechPassportFinesRegistry: React.FC = () => {
                       )
                     }
                     className="p-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition"
-                    title="Скопировать без дефисов (для формы protocol.ge)"
+                    title="Скопировать без дефисов (для формы protocols.ge)"
                   >
                     {copiedKey === `raw-plate-${selectedAssistantCar.id}` ? (
                       <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -419,7 +419,7 @@ export const TechPassportFinesRegistry: React.FC = () => {
               >
                 <div className="flex items-center space-x-2">
                   <ExternalLink className="w-4 h-4" />
-                  <span>1. Открыть police.ge/protocol (Реестр)</span>
+                  <span>1. Открыть protocols.ge (Реестр штрафов)</span>
                 </div>
                 <span className="text-[10px] bg-black/30 px-2 py-0.5 rounded font-mono">
                   копирует госномер
@@ -729,10 +729,10 @@ export const TechPassportFinesRegistry: React.FC = () => {
                     <button
                       onClick={() => handleOpenProtocolPortal(car)}
                       className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center space-x-1 transition"
-                      title="Открыть protocol.ge со скопированным номером"
+                      title="Открыть protocols.ge со скопированным номером"
                     >
                       <ExternalLink className="w-3 h-3 text-blue-400" />
-                      <span>protocol.ge</span>
+                      <span>protocols.ge</span>
                     </button>
 
                     <button
@@ -870,7 +870,7 @@ export const TechPassportFinesRegistry: React.FC = () => {
                 className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                <span>Проверить на protocol.ge</span>
+                <span>Проверить на protocols.ge</span>
               </button>
             </div>
           </div>
@@ -887,7 +887,7 @@ export const TechPassportFinesRegistry: React.FC = () => {
                   Фиксация нарушения
                 </span>
                 <h3 className="font-extrabold text-base text-white mt-1">
-                  Внесение штрафа с камер / protocol.ge
+                  Внесение штрафа с камер / protocols.ge
                 </h3>
               </div>
               <button

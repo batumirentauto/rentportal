@@ -149,7 +149,7 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { action, carId, fineId, status, notes, managerName = "Менеджер" } = body;
 
-    // Action 1: Быстрая отметка "Проверено на protocol.ge, штрафов нет"
+    // Action 1: Быстрая отметка "Проверено на protocols.ge, штрафов нет"
     if (action === "VERIFIED_CLEAN" && carId) {
       const car = await prisma.car.update({
         where: { id: carId },

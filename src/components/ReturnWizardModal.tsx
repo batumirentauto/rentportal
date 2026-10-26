@@ -110,7 +110,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const [techPassportReturned, setTechPassportReturned] = useState<boolean>(true);
   const [lostTechPassportCharge, setLostTechPassportCharge] = useState<number>(100); // 100 USD (270 GEL) за восстановление в Сервисном Агентстве МВД
 
-  // 4. Штрафы ПДД (protocol.ge / Videos Police GE)
+  // 4. Штрафы ПДД (protocols.ge / Videos Police GE)
   const [trafficFines, setTrafficFines] = useState<any[]>(booking.trafficFines || []);
   const [selectedFineIds, setSelectedFineIds] = useState<string[]>([]);
   const [finesPaidByClientToCompany, setFinesPaidByClientToCompany] = useState<boolean>(true);
@@ -1022,23 +1022,35 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
               )}
             </div>
 
-            {/* 5. Проверка штрафов (protocol.ge) */}
+            {/* 5. Проверка штрафов (protocols.ge) */}
             <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-slate-200 flex items-center space-x-1.5">
                   <FileText className="w-4 h-4 text-amber-400" />
-                  <span>Штрафы с камер МВД (protocol.ge):</span>
+                  <span>Штрафы с камер МВД (protocols.ge):</span>
                 </span>
 
-                <span className="text-[11px] font-mono text-slate-400">
-                  Госномер: <strong className="text-white">{car.plateNumber}</strong>
-                </span>
+                <div className="flex items-center space-x-2">
+                  <a
+                    href="https://protocols.ge"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2 py-0.5 bg-blue-900/40 hover:bg-blue-800/60 text-blue-300 border border-blue-500/30 rounded text-[11px] font-bold flex items-center space-x-1 transition"
+                    title="Открыть портал protocols.ge"
+                  >
+                    <span>protocols.ge</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    Госномер: <strong className="text-white">{car.plateNumber}</strong>
+                  </span>
+                </div>
               </div>
 
               {trafficFines.length === 0 ? (
                 <div className="p-2.5 bg-emerald-950/20 border border-emerald-500/30 rounded-xl flex items-center space-x-2 text-xs text-emerald-300">
                   <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Штрафов за период поездки не обнаружено (protocol.ge чист) ✓</span>
+                  <span>Штрафов за период поездки не обнаружено (protocols.ge чист) ✓</span>
                 </div>
               ) : (
                 <div className="space-y-2">

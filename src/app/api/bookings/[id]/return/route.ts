@@ -189,7 +189,7 @@ export async function POST(
           status: "PAID_BY_CLIENT_TO_COMPANY",
           deductedFromDeposit: depositAmount > 0,
           checkedByManager: managerName,
-          notes: `Штраф оплачен клиентом ${booking.customer.fullName} компании при возврате авто (Бронь: ${booking.bookingNumber}). Сумма принята в кассу (${settlementMethod}), ожидает оплаты в полицию / protocol.ge`,
+          notes: `Штраф оплачен клиентом ${booking.customer.fullName} компании при возврате авто (Бронь: ${booking.bookingNumber}). Сумма принята в кассу (${settlementMethod}), ожидает оплаты в полицию / protocols.ge`,
         },
       });
 

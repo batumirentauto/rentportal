@@ -325,7 +325,7 @@ model ReturnReport {
   kmUntilOilChange           Int?      // Оставшийся пробег до ТО (или отрицательный при перепробеге)
 
   // Штрафы
-  finesChecked               Boolean   @default(true) // Проверено на protocol.ge
+  finesChecked               Boolean   @default(true) // Проверено на protocols.ge
   finesDetectedCount         Int       @default(0) // Количество штрафов
   finesTotalAmountGEL        Float     @default(0) // Сумма штрафов (GEL)
   finesTotalAmountUSD        Float     @default(0) // Сумма штрафов (USD)
@@ -434,7 +434,7 @@ model CarWashTask {
   updatedAt   DateTime @updatedAt
 }
 
-// Реестр штрафов патрульной полиции и видеофиксации (police.ge/protocol, videos.police.ge)
+// Реестр штрафов патрульной полиции и видеофиксации (protocols.ge, videos.police.ge)
 model TrafficFine {
   id                  String    @id @default(cuid())
   carId               String
