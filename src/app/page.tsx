@@ -189,7 +189,7 @@ export default function Home() {
         isSimulating={isSimulating}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-6">
         {loading ? (
           <div className="py-20 text-center text-slate-400">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-amber-500" />

@@ -28,8 +28,20 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   isSimulating,
 }) => {
+  React.useEffect(() => {
+    const updateHeaderHeight = () => {
+      const el = document.getElementById("main-app-header");
+      if (el) {
+        document.documentElement.style.setProperty("--app-header-height", `${el.offsetHeight}px`);
+      }
+    };
+    updateHeaderHeight();
+    window.addEventListener("resize", updateHeaderHeight);
+    return () => window.removeEventListener("resize", updateHeaderHeight);
+  }, [selectedCity, activeTab]);
+
   return (
-    <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-lg">
+    <header id="main-app-header" className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-20">
           {/* Logo & Subtitle - Hidden on mobile, visible on desktop */}

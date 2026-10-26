@@ -137,6 +137,21 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   // Availability Search & Matcher Modal state
   const [isAvailabilitySearchOpen, setIsAvailabilitySearchOpen] = useState<boolean>(false);
 
+  // Dynamic Header Height measurement for sticky top calculations
+  const [headerHeight, setHeaderHeight] = useState<number>(140);
+
+  useEffect(() => {
+    const updateH = () => {
+      const el = document.getElementById("main-app-header");
+      if (el) {
+        setHeaderHeight(el.offsetHeight);
+      }
+    };
+    updateH();
+    window.addEventListener("resize", updateH);
+    return () => window.removeEventListener("resize", updateH);
+  }, []);
+
   const handleOpenNewBooking = (carId?: string, dateStr?: string, days?: number) => {
     setBookingInitialCarId(carId || "");
     setBookingInitialDate(dateStr || "");
@@ -667,11 +682,16 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       )}
 
       {/* TIMELINE GANTT GRID CONTAINER */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
-        <div className="overflow-x-auto rounded-2xl">
-          <div className="w-max min-w-full">
-            {/* Header row: Cars column + Day columns - Sticky under main Header */}
-            <div className="flex border-b border-slate-800 bg-slate-950 sticky top-14 sm:top-20 z-30 shadow-md">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+        <div
+          className="overflow-auto rounded-2xl overscroll-contain"
+          style={{
+            maxHeight: `calc(100dvh - ${headerHeight}px - 1.5rem)`,
+          }}
+        >
+          <div className="w-max min-w-full pb-24">
+            {/* Header row: Cars column + Day columns - Sticky at top of the grid */}
+            <div className="flex border-b border-slate-800 bg-slate-950 sticky top-0 z-30 shadow-md">
               <div className="w-[140px] sm:w-[240px] shrink-0 p-2 sm:p-3 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-40 bg-slate-950 shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                 <div className="flex items-center space-x-1.5 truncate">
                   <span className="truncate">Автомобиль</span>
