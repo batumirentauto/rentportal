@@ -10,8 +10,8 @@ interface HeaderProps {
   onOpenRecordExpense?: () => void;
   onOpenNewBooking?: () => void;
   onOpenBackup?: () => void;
-  activeTab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats";
-  setActiveTab: (tab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats") => void;
+  activeTab: "timeline" | "catalog" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats";
+  setActiveTab: (tab: "timeline" | "catalog" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats") => void;
   isSimulating: boolean;
 }
 
@@ -226,6 +226,17 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <span>📅 Шахматка занятости</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("catalog")}
+            className={`px-4 py-2 rounded-lg font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
+              activeTab === "catalog"
+                ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow-lg"
+                : "text-amber-400 hover:text-amber-300 hover:bg-slate-800/50 border border-amber-500/20"
+            }`}
+          >
+            <span>🚗 База авто (Каталог)</span>
           </button>
 
           <button

@@ -5,12 +5,20 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const cityCode = searchParams.get("city");
-    const includeArchived = searchParams.get("includeArchived") === "true";
+    const includeArchived = searchParams.get("includeArchived"); // "true", "only", "false"
+    const brand = searchParams.get("brand");
 
     const where: any = {};
-    if (!includeArchived) {
+    if (includeArchived === "only") {
+      where.isArchived = true;
+    } else if (includeArchived !== "true" && includeArchived !== "ALL") {
       where.isArchived = false;
     }
+
+    if (brand && brand !== "ALL") {
+      where.brand = brand;
+    }
+
     if (cityCode && cityCode !== "ALL") {
       where.city = { code: cityCode };
     }

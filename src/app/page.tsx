@@ -11,6 +11,7 @@ import { TechPassportFinesRegistry } from "@/components/TechPassportFinesRegistr
 import { OwnerInvestorCabinet } from "@/components/OwnerInvestorCabinet";
 import { FleetPricingRegistry } from "@/components/FleetPricingRegistry";
 import { FleetMaintenanceHub } from "@/components/FleetMaintenanceHub";
+import { FleetCatalogHub } from "@/components/FleetCatalogHub";
 import { LoyalClientMobileApp } from "@/components/LoyalClientMobileApp";
 import { FleetTimelineGrid } from "@/components/FleetTimelineGrid";
 import { ContractModal } from "@/components/ContractModal";
@@ -29,7 +30,7 @@ import { RefreshCw, MessageSquare } from "lucide-react";
 export default function Home() {
   const [selectedCity, setSelectedCity] = useState<string>("ALL");
   const [activeTab, setActiveTab] = useState<
-    "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "crm" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "team" | "chats"
+    "timeline" | "catalog" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "crm" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "team" | "chats"
   >("timeline");
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -202,6 +203,14 @@ export default function Home() {
                 onOpenContract={(b) => setContractBooking(b)}
                 onOpenHandover={(b) => setHandoverBooking(b)}
                 onOpenReturn={(b) => setReturnBooking(b)}
+              />
+            )}
+
+            {activeTab === "catalog" && (
+              <FleetCatalogHub
+                onOpenBookingForCar={(_carId) => {
+                  setActiveTab("timeline");
+                }}
               />
             )}
 
