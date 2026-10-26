@@ -418,6 +418,10 @@ export const BookingExtensionModal: React.FC<BookingExtensionModalProps> = ({
                     {hoursCalc.totalFee} ₾ ({hoursCalc.explanation})
                   </span>
                 </div>
+                <div className="mt-1 text-[10px] text-emerald-400 font-semibold bg-emerald-950/40 p-1.5 rounded-lg border border-emerald-500/30 flex items-center space-x-1">
+                  <span>💰</span>
+                  <span>100% суммы за доп. часы поступает в кассу автопроката (выплата владельцу не изменяется).</span>
+                </div>
               </div>
 
               {/* Manual fee override */}

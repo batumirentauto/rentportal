@@ -113,7 +113,11 @@ export async function POST(
     }
 
     // 3. Обновляем само бронирование
+    // Часовое продление (до 7 часов) на сумму владельца автомобиля никак не влияет —
+    // эта сумма идёт на 100% в кассу проката.
+    // Если продление посуточное (или более 7 часов = 1 сутки), владельцу начисляется его суточная ставка.
     const additionalDays = daysToAdd > 0 ? daysToAdd : hoursToAdd > 7 ? 1 : 0;
+    const additionalOwnerPayout = additionalDays * (booking.ownerDailyRate || 0);
     const isHours = type === "HOURS" || hoursToAdd > 0;
 
     await prisma.booking.update({
@@ -123,6 +127,7 @@ export async function POST(
         rentalDays: booking.rentalDays + additionalDays,
         totalAmount: booking.totalAmount + extensionAmount,
         rentalTotal: booking.rentalTotal + extensionAmount,
+        ownerTotalPayout: (booking.ownerTotalPayout || 0) + additionalOwnerPayout,
         ...(dailyRate && { dailyRate: Number(dailyRate) }),
         ...(isHours && {
           extraHoursCount: (booking.extraHoursCount || 0) + hoursToAdd,

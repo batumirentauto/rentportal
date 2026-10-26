@@ -998,6 +998,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     {extraHoursFee > 0 ? `${extraHoursFee} ₾ (${hoursCalc.explanation})` : "0 ₾ (Без доплаты)"}
                   </span>
                 </div>
+                {extraHoursFee > 0 && (
+                  <div className="mt-1 text-[10px] text-emerald-400 font-medium">
+                    💰 Сумма за доп. часы поступает в кассу автопроката (не влияет на выплату владельцу).
+                  </div>
+                )}
               </div>
 
               {/* Paid earlier toggle */}
