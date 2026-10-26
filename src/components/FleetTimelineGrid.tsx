@@ -131,6 +131,17 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
     setIsNewBookingOpen(true);
   };
 
+  useEffect(() => {
+    const handleGlobalOpen = (e?: any) => {
+      const { carId, dateStr, days } = e?.detail || {};
+      handleOpenNewBooking(carId, dateStr, days);
+    };
+    window.addEventListener("open-new-booking", handleGlobalOpen);
+    return () => {
+      window.removeEventListener("open-new-booking", handleGlobalOpen);
+    };
+  }, []);
+
   // Selection mode for client offer & shareable cards
   const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
   const [selectedCarIds, setSelectedCarIds] = useState<string[]>([]);
@@ -403,11 +414,21 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <div className="min-w-[720px] sm:min-w-[980px]">
-            {/* Header row: Cars column + Day columns */}
-            <div className="grid grid-cols-[140px_1fr] sm:grid-cols-[240px_1fr] border-b border-slate-800 bg-slate-950 sticky top-0 z-20">
+            {/* Header row: Cars column + Day columns - Sticky under main Header */}
+            <div className="grid grid-cols-[140px_1fr] sm:grid-cols-[240px_1fr] border-b border-slate-800 bg-slate-950 sticky top-14 sm:top-20 z-20 shadow-md">
               <div className="p-2 sm:p-3 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-30 bg-slate-950">
-                <span className="truncate">Автомобиль</span>
-                <span className="text-[10px] text-slate-500 hidden sm:inline">{filteredCars.length} авто</span>
+                <div className="flex items-center space-x-1.5 truncate">
+                  <span className="truncate">Автомобиль</span>
+                  <span className="text-[10px] text-slate-500 hidden sm:inline">({filteredCars.length})</span>
+                </div>
+                <button
+                  onClick={() => handleOpenNewBooking()}
+                  className="flex items-center space-x-1 px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 text-[10px] font-black rounded-lg shadow transition active:scale-95 shrink-0"
+                  title="Быстро создать новую бронь (всегда зафиксировано)"
+                >
+                  <PlusCircle className="w-3 h-3" />
+                  <span>+ Бронь</span>
+                </button>
               </div>
 
               {/* Day headers */}
@@ -1334,6 +1355,16 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
           }}
         />
       )}
+
+      {/* Floating Action Button (FAB) - Always fixed on screen */}
+      <button
+        onClick={() => handleOpenNewBooking()}
+        className="fixed bottom-6 left-6 z-40 flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-2xl shadow-2xl shadow-amber-500/30 border-2 border-amber-300/60 active:scale-95 transition-all text-xs sm:text-sm group hover:scale-105"
+        title="Создать новую бронь (всегда под рукой на экране)"
+      >
+        <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 text-slate-950 transition-transform group-hover:rotate-90 duration-300" />
+        <span className="tracking-tight font-black">+ Новая бронь</span>
+      </button>
     </div>
   );
 };

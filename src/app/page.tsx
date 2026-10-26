@@ -161,6 +161,15 @@ export default function Home() {
     setActiveTab("finance");
   };
 
+  const handleOpenGlobalNewBooking = () => {
+    if (activeTab !== "timeline") {
+      setActiveTab("timeline");
+    }
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("open-new-booking"));
+    }, 60);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <Header
@@ -170,6 +179,7 @@ export default function Home() {
         onOpenNotifications={() => setIsNotificationsOpen(true)}
         onSimulateNewBooking={handleSimulateNewBooking}
         onOpenRecordExpense={() => setIsExpenseModalOpen(true)}
+        onOpenNewBooking={handleOpenGlobalNewBooking}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isSimulating={isSimulating}

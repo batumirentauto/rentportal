@@ -8,6 +8,7 @@ interface HeaderProps {
   onOpenNotifications: () => void;
   onSimulateNewBooking: () => void;
   onOpenRecordExpense?: () => void;
+  onOpenNewBooking?: () => void;
   activeTab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats";
   setActiveTab: (tab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats") => void;
   isSimulating: boolean;
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNotifications,
   onSimulateNewBooking,
   onOpenRecordExpense,
+  onOpenNewBooking,
   activeTab,
   setActiveTab,
   isSimulating,
@@ -95,27 +97,37 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Actions: Notification bell & Demo simulation */}
-          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+          {/* Actions: New Booking, Record Expense, Notification bell & Demo */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
+            {/* Real New Booking Button - Sticky in Header */}
+            <button
+              onClick={onOpenNewBooking}
+              title="Создать новую бронь автомобиля (зафиксировано в шапке)"
+              className="flex items-center space-x-1 sm:space-x-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl font-black shadow-lg shadow-amber-500/20 transition-all active:scale-95 border border-amber-300/40"
+            >
+              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950" />
+              <span>+ Новая бронь</span>
+            </button>
+
             {/* Record Expense Button */}
             <button
               onClick={onOpenRecordExpense}
               title="Зафиксировать расход (топливо, мойка, ТО, парковка)"
-              className="flex items-center space-x-1 sm:space-x-1.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg font-bold shadow-md transition-all active:scale-95"
+              className="flex items-center space-x-1 sm:space-x-1.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl font-bold shadow-md transition-all active:scale-95"
             >
               <Receipt className="w-3.5 h-3.5" />
-              <span>+ Расход</span>
+              <span className="hidden sm:inline">+ Расход</span>
             </button>
 
             {/* Simulation button */}
             <button
               onClick={onSimulateNewBooking}
               disabled={isSimulating}
-              title="Нажмите для проверки: эмуляция появления новой брони в течение дня"
-              className="hidden md:flex items-center space-x-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-3 py-2 rounded-lg font-semibold shadow transition-all active:scale-95 disabled:opacity-50"
+              title="Тестовая эмуляция: появление новой брони в течение дня"
+              className="hidden lg:flex items-center space-x-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] px-2 py-1.5 rounded-lg font-medium border border-slate-700 transition-all active:scale-95 disabled:opacity-50"
             >
-              <PlusCircle className={`w-3.5 h-3.5 ${isSimulating ? "animate-spin" : ""}`} />
-              <span>{isSimulating ? "Добавляем..." : "+ Новая бронь днем"}</span>
+              <RefreshCw className={`w-3 h-3 ${isSimulating ? "animate-spin" : ""}`} />
+              <span>{isSimulating ? "..." : "Тест-бронь"}</span>
             </button>
 
             {/* Team Chat Quick Launcher */}
