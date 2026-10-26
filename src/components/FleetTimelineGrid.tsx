@@ -106,12 +106,13 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [gridMode, setGridMode] = useState<"LIVE" | "ARCHIVE">("LIVE");
   const [currentStartDate, setCurrentStartDate] = useState<string>(() => {
     return new Date().toISOString().split("T")[0];
   });
   const [daysCount, setDaysCount] = useState<number>(14);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL"); // "ALL", "AVAILABLE", "RENTED", "ONE_WAY"
+  const [statusFilter, setStatusFilter] = useState<string>("ALL"); // "ALL", "COMPLETED", "AVAILABLE", "RENTED", "ONE_WAY"
   
   // Selected booking for popup details
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
@@ -193,18 +194,51 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
     fetchTimeline();
   }, [currentStartDate, daysCount, selectedCity]);
 
+  const handleSwitchToArchive = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - (daysCount - 1));
+    d.setHours(0, 0, 0, 0);
+    setCurrentStartDate(d.toISOString().split("T")[0]);
+    setGridMode("ARCHIVE");
+  };
+
+  const handleSwitchToLive = () => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    setCurrentStartDate(d.toISOString().split("T")[0]);
+    setGridMode("LIVE");
+  };
+
   const handlePrev = () => {
     const d = new Date(currentStartDate);
-    d.setDate(d.getDate() - 7);
+    d.setDate(d.getDate() - (gridMode === "ARCHIVE" ? daysCount : 7));
     setCurrentStartDate(d.toISOString().split("T")[0]);
   };
+
   const handleNext = () => {
     const d = new Date(currentStartDate);
-    d.setDate(d.getDate() + 7);
+    d.setDate(d.getDate() + (gridMode === "ARCHIVE" ? daysCount : 7));
+    if (gridMode === "ARCHIVE") {
+      const maxStart = new Date();
+      maxStart.setDate(maxStart.getDate() - (daysCount - 1));
+      maxStart.setHours(0, 0, 0, 0);
+      if (d > maxStart) {
+        setCurrentStartDate(maxStart.toISOString().split("T")[0]);
+        return;
+      }
+    }
     setCurrentStartDate(d.toISOString().split("T")[0]);
   };
+
   const handleToday = () => {
-    setCurrentStartDate(new Date().toISOString().split("T")[0]);
+    if (gridMode === "ARCHIVE") {
+      const d = new Date();
+      d.setDate(d.getDate() - (daysCount - 1));
+      d.setHours(0, 0, 0, 0);
+      setCurrentStartDate(d.toISOString().split("T")[0]);
+    } else {
+      setCurrentStartDate(new Date().toISOString().split("T")[0]);
+    }
   };
 
   const filteredCars = useMemo(() => {
@@ -219,6 +253,9 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
       if (statusFilter === "AVAILABLE") return car.status === "AVAILABLE";
       if (statusFilter === "RENTED") return car.status === "RENTED";
+      if (statusFilter === "COMPLETED") {
+        return car.bookings.some((b: any) => b.status === "COMPLETED");
+      }
       if (statusFilter === "ONE_WAY") {
         return car.bookings.some((b: any) => b.isOneWay);
       }
@@ -242,210 +279,379 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   return (
     <div className="space-y-4">
       {/* Controls Bar: Navigation, Date jump, Search & Period */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-md">
-        {/* Date Navigator */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={handlePrev}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition"
-              title="Назад на 7 дней"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-md">
+        
+        {/* Row 1: Mode Switcher (Live Timeline vs Archive Timeline) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+          <div className="flex items-center space-x-2">
+            <div className="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold shadow-inner">
+              <button
+                onClick={handleSwitchToLive}
+                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl transition ${
+                  gridMode === "LIVE"
+                    ? "bg-amber-500 text-slate-950 shadow-md font-black"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <CalendarIcon className="w-3.5 h-3.5" />
+                <span>📅 Актуальная шахматка</span>
+              </button>
+              <button
+                onClick={handleSwitchToArchive}
+                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl transition ${
+                  gridMode === "ARCHIVE"
+                    ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md font-black ring-2 ring-purple-400"
+                    : "text-purple-300 hover:text-white hover:bg-purple-950/40"
+                }`}
+                title="Переключиться в архивную шахматку броней до сегодняшней даты"
+              >
+                <Clock className="w-3.5 h-3.5 text-purple-300" />
+                <span>🕒 Архивная шахматка (прошлые брони)</span>
+              </button>
+            </div>
 
-            <button
-              onClick={handleToday}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                currentStartDate === new Date().toISOString().split("T")[0]
-                  ? "bg-amber-500 text-slate-950 shadow"
-                  : "bg-slate-800 text-slate-300 hover:text-white"
-              }`}
-            >
-              Сегодня
-            </button>
-
-            <button
-              onClick={handleNext}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition"
-              title="Вперед на 7 дней"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            {gridMode === "ARCHIVE" && (
+              <span className="hidden sm:inline-flex text-[11px] px-2.5 py-1 rounded-xl bg-purple-950/70 border border-purple-500/40 text-purple-300 font-bold">
+                Архив до {days[days.length - 1]?.dayNumber} {days[days.length - 1]?.monthName}
+              </span>
+            )}
           </div>
 
-          {/* Calendar Date Picker Jump */}
-          <div className="flex items-center space-x-1.5 bg-slate-950 px-2.5 py-1.5 rounded-xl border border-slate-700">
-            <CalendarIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <input
-              type="date"
-              value={currentStartDate}
-              onChange={(e) => setCurrentStartDate(e.target.value)}
-              className="bg-transparent text-white text-xs font-mono font-bold focus:outline-none cursor-pointer"
-              title="Выберите любую дату календаря (например, 27 декабря)"
-            />
+          <div className="flex items-center space-x-2 text-xs text-slate-400">
+            {gridMode === "ARCHIVE" ? (
+              <button
+                onClick={() => setIsHistoryModalOpen(true)}
+                className="flex items-center space-x-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 rounded-xl font-bold transition shadow"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Открыть архив таблицей / поиском</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleSwitchToArchive}
+                className="flex items-center space-x-1 px-3 py-1.5 bg-purple-950/50 hover:bg-purple-900/60 text-purple-300 border border-purple-500/30 rounded-xl font-bold transition"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Посмотреть прошлые брони ➔</span>
+              </button>
+            )}
           </div>
-
-          {/* Quick jump to 27 December (New Year) */}
-          <button
-            onClick={() => {
-              setCurrentStartDate("2026-12-27");
-              setDaysCount(14);
-            }}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center space-x-1 ${
-              currentStartDate === "2026-12-27"
-                ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
-                : "bg-slate-950 text-amber-300 hover:text-white border-amber-500/30"
-            }`}
-            title="Перейти к 27 декабря 2026 (Новогодний пик)"
-          >
-            <span>🎄 27 дек (Новый Год)</span>
-          </button>
-
-          <span className="text-xs text-slate-400 font-medium pl-1 hidden lg:inline">
-            с {days[0]?.dayNumber} {days[0]?.monthName} по {days[days.length - 1]?.dayNumber} {days[days.length - 1]?.monthName}
-          </span>
         </div>
 
-        {/* Filter controls */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Availability Matcher Button */}
-          <button
-            onClick={() => setIsAvailabilitySearchOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition active:scale-95"
-            title="Проверить свободные машины на любой диапазон дат (например, с 27 декабря по 5 января)"
-          >
-            <Search className="w-3.5 h-3.5" />
-            <span>🔍 Подобрать авто на даты</span>
-          </button>
+        {/* Row 2: Date Navigator & Filter controls */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Date Navigator */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={handlePrev}
+                className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition"
+                title={gridMode === "ARCHIVE" ? `Назад на ${daysCount} дн. вглубь архива` : "Назад на 7 дней"}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
 
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск авто..."
-              className="bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 w-32 sm:w-40"
-            />
+              <button
+                onClick={handleToday}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                  (gridMode === "LIVE" && currentStartDate === new Date().toISOString().split("T")[0]) ||
+                  (gridMode === "ARCHIVE" && days[days.length - 1]?.isToday)
+                    ? "bg-amber-500 text-slate-950 shadow"
+                    : "bg-slate-800 text-slate-300 hover:text-white"
+                }`}
+                title={gridMode === "ARCHIVE" ? "Сдвинуть архив вплотную к сегодняшнему дню" : "К сегодняшнему дню"}
+              >
+                {gridMode === "ARCHIVE" ? "До сегодня" : "Сегодня"}
+              </button>
+
+              <button
+                onClick={handleNext}
+                className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition"
+                title={gridMode === "ARCHIVE" ? `Вперед на ${daysCount} дн. к сегодняшней дате` : "Вперед на 7 дней"}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Calendar Date Picker Jump */}
+            <div className="flex items-center space-x-1.5 bg-slate-950 px-2.5 py-1.5 rounded-xl border border-slate-700">
+              <CalendarIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <input
+                type="date"
+                value={currentStartDate}
+                max={gridMode === "ARCHIVE" ? new Date().toISOString().split("T")[0] : undefined}
+                onChange={(e) => setCurrentStartDate(e.target.value)}
+                className="bg-transparent text-white text-xs font-mono font-bold focus:outline-none cursor-pointer"
+                title={gridMode === "ARCHIVE" ? "Выберите дату начала архивного периода" : "Выберите любую дату календаря (например, 27 декабря)"}
+              />
+            </div>
+
+            {/* Quick jump for mode */}
+            {gridMode === "ARCHIVE" ? (
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={() => {
+                    const d = new Date(currentStartDate);
+                    d.setDate(d.getDate() - 30);
+                    setCurrentStartDate(d.toISOString().split("T")[0]);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-950 text-purple-300 hover:text-white border border-purple-500/30 transition"
+                  title="Сдвинуться назад на 30 дней вглубь архива"
+                >
+                  ⏪ -1 мес
+                </button>
+                <button
+                  onClick={handleToday}
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-950 text-amber-300 hover:text-white border border-amber-500/30 transition"
+                  title="Показать архив вплоть до сегодняшней даты"
+                >
+                  К сегодняшнему дню ➔
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setCurrentStartDate("2026-12-27");
+                  setDaysCount(14);
+                }}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center space-x-1 ${
+                  currentStartDate === "2026-12-27"
+                    ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
+                    : "bg-slate-950 text-amber-300 hover:text-white border-amber-500/30"
+                }`}
+                title="Перейти к 27 декабря 2026 (Новогодний пик)"
+              >
+                <span>🎄 27 дек (Новый Год)</span>
+              </button>
+            )}
+
+            <span className="text-xs text-slate-400 font-medium pl-1 hidden lg:inline">
+              с {days[0]?.dayNumber} {days[0]?.monthName} по {days[days.length - 1]?.dayNumber} {days[days.length - 1]?.monthName}
+            </span>
           </div>
 
-          {/* Period length */}
-          <div className="flex bg-slate-950 rounded-xl p-1 border border-slate-800 text-xs font-medium">
+          {/* Filter controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Availability Matcher Button */}
             <button
-              onClick={() => setDaysCount(7)}
-              className={`px-2 py-1 rounded-lg transition ${
-                daysCount === 7 ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-              }`}
+              onClick={() => setIsAvailabilitySearchOpen(true)}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition active:scale-95"
+              title="Проверить свободные машины на любой диапазон дат (например, с 27 декабря по 5 января)"
             >
-              7 дн.
+              <Search className="w-3.5 h-3.5" />
+              <span>🔍 Подобрать авто на даты</span>
             </button>
-            <button
-              onClick={() => setDaysCount(14)}
-              className={`px-2 py-1 rounded-lg transition ${
-                daysCount === 14 ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-              }`}
+
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Поиск авто..."
+                className="bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 w-32 sm:w-40"
+              />
+            </div>
+
+            {/* Period length */}
+            <div className="flex bg-slate-950 rounded-xl p-1 border border-slate-800 text-xs font-medium">
+              <button
+                onClick={() => {
+                  setDaysCount(7);
+                  if (gridMode === "ARCHIVE") {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 6);
+                    setCurrentStartDate(d.toISOString().split("T")[0]);
+                  }
+                }}
+                className={`px-2 py-1 rounded-lg transition ${
+                  daysCount === 7 ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                7 дн.
+              </button>
+              <button
+                onClick={() => {
+                  setDaysCount(14);
+                  if (gridMode === "ARCHIVE") {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 13);
+                    setCurrentStartDate(d.toISOString().split("T")[0]);
+                  }
+                }}
+                className={`px-2 py-1 rounded-lg transition ${
+                  daysCount === 14 ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                14 дн.
+              </button>
+              <button
+                onClick={() => {
+                  setDaysCount(21);
+                  if (gridMode === "ARCHIVE") {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 20);
+                    setCurrentStartDate(d.toISOString().split("T")[0]);
+                  }
+                }}
+                className={`px-2 py-1 rounded-lg transition ${
+                  daysCount === 21 ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                21 дн.
+              </button>
+              <button
+                onClick={() => {
+                  setDaysCount(30);
+                  if (gridMode === "ARCHIVE") {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 29);
+                    setCurrentStartDate(d.toISOString().split("T")[0]);
+                  }
+                }}
+                className={`px-2 py-1 rounded-lg transition ${
+                  daysCount === 30 ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+                }`}
+                title="Отобразить 30 дней (целый месяц)"
+              >
+                30 дн.
+              </button>
+            </div>
+
+            {/* Status selector */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
             >
-              14 дн.
+              <option value="ALL">Все брони</option>
+              <option value="COMPLETED">🏁 Только завершенные</option>
+              <option value="ONE_WAY">⇄ Только One-Way (междугородние)</option>
+              <option value="AVAILABLE">Только свободные</option>
+              <option value="RENTED">Только в поездке</option>
+            </select>
+
+            {/* Selection Mode Button for Client Offer */}
+            <button
+              onClick={() => {
+                setIsSelectionMode(!isSelectionMode);
+                if (isSelectionMode) setSelectedCarIds([]);
+              }}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                isSelectionMode
+                  ? "bg-purple-600 text-white font-black shadow-lg ring-2 ring-purple-400"
+                  : "bg-purple-950/60 border border-purple-500/40 text-purple-300 hover:bg-purple-900/60 hover:text-white"
+              }`}
+              title="Отметить автомобили галочками и отправить подборку клиенту в мессенджеры"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>{isSelectionMode ? "Отменить подборку" : "📤 Подборка для клиента"}</span>
             </button>
+
+            {/* Booking Archive Mode CTA */}
             <button
-              onClick={() => setDaysCount(21)}
-              className={`px-2 py-1 rounded-lg transition ${
-                daysCount === 21 ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+              onClick={() => {
+                if (gridMode === "LIVE") {
+                  handleSwitchToArchive();
+                } else {
+                  handleSwitchToLive();
+                }
+              }}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow ${
+                gridMode === "ARCHIVE"
+                  ? "bg-purple-600 text-white font-black shadow-lg ring-2 ring-purple-400"
+                  : "bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40"
               }`}
+              title="Переключить шахматку в режим архива (до сегодняшней даты)"
             >
-              21 дн.
+              <Clock className="w-3.5 h-3.5 text-purple-400" />
+              <span>{gridMode === "ARCHIVE" ? "🕒 Архивная шахматка (активна)" : "🕒 Архив броней"}</span>
             </button>
+
+            {/* Quick City Distributor CTA */}
             <button
-              onClick={() => setDaysCount(30)}
-              className={`px-2 py-1 rounded-lg transition ${
-                daysCount === 30 ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-              }`}
-              title="Отобразить 30 дней (целый месяц)"
+              onClick={() => setIsCityDistributorOpen(true)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold shadow transition"
+              title="Быстро распределить города для всех автомобилей автопарка"
             >
-              30 дн.
+              <MapPin className="w-3.5 h-3.5" />
+              <span>📍 Города авто</span>
+            </button>
+
+            {/* Database Backup CTA */}
+            <button
+              onClick={() => setIsBackupModalOpen(true)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold shadow transition"
+              title="Резервное копирование и статус сохранности базы данных"
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>💾 Бэкап</span>
+            </button>
+
+            {/* New Car CTA */}
+            <button
+              onClick={() => setIsNewCarModalOpen(true)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/40 rounded-xl text-xs font-bold shadow transition ml-auto sm:ml-0"
+              title="Добавить новый автомобиль в автопарк и задать город дислокации"
+            >
+              <Car className="w-3.5 h-3.5" />
+              <span>+ Автомобиль</span>
+            </button>
+
+            {/* New Booking CTA */}
+            <button
+              onClick={() => handleOpenNewBooking()}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black shadow transition"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ Новая бронь</span>
             </button>
           </div>
-
-          {/* Status selector */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
-          >
-            <option value="ALL">Все брони</option>
-            <option value="ONE_WAY">⇄ Только One-Way (междугородние)</option>
-            <option value="AVAILABLE">Только свободные</option>
-            <option value="RENTED">Только в поездке</option>
-          </select>
-
-          {/* Selection Mode Button for Client Offer */}
-          <button
-            onClick={() => {
-              setIsSelectionMode(!isSelectionMode);
-              if (isSelectionMode) setSelectedCarIds([]);
-            }}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-              isSelectionMode
-                ? "bg-purple-600 text-white font-black shadow-lg ring-2 ring-purple-400"
-                : "bg-purple-950/60 border border-purple-500/40 text-purple-300 hover:bg-purple-900/60 hover:text-white"
-            }`}
-            title="Отметить автомобили галочками и отправить подборку клиенту в мессенджеры"
-          >
-            <Share2 className="w-4 h-4" />
-            <span>{isSelectionMode ? "Отменить подборку" : "📤 Подборка для клиента"}</span>
-          </button>
-
-          {/* Booking History CTA */}
-          <button
-            onClick={() => setIsHistoryModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-bold shadow transition"
-            title="История и архив всех завершенных, текущих и отмененных бронирований"
-          >
-            <Clock className="w-3.5 h-3.5 text-purple-400" />
-            <span>🕒 История броней</span>
-          </button>
-
-          {/* Quick City Distributor CTA */}
-          <button
-            onClick={() => setIsCityDistributorOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold shadow transition"
-            title="Быстро распределить города для всех автомобилей автопарка"
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            <span>📍 Города авто</span>
-          </button>
-
-          {/* Database Backup CTA */}
-          <button
-            onClick={() => setIsBackupModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold shadow transition"
-            title="Резервное копирование и статус сохранности базы данных"
-          >
-            <Database className="w-3.5 h-3.5" />
-            <span>💾 Бэкап</span>
-          </button>
-
-          {/* New Car CTA */}
-          <button
-            onClick={() => setIsNewCarModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/40 rounded-xl text-xs font-bold shadow transition ml-auto sm:ml-0"
-            title="Добавить новый автомобиль в автопарк и задать город дислокации"
-          >
-            <Car className="w-3.5 h-3.5" />
-            <span>+ Автомобиль</span>
-          </button>
-
-          {/* New Booking CTA */}
-          <button
-            onClick={() => handleOpenNewBooking()}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black shadow transition"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>+ Новая бронь</span>
-          </button>
         </div>
       </div>
+
+      {/* Archive Banner Alert when in Archive Mode */}
+      {gridMode === "ARCHIVE" && (
+        <div className="bg-gradient-to-r from-purple-950/90 via-slate-900 to-indigo-950/90 border-2 border-purple-500/60 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-2xl animate-in slide-in-from-top-2">
+          <div className="flex items-start space-x-3">
+            <div className="p-3 bg-purple-600/20 border border-purple-400/40 rounded-2xl text-purple-300 shrink-0">
+              <Clock className="w-5 h-5 text-purple-300 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h3 className="text-base font-black text-white">
+                  🕒 Архивная шахматка бронирований (до сегодняшней даты)
+                </h3>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-purple-500/30 text-purple-200 border border-purple-400/40">
+                  Режим истории
+                </span>
+              </div>
+              <p className="text-xs text-purple-200/80 mt-1 max-w-3xl">
+                Вы просматриваете историю броней в виде шахматки. Кликните на любую полоску брони для просмотра, перепроверки или фактовой корректировки дат, автомобиля или тарифа.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsHistoryModalOpen(true)}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow"
+              title="Открыть архив броней в виде таблицы с поиском и суммами"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Табличный реестр</span>
+            </button>
+
+            <button
+              onClick={handleSwitchToLive}
+              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition active:scale-95 flex items-center space-x-1.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Вернуться в актуальную шахматку</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* TIMELINE GANTT GRID CONTAINER */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
@@ -780,11 +986,14 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
                             const isActive = booking.status === "ACTIVE";
                             const isPreparing = booking.status === "PREPARING";
+                            const isCompleted = booking.status === "COMPLETED";
                             const isOneWay = booking.isOneWay;
 
                             let barStyle = "bg-gradient-to-r from-blue-600 to-indigo-700 border-blue-400 text-white shadow-blue-900/40";
                             
-                            if (isOneWay) {
+                            if (isCompleted) {
+                              barStyle = "bg-gradient-to-r from-slate-800 via-slate-850 to-slate-800 border-2 border-emerald-500/60 text-slate-100 shadow-md";
+                            } else if (isOneWay) {
                               if (isActive) {
                                 barStyle = "bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-800 border-2 border-fuchsia-300 text-white shadow-lg shadow-fuchsia-900/50 animate-pulse-subtle";
                               } else {
@@ -823,8 +1032,8 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                                     </span>
                                   </div>
                                 ) : (
-                                  <div className="text-[10px] opacity-85 truncate">
-                                    {isActive ? "🚗 В поездке" : isPreparing ? "🧼 Подготовка" : "📅 Локальная бронь"}
+                                  <div className="text-[10px] opacity-90 truncate font-semibold">
+                                    {isCompleted ? "🏁 Завершена (архив)" : isActive ? "🚗 В поездке" : isPreparing ? "🧼 Подготовка" : "📅 Локальная бронь"}
                                   </div>
                                 )}
 
@@ -891,6 +1100,11 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
             <div className="flex items-center space-x-1.5">
               <span className="w-3 h-3 rounded-full bg-blue-500" />
               <span>Локальная бронь</span>
+            </div>
+
+            <div className="flex items-center space-x-1.5">
+              <span className="w-3 h-3 rounded-full bg-slate-800 border-2 border-emerald-500" />
+              <span className="text-emerald-300 font-bold">🏁 Завершена (архив)</span>
             </div>
           </div>
 
