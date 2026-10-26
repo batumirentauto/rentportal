@@ -40,6 +40,7 @@ import { CustomerDossierModal } from "./CustomerDossierModal";
 import { EditBookingModal } from "./EditBookingModal";
 import { FleetCityDistributorModal } from "./FleetCityDistributorModal";
 import { DatabaseBackupModal } from "./DatabaseBackupModal";
+import { BookingHistoryModal } from "./BookingHistoryModal";
 
 interface FleetTimelineGridProps {
   onOpenContract?: (booking: any) => void;
@@ -157,6 +158,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [isNewCarModalOpen, setIsNewCarModalOpen] = useState<boolean>(false);
   const [isCityDistributorOpen, setIsCityDistributorOpen] = useState<boolean>(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState<boolean>(false);
 
   const toggleCarSelection = (carId: string) => {
     setSelectedCarIds((prev) =>
@@ -392,6 +394,16 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
           >
             <Share2 className="w-4 h-4" />
             <span>{isSelectionMode ? "Отменить подборку" : "📤 Подборка для клиента"}</span>
+          </button>
+
+          {/* Booking History CTA */}
+          <button
+            onClick={() => setIsHistoryModalOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-bold shadow transition"
+            title="История и архив всех завершенных, текущих и отмененных бронирований"
+          >
+            <Clock className="w-3.5 h-3.5 text-purple-400" />
+            <span>🕒 История броней</span>
           </button>
 
           {/* Quick City Distributor CTA */}
@@ -1405,6 +1417,61 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
           onClose={() => setIsBackupModalOpen(false)}
           onDataRestored={() => {
             fetchTimeline();
+          }}
+        />
+      )}
+
+      {/* Booking History & Archive Modal */}
+      {isHistoryModalOpen && (
+        <BookingHistoryModal
+          isOpen={isHistoryModalOpen}
+          onClose={() => setIsHistoryModalOpen(false)}
+          cars={data?.cars || []}
+          onSelectBooking={(booking) => {
+            setSelectedBooking(booking);
+            setIsHistoryModalOpen(false);
+          }}
+          onEditBooking={(booking) => {
+            setSelectedBooking(booking);
+            setIsEditBookingOpen(true);
+            setIsHistoryModalOpen(false);
+          }}
+          onOpenContract={(booking) => {
+            if (onOpenContract) {
+              onOpenContract(booking);
+              setIsHistoryModalOpen(false);
+            }
+          }}
+          onOpenHandover={(booking) => {
+            if (onOpenHandover) {
+              onOpenHandover(booking);
+              setIsHistoryModalOpen(false);
+            }
+          }}
+          onOpenReturn={(booking) => {
+            if (onOpenReturn) {
+              onOpenReturn(booking);
+              setIsHistoryModalOpen(false);
+            }
+          }}
+          onOpenCustomerDossier={(customer, bookingId) => {
+            setSelectedBooking((prev: any) => ({
+              ...prev,
+              id: bookingId,
+              customer,
+            }));
+            setIsCustomerDossierOpen(true);
+            setIsHistoryModalOpen(false);
+          }}
+          onOpenDocsUpload={(customer, bookingId, bookingNumber) => {
+            setSelectedBooking((prev: any) => ({
+              ...prev,
+              id: bookingId,
+              bookingNumber,
+              customer,
+            }));
+            setIsDocsUploadModalOpen(true);
+            setIsHistoryModalOpen(false);
           }}
         />
       )}

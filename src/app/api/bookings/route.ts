@@ -4,8 +4,13 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const cityCode = searchParams.get("city"); // "TBS", "BUS", "KUT"
-    const status = searchParams.get("status");
+    const cityCode = searchParams.get("city"); // "TBS", "BUS", "KUT", "ALL"
+    const status = searchParams.get("status"); // "COMPLETED", "ACTIVE", "CONFIRMED", "CANCELLED", "ALL"
+    const carId = searchParams.get("carId");
+    const query = searchParams.get("search")?.trim().toLowerCase() || searchParams.get("query")?.trim().toLowerCase() || "";
+    const order = searchParams.get("order") === "asc" ? "asc" : "desc";
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
 
     const whereClause: any = {};
 
@@ -19,6 +24,20 @@ export async function GET(request: Request) {
 
     if (status && status !== "ALL") {
       whereClause.status = status;
+    }
+
+    if (carId && carId !== "ALL") {
+      whereClause.carId = carId;
+    }
+
+    if (dateFrom || dateTo) {
+      whereClause.startDate = {};
+      if (dateFrom) {
+        whereClause.startDate.gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        whereClause.startDate.lte = new Date(dateTo);
+      }
     }
 
     const bookings = await prisma.booking.findMany({
@@ -48,11 +67,35 @@ export async function GET(request: Request) {
         payments: true,
       },
       orderBy: {
-        startDate: "asc",
+        startDate: order,
       },
     });
 
-    return NextResponse.json({ success: true, bookings });
+    const filteredBookings = query
+      ? bookings.filter((b) => {
+          const bookingNum = (b.bookingNumber || "").toLowerCase();
+          const custName = (b.customer?.fullName || "").toLowerCase();
+          const custPhone = (b.customer?.phone || "").toLowerCase();
+          const carBrand = (b.car?.brand || "").toLowerCase();
+          const carModel = (b.car?.model || "").toLowerCase();
+          const carPlate = (b.car?.plateNumber || "").toLowerCase();
+          const pickupLoc = (b.pickupLocation?.name || "").toLowerCase();
+          const returnLoc = (b.returnLocation?.name || "").toLowerCase();
+
+          return (
+            bookingNum.includes(query) ||
+            custName.includes(query) ||
+            custPhone.includes(query) ||
+            carBrand.includes(query) ||
+            carModel.includes(query) ||
+            carPlate.includes(query) ||
+            pickupLoc.includes(query) ||
+            returnLoc.includes(query)
+          );
+        })
+      : bookings;
+
+    return NextResponse.json({ success: true, bookings: filteredBookings });
   } catch (error: any) {
     if (error?.digest?.startsWith?.("NEXT_")) {
       throw error;
