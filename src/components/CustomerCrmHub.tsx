@@ -577,11 +577,35 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                   {/* Contacts */}
                   <div className="space-y-1.5">
                     <span className="text-slate-400 font-bold block text-[11px]">Контакты & Мессенджеры:</span>
-                    <div className="flex items-center space-x-2 text-white font-mono">
+                    <div className="flex items-center space-x-2 text-white font-mono flex-wrap gap-y-1">
                       <Phone className="w-3.5 h-3.5 text-amber-400" />
                       <a href={`tel:${c.phone}`} className="hover:underline font-bold">
                         {c.phone}
                       </a>
+                      {c.phone && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(c.phone, `phone-${c.id}`)}
+                          className={`px-1.5 py-0.5 rounded transition flex items-center space-x-1 text-[10px] font-sans font-bold shadow-sm ${
+                            copiedId === `phone-${c.id}`
+                              ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
+                              : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
+                          }`}
+                          title="Скопировать номер телефона"
+                        >
+                          {copiedId === `phone-${c.id}` ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-400" />
+                              <span>Скопировано!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3 text-amber-400" />
+                              <span>Копировать</span>
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center space-x-3 pt-0.5">
                       {c.whatsapp && (
@@ -779,9 +803,34 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                       {selectedCustomerDossier.loyaltyTier}
                     </span>
                   </div>
-                  <span className="text-xs text-slate-400 font-mono">
-                    {selectedCustomerDossier.phone} • {selectedCustomerDossier.city || "Грузия"}
-                  </span>
+                  <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono mt-0.5 flex-wrap gap-y-1">
+                    <span className="text-white font-bold">{selectedCustomerDossier.phone}</span>
+                    {selectedCustomerDossier.phone && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(selectedCustomerDossier.phone, `dossier-phone-${selectedCustomerDossier.id}`)}
+                        className={`px-1.5 py-0.5 rounded transition flex items-center space-x-1 text-[10px] font-sans font-bold shadow-sm ${
+                          copiedId === `dossier-phone-${selectedCustomerDossier.id}`
+                            ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
+                            : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
+                        }`}
+                        title="Скопировать номер телефона"
+                      >
+                        {copiedId === `dossier-phone-${selectedCustomerDossier.id}` ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span>Скопировано!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3 text-amber-400" />
+                            <span>Копировать</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <span>• {selectedCustomerDossier.city || "Грузия"}</span>
+                  </div>
                 </div>
               </div>
               <button
@@ -945,9 +994,31 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
               {/* Phones & Messengers */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-bold block mb-1">
-                    Основной телефон*:
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-300 font-bold block">
+                      Основной телефон*:
+                    </label>
+                    {formPhone && formPhone !== "+995 " && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(formPhone, "form-phone")}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center space-x-0.5 font-bold"
+                        title="Скопировать телефон"
+                      >
+                        {copiedId === "form-phone" ? (
+                          <span className="text-emerald-400 flex items-center space-x-0.5">
+                            <Check className="w-2.5 h-2.5" />
+                            <span>Скопировано!</span>
+                          </span>
+                        ) : (
+                          <>
+                            <Copy className="w-2.5 h-2.5" />
+                            <span>Копировать</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     required
@@ -959,9 +1030,31 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-slate-300 font-bold block mb-1">
-                    WhatsApp (номер с кодом):
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-300 font-bold block">
+                      WhatsApp (номер с кодом):
+                    </label>
+                    {formWhatsapp && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(formWhatsapp, "form-wa")}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center space-x-0.5 font-bold"
+                        title="Скопировать WhatsApp"
+                      >
+                        {copiedId === "form-wa" ? (
+                          <span className="text-emerald-400 flex items-center space-x-0.5">
+                            <Check className="w-2.5 h-2.5" />
+                            <span>Скопировано!</span>
+                          </span>
+                        ) : (
+                          <>
+                            <Copy className="w-2.5 h-2.5" />
+                            <span>Копировать</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={formWhatsapp}

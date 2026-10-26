@@ -284,9 +284,34 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
                   </span>
                 )}
               </div>
-              <span className="text-xs text-slate-400 font-mono">
-                {phone || "Телефон не указан"} • {city || "Грузия"}
-              </span>
+              <div className="text-xs text-slate-400 font-mono flex items-center space-x-2 mt-0.5 flex-wrap gap-y-1">
+                <span className="text-white font-bold">{phone || "Телефон не указан"}</span>
+                {phone && (
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(phone, "header-phone")}
+                    className={`px-1.5 py-0.5 rounded transition flex items-center space-x-1 text-[10px] font-sans font-bold shadow-sm ${
+                      copiedKey === "header-phone"
+                        ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
+                        : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
+                    }`}
+                    title="Скопировать телефон"
+                  >
+                    {copiedKey === "header-phone" ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span>Скопировано!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3 text-amber-400" />
+                        <span>Копировать</span>
+                      </>
+                    )}
+                  </button>
+                )}
+                <span>• {city || "Грузия"}</span>
+              </div>
             </div>
           </div>
 
@@ -660,32 +685,66 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-slate-400 text-[10px] block mb-1 font-semibold">
-                    Телефон (основной):
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+995 599 000 000"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono focus:border-amber-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(phone, "phone")}
-                      className="absolute right-2 top-2.5 text-slate-500 hover:text-white"
-                      title="Скопировать телефон"
-                    >
-                      {copiedKey === "phone" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 text-[10px] block font-semibold">
+                      Телефон (основной):
+                    </label>
+                    {phone && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(phone, "phone")}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center space-x-1 font-bold"
+                        title="Скопировать телефон"
+                      >
+                        {copiedKey === "phone" ? (
+                          <span className="text-emerald-400 flex items-center space-x-0.5">
+                            <Check className="w-2.5 h-2.5" />
+                            <span>Скопировано!</span>
+                          </span>
+                        ) : (
+                          <>
+                            <Copy className="w-2.5 h-2.5" />
+                            <span>Копировать</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+995 599 000 000"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono focus:border-amber-500"
+                  />
                 </div>
 
                 <div>
-                  <label className="text-slate-400 text-[10px] block mb-1 font-semibold">
-                    WhatsApp:
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 text-[10px] block font-semibold">
+                      WhatsApp:
+                    </label>
+                    {whatsapp && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(whatsapp, "whatsapp")}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center space-x-1 font-bold"
+                        title="Скопировать WhatsApp"
+                      >
+                        {copiedKey === "whatsapp" ? (
+                          <span className="text-emerald-400 flex items-center space-x-0.5">
+                            <Check className="w-2.5 h-2.5" />
+                            <span>Скопировано!</span>
+                          </span>
+                        ) : (
+                          <>
+                            <Copy className="w-2.5 h-2.5" />
+                            <span>Копировать</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={whatsapp}
