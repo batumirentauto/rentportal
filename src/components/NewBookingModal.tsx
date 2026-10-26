@@ -44,6 +44,7 @@ interface NewBookingModalProps {
   onBookingCreated: () => void;
   initialCarId?: string;
   initialDate?: string;
+  initialDays?: number;
 }
 
 export const NewBookingModal: React.FC<NewBookingModalProps> = ({
@@ -52,6 +53,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   onBookingCreated,
   initialCarId,
   initialDate,
+  initialDays,
 }) => {
   const [cars, setCars] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>(DEFAULT_LOCATIONS);
@@ -78,7 +80,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [startTime, setStartTime] = useState<string>("10:00");
   const [returnTime, setReturnTime] = useState<string>("10:00");
   
-  const [rentalDays, setRentalDays] = useState<number>(3);
+  const [rentalDays, setRentalDays] = useState<number>(initialDays || 3);
 
   const computedEndDate = useMemo(() => {
     const d = new Date(startDate);
@@ -156,7 +158,10 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     };
 
     loadData();
-  }, [isOpen, initialCarId]);
+    if (initialDate) setStartDate(initialDate);
+    if (initialDays) setRentalDays(initialDays);
+    if (initialCarId) setCarId(initialCarId);
+  }, [isOpen, initialCarId, initialDate, initialDays]);
 
   // Selected Car object
   const selectedCar = useMemo(() => {

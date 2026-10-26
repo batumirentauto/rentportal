@@ -32,6 +32,7 @@ import { ShareOfferModal } from "./ShareOfferModal";
 import { StopUnblockModal } from "./StopUnblockModal";
 import { CarDetailsModal } from "./CarDetailsModal";
 import { NewCarModal } from "./NewCarModal";
+import { AvailabilitySearchModal } from "./AvailabilitySearchModal";
 
 interface FleetTimelineGridProps {
   onOpenContract?: (booking: any) => void;
@@ -97,7 +98,9 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [startDateOffset, setStartDateOffset] = useState<number>(0);
+  const [currentStartDate, setCurrentStartDate] = useState<string>(() => {
+    return new Date().toISOString().split("T")[0];
+  });
   const [daysCount, setDaysCount] = useState<number>(14);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL"); // "ALL", "AVAILABLE", "RENTED", "ONE_WAY"
@@ -109,10 +112,15 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [isNewBookingOpen, setIsNewBookingOpen] = useState<boolean>(false);
   const [bookingInitialCarId, setBookingInitialCarId] = useState<string>("");
   const [bookingInitialDate, setBookingInitialDate] = useState<string>("");
+  const [bookingInitialDays, setBookingInitialDays] = useState<number>(3);
 
-  const handleOpenNewBooking = (carId?: string, dateStr?: string) => {
+  // Availability Search & Matcher Modal state
+  const [isAvailabilitySearchOpen, setIsAvailabilitySearchOpen] = useState<boolean>(false);
+
+  const handleOpenNewBooking = (carId?: string, dateStr?: string, days?: number) => {
     setBookingInitialCarId(carId || "");
     setBookingInitialDate(dateStr || "");
+    if (days) setBookingInitialDays(days);
     setIsNewBookingOpen(true);
   };
 
@@ -134,18 +142,16 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   };
 
   const baseDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + startDateOffset);
+    const d = new Date(currentStartDate);
     d.setHours(0, 0, 0, 0);
     return d;
-  }, [startDateOffset]);
+  }, [currentStartDate]);
 
   const fetchTimeline = async () => {
     setLoading(true);
     try {
-      const dateStr = baseDate.toISOString().split("T")[0];
       const res = await fetch(
-        `/api/fleet/timeline?startDate=${dateStr}&days=${daysCount}&city=${selectedCity}`
+        `/api/fleet/timeline?startDate=${currentStartDate}&days=${daysCount}&city=${selectedCity}`
       );
       const json = await res.json();
       if (json.success) {
@@ -160,11 +166,21 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
   useEffect(() => {
     fetchTimeline();
-  }, [startDateOffset, daysCount, selectedCity]);
+  }, [currentStartDate, daysCount, selectedCity]);
 
-  const handlePrev = () => setStartDateOffset((prev) => prev - 7);
-  const handleNext = () => setStartDateOffset((prev) => prev + 7);
-  const handleToday = () => setStartDateOffset(0);
+  const handlePrev = () => {
+    const d = new Date(currentStartDate);
+    d.setDate(d.getDate() - 7);
+    setCurrentStartDate(d.toISOString().split("T")[0]);
+  };
+  const handleNext = () => {
+    const d = new Date(currentStartDate);
+    d.setDate(d.getDate() + 7);
+    setCurrentStartDate(d.toISOString().split("T")[0]);
+  };
+  const handleToday = () => {
+    setCurrentStartDate(new Date().toISOString().split("T")[0]);
+  };
 
   const filteredCars = useMemo(() => {
     if (!data?.cars) return [];
@@ -203,49 +219,89 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       {/* Controls Bar: Navigation, Date jump, Search & Period */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-md">
         {/* Date Navigator */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handlePrev}
-            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition"
-            title="Назад на 7 дней"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={handlePrev}
+              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition"
+              title="Назад на 7 дней"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
 
+            <button
+              onClick={handleToday}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                currentStartDate === new Date().toISOString().split("T")[0]
+                  ? "bg-amber-500 text-slate-950 shadow"
+                  : "bg-slate-800 text-slate-300 hover:text-white"
+              }`}
+            >
+              Сегодня
+            </button>
+
+            <button
+              onClick={handleNext}
+              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition"
+              title="Вперед на 7 дней"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Calendar Date Picker Jump */}
+          <div className="flex items-center space-x-1.5 bg-slate-950 px-2.5 py-1.5 rounded-xl border border-slate-700">
+            <CalendarIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <input
+              type="date"
+              value={currentStartDate}
+              onChange={(e) => setCurrentStartDate(e.target.value)}
+              className="bg-transparent text-white text-xs font-mono font-bold focus:outline-none cursor-pointer"
+              title="Выберите любую дату календаря (например, 27 декабря)"
+            />
+          </div>
+
+          {/* Quick jump to 27 December (New Year) */}
           <button
-            onClick={handleToday}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-              startDateOffset === 0
-                ? "bg-amber-500 text-slate-950 shadow"
-                : "bg-slate-800 text-slate-300 hover:text-white"
+            onClick={() => {
+              setCurrentStartDate("2026-12-27");
+              setDaysCount(14);
+            }}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center space-x-1 ${
+              currentStartDate === "2026-12-27"
+                ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
+                : "bg-slate-950 text-amber-300 hover:text-white border-amber-500/30"
             }`}
+            title="Перейти к 27 декабря 2026 (Новогодний пик)"
           >
-            Сегодня
+            <span>🎄 27 дек (Новый Год)</span>
           </button>
 
-          <button
-            onClick={handleNext}
-            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition"
-            title="Вперед на 7 дней"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-
-          <span className="text-xs text-slate-300 font-medium pl-2 hidden sm:inline">
-            Период: с {days[0]?.dayNumber} {days[0]?.monthName} по {days[days.length - 1]?.dayNumber} {days[days.length - 1]?.monthName}
+          <span className="text-xs text-slate-400 font-medium pl-1 hidden lg:inline">
+            с {days[0]?.dayNumber} {days[0]?.monthName} по {days[days.length - 1]?.dayNumber} {days[days.length - 1]?.monthName}
           </span>
         </div>
 
         {/* Filter controls */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Availability Matcher Button */}
+          <button
+            onClick={() => setIsAvailabilitySearchOpen(true)}
+            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition active:scale-95"
+            title="Проверить свободные машины на любой диапазон дат (например, с 27 декабря по 5 января)"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>🔍 Подобрать авто на даты</span>
+          </button>
+
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по марке / номеру..."
-              className="bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 w-36 sm:w-48"
+              placeholder="Поиск авто..."
+              className="bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 w-32 sm:w-40"
             />
           </div>
 
@@ -274,6 +330,15 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
               }`}
             >
               21 дн.
+            </button>
+            <button
+              onClick={() => setDaysCount(30)}
+              className={`px-2 py-1 rounded-lg transition ${
+                daysCount === 30 ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+              }`}
+              title="Отобразить 30 дней (целый месяц)"
+            >
+              30 дн.
             </button>
           </div>
 
@@ -1018,7 +1083,24 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
         onBookingCreated={() => fetchTimeline()}
         initialCarId={bookingInitialCarId}
         initialDate={bookingInitialDate}
+        initialDays={bookingInitialDays}
       />
+
+      {/* Availability Search & Matcher Modal */}
+      {isAvailabilitySearchOpen && (
+        <AvailabilitySearchModal
+          isOpen={isAvailabilitySearchOpen}
+          onClose={() => setIsAvailabilitySearchOpen(false)}
+          currentCity={selectedCity}
+          onJumpTimeline={(dateStr) => {
+            setCurrentStartDate(dateStr);
+            setDaysCount(14);
+          }}
+          onBookCar={(carId, startDateStr, days) => {
+            handleOpenNewBooking(carId, startDateStr, days);
+          }}
+        />
+      )}
 
       {/* Floating Action Bar for Client Offer Selection Mode */}
       {isSelectionMode && (
