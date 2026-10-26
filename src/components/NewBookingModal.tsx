@@ -246,11 +246,40 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
       }
     };
 
-    loadData();
-    if (initialDate) setStartDate(initialDate);
+    // Полная очистка полей от предыдущих броней при каждом открытии модального окна
+    setIsNewCustomerMode(false);
+    setNewCustomerName("");
+    setNewCustomerPhone("");
+    setNewCustomerPassport("");
+    setNewCustomerLicense("");
+    setNewCustomerCountry("Грузия / Международный");
+    setNewCustomerNotes("");
+    setNewCustomerPassportUrl(null);
+    setNewCustomerLicenseFrontUrl(null);
+    setNewCustomerLicenseBackUrl(null);
+    setNewCustomerBirthDate("");
+    setNewCustomerLicenseExpiry("");
+    setDocAiNotice(null);
+
+    setStartDate(initialDate || new Date().toISOString().split("T")[0]);
+    setStartTime("10:00");
+    setReturnTime("10:00");
     setRentalDays(initialDays || 1);
     setDepositAmount(0);
+    setBookingSource("WHATSAPP");
+    setNewCustomerInstagram("");
+    setNewCustomerTelegram("");
+
+    setPickupType("OFFICE");
+    setPickupAddress("");
+    setReturnType("OFFICE");
+
+    setAcknowledgedRelocation(false);
+    setAcknowledgedStopBlock(false);
+    setAcknowledgedBlacklist(false);
+
     if (initialCarId) setCarId(initialCarId);
+    loadData();
   }, [isOpen, initialCarId, initialDate, initialDays]);
 
   // Selected Car object
@@ -906,36 +935,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                         </button>
                       </div>
                     </div>
-
-                    {bookingSource === "INSTAGRAM" && (
-                      <div>
-                        <label className="text-[10px] text-pink-400 font-semibold block mb-0.5">
-                          Instagram клиента (@username или ссылка на профиль):
-                        </label>
-                        <input
-                          type="text"
-                          value={newCustomerInstagram}
-                          onChange={(e) => setNewCustomerInstagram(e.target.value)}
-                          placeholder="@batumi_client"
-                          className="w-full bg-slate-950 border border-pink-500/50 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-pink-400"
-                        />
-                      </div>
-                    )}
-
-                    {bookingSource === "TELEGRAM" && (
-                      <div>
-                        <label className="text-[10px] text-sky-400 font-semibold block mb-0.5">
-                          Telegram клиента (@username):
-                        </label>
-                        <input
-                          type="text"
-                          value={newCustomerTelegram}
-                          onChange={(e) => setNewCustomerTelegram(e.target.value)}
-                          placeholder="@username"
-                          className="w-full bg-slate-950 border border-sky-500/50 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-sky-400 font-mono"
-                        />
-                      </div>
-                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -1022,15 +1021,36 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               </div>
               <div>
                 <label className="text-slate-400 font-semibold block mb-1">⏳ Дней аренды:</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="60"
+                <select
                   value={rentalDays}
                   onChange={(e) => setRentalDays(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white font-mono font-bold focus:outline-none focus:border-amber-500"
-                  required
-                />
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white font-mono font-bold focus:outline-none focus:border-amber-500 cursor-pointer"
+                >
+                  {[
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+                    35, 40, 45, 50, 60, 90,
+                  ].map((d) => {
+                    let label = `${d} дн.`;
+                    if (d === 1) label = "1 день (сутки)";
+                    else if (d >= 2 && d <= 4) label = `${d} дня`;
+                    else if (d % 10 === 1 && d !== 11) label = `${d} день`;
+                    else if (d % 10 >= 2 && d % 10 <= 4 && (d < 10 || d > 20)) label = `${d} дня`;
+                    else label = `${d} дней`;
+
+                    if (d === 7) label += " (1 неделя)";
+                    if (d === 14) label += " (2 недели)";
+                    if (d === 21) label += " (3 недели)";
+                    if (d === 30) label += " (1 месяц)";
+                    if (d === 60) label += " (2 месяца)";
+                    if (d === 90) label += " (3 месяца)";
+
+                    return (
+                      <option key={d} value={d} className="bg-slate-900 text-white">
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
             </div>
 

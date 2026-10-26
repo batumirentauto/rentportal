@@ -118,6 +118,36 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     loadLocs();
   }, []);
 
+  // Update states whenever booking or isOpen changes
+  useEffect(() => {
+    if (!booking || !isOpen) return;
+    setSelectedCarId(booking.carId || "");
+    const start = booking.startDate ? new Date(booking.startDate) : new Date();
+    const end = booking.endDate ? new Date(booking.endDate) : new Date();
+    setStartDateStr(start.toISOString().split("T")[0]);
+    setStartTimeStr(start.toTimeString().slice(0, 5) || "10:00");
+    setEndDateStr(end.toISOString().split("T")[0]);
+    setReturnTimeStr(end.toTimeString().slice(0, 5) || "10:00");
+    setRentalDays(booking.rentalDays || 1);
+    setPickupCityCode(booking.fromCityCode || booking.pickupLocation?.city?.code || "TBS");
+    setPickupLocationId(booking.pickupLocationId || "");
+    setPickupType(booking.pickupType || "OFFICE");
+    setPickupAddress(booking.pickupAddress || "");
+    setReturnCityCode(booking.toCityCode || booking.returnLocation?.city?.code || "TBS");
+    setReturnLocationId(booking.returnLocationId || "");
+    setReturnType(booking.returnType || "OFFICE");
+    setReturnAddress(booking.returnAddress || "");
+    setDailyRate(booking.dailyRate || 65);
+    setDeliveryFee(booking.deliveryFee || 0);
+    setExtrasTotal(booking.extrasTotal || 0);
+    setDepositAmount(booking.depositAmount !== undefined ? Number(booking.depositAmount) : 0);
+    setTotalAmount(booking.totalAmount || 0);
+    setOwnerDailyRate(booking.ownerDailyRate || 25);
+    setBookingSource(booking.source || "WHATSAPP");
+    setStatus(booking.status || "CONFIRMED");
+    setManagerNotes(booking.overdueDecisionNotes || "");
+  }, [booking, isOpen]);
+
   // When startDate or rentalDays change, auto update endDate
   const handleDaysChange = (newDays: number) => {
     const d = Math.max(1, newDays);
@@ -434,34 +464,38 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               </div>
             </div>
 
-            {/* Rental Days counter */}
+            {/* Rental Days dropdown */}
             <div className="flex items-center justify-between bg-slate-900/80 px-3 py-2 rounded-xl border border-slate-800">
               <span className="text-slate-300 font-semibold">
                 Срок аренды (дней):
               </span>
-              <div className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  onClick={() => handleDaysChange(rentalDays - 1)}
-                  className="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold flex items-center justify-center transition"
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  min={1}
-                  value={rentalDays}
-                  onChange={(e) => handleDaysChange(Number(e.target.value))}
-                  className="w-16 bg-slate-950 border border-slate-700 rounded-lg p-1 text-center font-mono font-bold text-amber-400"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleDaysChange(rentalDays + 1)}
-                  className="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold flex items-center justify-center transition"
-                >
-                  +
-                </button>
-              </div>
+              <select
+                value={rentalDays}
+                onChange={(e) => handleDaysChange(Number(e.target.value))}
+                className="bg-slate-950 border border-slate-700 rounded-lg py-1.5 px-3 text-white font-mono font-bold text-amber-400 focus:outline-none focus:border-amber-500 cursor-pointer text-xs"
+              >
+                {[
+                  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+                  35, 40, 45, 50, 60, 90,
+                ].map((d) => {
+                  let label = `${d} дн.`;
+                  if (d === 1) label = "1 день (сутки)";
+                  else if (d >= 2 && d <= 4) label = `${d} дня`;
+                  else if (d % 10 === 1 && d !== 11) label = `${d} день`;
+                  else if (d % 10 >= 2 && d % 10 <= 4 && (d < 10 || d > 20)) label = `${d} дня`;
+                  else label = `${d} дней`;
+
+                  if (d === 7) label += " (1 нед.)";
+                  if (d === 14) label += " (2 нед.)";
+                  if (d === 21) label += " (3 нед.)";
+                  if (d === 30) label += " (1 мес.)";
+                  return (
+                    <option key={d} value={d} className="bg-slate-900 text-white">
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
           </div>
 
