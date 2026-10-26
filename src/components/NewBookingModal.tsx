@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Users,
   Plus,
+  Copy,
 } from "lucide-react";
 import { getCityTheme } from "./FleetTimelineGrid";
 
@@ -201,6 +202,18 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [dailyRate, setDailyRate] = useState<number>(65);
   const [rentalTotal, setRentalTotal] = useState<number>(65);
   const [ownerDailyRate, setOwnerDailyRate] = useState<number>(25);
+  const [copiedCustomerPhone, setCopiedCustomerPhone] = useState<boolean>(false);
+
+  const handleCopyPhone = (text: string) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedCustomerPhone(true);
+      setTimeout(() => setCopiedCustomerPhone(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
 
   const handleDailyRateChange = (val: number | string) => {
     const rate = val === "" ? 0 : Number(val);
@@ -861,8 +874,34 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                     <div className="mt-2.5 p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
                         <span className="text-slate-400">Контакты клиента:</span>
-                        <div className="flex items-center space-x-2 font-mono text-white text-xs">
-                          <span>📞 {selectedCustomer.phone}</span>
+                        <div className="flex items-center space-x-2 font-mono text-white text-xs flex-wrap gap-y-1">
+                          <div className="flex items-center space-x-1.5 bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">
+                            <span>📞 {selectedCustomer.phone}</span>
+                            {selectedCustomer.phone && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyPhone(selectedCustomer.phone)}
+                                className={`px-1.5 py-0.5 rounded transition flex items-center space-x-1 text-[10px] font-sans font-bold shadow-sm ${
+                                  copiedCustomerPhone
+                                    ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
+                                    : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
+                                }`}
+                                title="Скопировать номер телефона"
+                              >
+                                {copiedCustomerPhone ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-emerald-400" />
+                                    <span>Скопировано!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3 text-amber-400" />
+                                    <span>Копировать</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
                           {selectedCustomer.telegram && <span className="text-sky-400">@{selectedCustomer.telegram}</span>}
                           {selectedCustomer.instagram && <span className="text-pink-400">@{selectedCustomer.instagram}</span>}
                         </div>
@@ -1081,9 +1120,31 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">
-                        Телефон клиента <span className="text-red-400">*</span>:
-                      </label>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <label className="text-[10px] text-slate-400 font-semibold block">
+                          Телефон клиента <span className="text-red-400">*</span>:
+                        </label>
+                        {newCustomerPhone && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyPhone(newCustomerPhone)}
+                            className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center space-x-0.5 font-bold"
+                            title="Скопировать телефон"
+                          >
+                            {copiedCustomerPhone ? (
+                              <span className="text-emerald-400 flex items-center space-x-0.5">
+                                <Check className="w-2.5 h-2.5" />
+                                <span>Скопировано!</span>
+                              </span>
+                            ) : (
+                              <>
+                                <Copy className="w-2.5 h-2.5" />
+                                <span>Копировать</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="tel"
                         value={newCustomerPhone}

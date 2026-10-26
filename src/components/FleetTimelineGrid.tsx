@@ -31,6 +31,8 @@ import {
   Users,
   DollarSign,
   ExternalLink,
+  Copy,
+  Check,
 } from "lucide-react";
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
@@ -129,6 +131,18 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [isRefundModalOpen, setIsRefundModalOpen] = useState<boolean>(false);
   const [isExtensionModalOpen, setIsExtensionModalOpen] = useState<boolean>(false);
   const [isAdditionalDriversModalOpen, setIsAdditionalDriversModalOpen] = useState<boolean>(false);
+  const [copiedPopupPhone, setCopiedPopupPhone] = useState<boolean>(false);
+
+  const handleCopyPopupPhone = (text: string) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedPopupPhone(true);
+      setTimeout(() => setCopiedPopupPhone(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
 
   // New Booking Modal state
   const [isNewBookingOpen, setIsNewBookingOpen] = useState<boolean>(false);
@@ -1329,9 +1343,33 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                       </span>
                     )}
                   </button>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    {selectedBooking.customer.phone}
-                  </span>
+                  <div className="flex items-center space-x-1.5 font-mono text-[11px] text-slate-300 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                    <span>📞 {selectedBooking.customer.phone}</span>
+                    {selectedBooking.customer?.phone && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPopupPhone(selectedBooking.customer.phone)}
+                        className={`px-1.5 py-0.5 rounded transition flex items-center space-x-1 text-[10px] font-sans font-bold shadow-sm ${
+                          copiedPopupPhone
+                            ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
+                            : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
+                        }`}
+                        title="Скопировать номер телефона"
+                      >
+                        {copiedPopupPhone ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span>Скопировано!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3 text-amber-400" />
+                            <span>Копировать</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <p className="text-[11px] text-slate-400">
                   Паспорт: {selectedBooking.customer.passportNumber} • Права: {selectedBooking.customer.driverLicenseNumber}

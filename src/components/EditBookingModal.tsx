@@ -18,6 +18,8 @@ import {
   DollarSign,
   Plus,
   ExternalLink,
+  Copy,
+  Check,
 } from "lucide-react";
 import { AdditionalDriversModal } from "./AdditionalDriversModal";
 import { BookingRefundModal } from "./BookingRefundModal";
@@ -94,6 +96,18 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   const [totalAmount, setTotalAmount] = useState<number>(booking?.totalAmount || 195);
   const [ownerDailyRate, setOwnerDailyRate] = useState<number>(booking?.ownerDailyRate || 25);
   const [bookingSource, setBookingSource] = useState<string>(booking?.source || "WHATSAPP");
+  const [copiedContact, setCopiedContact] = useState<boolean>(false);
+
+  const handleCopyPhone = (text: string) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedContact(true);
+      setTimeout(() => setCopiedContact(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
 
   const handleStartTimeChange = (val: string) => {
     setStartTimeStr(val);
@@ -387,8 +401,34 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 <User className="w-4 h-4 text-amber-400" />
                 <span>Клиент: {booking.customer?.fullName}</span>
               </span>
-              <div className="flex items-center space-x-2 text-slate-300 font-mono text-[11px]">
-                <span>📞 {booking.customer?.phone}</span>
+              <div className="flex items-center space-x-2 text-slate-300 font-mono text-[11px] flex-wrap gap-y-1">
+                <div className="flex items-center space-x-1.5 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                  <span>📞 {booking.customer?.phone}</span>
+                  {booking.customer?.phone && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPhone(booking.customer.phone)}
+                      className={`px-1.5 py-0.5 rounded transition flex items-center space-x-1 text-[10px] font-sans font-bold shadow-sm ${
+                        copiedContact
+                          ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
+                          : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
+                      }`}
+                      title="Скопировать номер телефона"
+                    >
+                      {copiedContact ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span>Скопировано!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3 text-amber-400" />
+                          <span>Копировать</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
                 {booking.customer?.telegram && <span className="text-sky-400">@{booking.customer.telegram}</span>}
                 {booking.customer?.instagram && <span className="text-pink-400">@{booking.customer.instagram}</span>}
               </div>
