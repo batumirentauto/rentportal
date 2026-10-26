@@ -24,6 +24,10 @@ export async function GET(request: Request) {
       where: carWhere,
       include: {
         city: true,
+        availabilityBlocks: {
+          where: { isActive: true },
+          orderBy: { startDate: "asc" },
+        },
         bookings: {
           where: {
             status: { notIn: ["CANCELLED"] },
@@ -128,7 +132,13 @@ export async function GET(request: Request) {
         return today >= bStart && today <= bEnd;
       });
 
-      if (isBusyToday || car.status === "RENTED") {
+      const isBlockedToday = car.isStopBlocked || car.availabilityBlocks.some((b) => {
+        const bStart = new Date(b.startDate);
+        const bEnd = b.endDate ? new Date(b.endDate) : null;
+        return today >= bStart && (!bEnd || today <= bEnd);
+      });
+
+      if (isBusyToday || car.status === "RENTED" || isBlockedToday) {
         rentedToday++;
       } else {
         availableToday++;
@@ -137,6 +147,7 @@ export async function GET(request: Request) {
       return {
         ...car,
         bookings: processedBookings,
+        availabilityBlocks: car.availabilityBlocks,
         currentCityName: currentCity.nameRu,
         currentCityCode: currentCity.code,
         nextRelocation,

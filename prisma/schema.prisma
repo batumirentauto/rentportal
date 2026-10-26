@@ -117,8 +117,24 @@ model Car {
   issues          CarIssue[]
   checklists      CarTechnicalChecklist[]
   managerTasks    ManagerTask[]
+  availabilityBlocks CarAvailabilityBlock[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+}
+
+model CarAvailabilityBlock {
+  id          String    @id @default(cuid())
+  carId       String
+  car         Car       @relation(fields: [carId], references: [id], onDelete: Cascade)
+  startDate   DateTime
+  endDate     DateTime? // null = бессрочно (от startDate до ручного открытия)
+  reason      String    @default("MAINTENANCE") // "MAINTENANCE", "REPAIR", "SERVICE_TRIP", "PERSONAL", "DETAILING", "OTHER"
+  reasonText  String?
+  notes       String?
+  createdBy   String?   @default("Менеджер")
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Customer {

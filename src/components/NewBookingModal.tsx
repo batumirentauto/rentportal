@@ -817,10 +817,15 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                     </h4>
                   </div>
                   <p className="text-red-100 text-xs leading-relaxed font-semibold">
-                    Причина: {selectedCar.stopReason || "Истёк срок гостехосмотра (PTI) или страховки (КАСКО)"}.
+                    Причина: {selectedCar.stopReason || "Ручная блокировка доступности / ТО / страховка"}.
                   </p>
+                  {selectedCar.stopNotes && (
+                    <p className="text-[11px] text-red-200 bg-red-950/60 p-1.5 rounded border border-red-500/30">
+                      📝 Комментарий: {selectedCar.stopNotes}
+                    </p>
+                  )}
                   <p className="text-[11px] text-red-200/80 italic">
-                    ⚠️ По законам Грузии эксплуатация данного автомобиля без действующего техосмотра / страховки влечет штраф и аннулирование страхового покрытия. Перед выдачей авто клиенту необходимо пройти техосмотр или продлить полис.
+                    ⚠️ Автомобиль временно недоступен или находится на обслуживании. Выдача возможна только после снятия блокировки.
                   </p>
                 </div>
               </div>

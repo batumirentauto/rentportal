@@ -30,6 +30,8 @@ import {
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
 import { StopUnblockModal } from "./StopUnblockModal";
+import { CarDetailsModal } from "./CarDetailsModal";
+import { NewCarModal } from "./NewCarModal";
 
 interface FleetTimelineGridProps {
   onOpenContract?: (booking: any) => void;
@@ -119,6 +121,11 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [selectedCarIds, setSelectedCarIds] = useState<string[]>([]);
   const [unblockCar, setUnblockCar] = useState<any | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+
+  // Car Details & Availability Modal states
+  const [selectedCarForDetails, setSelectedCarForDetails] = useState<string | null>(null);
+  const [carModalTab, setCarModalTab] = useState<"general" | "availability">("general");
+  const [isNewCarModalOpen, setIsNewCarModalOpen] = useState<boolean>(false);
 
   const toggleCarSelection = (carId: string) => {
     setSelectedCarIds((prev) =>
@@ -299,10 +306,20 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
             <span>{isSelectionMode ? "Отменить подборку" : "📤 Подборка для клиента"}</span>
           </button>
 
+          {/* New Car CTA */}
+          <button
+            onClick={() => setIsNewCarModalOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/40 rounded-xl text-xs font-bold shadow transition ml-auto sm:ml-0"
+            title="Добавить новый автомобиль в автопарк и задать город дислокации"
+          >
+            <Car className="w-3.5 h-3.5" />
+            <span>+ Автомобиль</span>
+          </button>
+
           {/* New Booking CTA */}
           <button
             onClick={() => handleOpenNewBooking()}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black shadow transition ml-auto sm:ml-0"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black shadow transition"
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Новая бронь</span>
@@ -379,18 +396,24 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                   return (
                     <div
                       key={car.id}
-                      onClick={() => {
-                        if (isSelectionMode) toggleCarSelection(car.id);
-                      }}
                       className={`grid grid-cols-[140px_1fr] sm:grid-cols-[240px_1fr] hover:bg-slate-800/30 transition-colors group ${
                         isSelectionMode ? "cursor-pointer" : ""
                       } ${isSelected ? "bg-purple-950/20" : ""}`}
                     >
-                      {/* Left: Car Details & Distinct City Color Border */}
+                      {/* Left: Car Details & Distinct City Color Border (Clickable to open Car Details Modal) */}
                       <div
-                        className={`sticky left-0 z-10 p-2 sm:p-3 border-r border-slate-800 bg-slate-900/95 flex items-center space-x-1.5 sm:space-x-2.5 transition-all ${
+                        onClick={(e) => {
+                          if (isSelectionMode) {
+                            toggleCarSelection(car.id);
+                          } else {
+                            setSelectedCarForDetails(car.id);
+                            setCarModalTab("general");
+                          }
+                        }}
+                        className={`sticky left-0 z-10 p-2 sm:p-3 border-r border-slate-800 bg-slate-900/95 flex items-center space-x-1.5 sm:space-x-2.5 transition-all cursor-pointer hover:bg-slate-850 group/car ${
                           isSelected ? "bg-purple-950/40 ring-1 ring-purple-500/70" : ""
                         } ${cityTheme.borderL}`}
+                        title="Нажмите, чтобы открыть карточку автомобиля, сменить город присутствия или закрыть доступность"
                       >
                         {/* Selection Checkbox */}
                         {isSelectionMode && (
@@ -410,7 +433,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                         <div className="flex-1 space-y-1 sm:space-y-1.5 min-w-0">
                           {/* Brand & City badge */}
                           <div className="flex items-center justify-between gap-1">
-                            <h4 className="font-extrabold text-white text-[11px] sm:text-xs truncate max-w-[80px] sm:max-w-[140px]" title={`${car.brand} ${car.model}`}>
+                            <h4 className="font-extrabold text-white text-[11px] sm:text-xs truncate max-w-[80px] sm:max-w-[140px] group-hover/car:text-amber-400 transition-colors" title={`${car.brand} ${car.model}`}>
                               {car.brand} {car.model}
                             </h4>
                             
@@ -446,8 +469,32 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                             )}
                           </div>
 
+                          {/* ACTIVE AVAILABILITY BLOCKS (MANUAL BLOCKS) */}
+                          {car.availabilityBlocks?.filter((b: any) => b.isActive).map((b: any) => (
+                            <div
+                              key={b.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCarForDetails(car.id);
+                                setCarModalTab("availability");
+                              }}
+                              className="bg-red-950/90 border border-red-500/80 rounded-lg p-1 text-[9px] text-red-200 space-y-0.5 hover:bg-red-900 transition shadow cursor-pointer"
+                              title="Нажмите для управления блокировкой"
+                            >
+                              <div className="font-bold flex items-center justify-between">
+                                <span className="truncate">⛔ {b.reasonText || (b.reason === "MAINTENANCE" ? "На ТО / ремонте" : "Закрыт")}</span>
+                                <span className="font-mono text-[8px] bg-red-600 px-1 rounded text-white font-black shrink-0 ml-1">
+                                  {b.endDate ? "В ПЕРИОДЕ" : "БЕССРОЧНО"}
+                                </span>
+                              </div>
+                              <div className="text-[8px] text-red-300 font-mono truncate">
+                                {b.endDate ? `до ${new Date(b.endDate).toLocaleDateString("ru-RU")}` : "Бессрочно"}
+                              </div>
+                            </div>
+                          ))}
+
                           {/* STOP BLOCKED ACTION BANNER */}
-                          {car.isStopBlocked && (
+                          {car.isStopBlocked && (!car.availabilityBlocks || car.availabilityBlocks.filter((b: any) => b.isActive).length === 0) && (
                             <div className="bg-red-950/80 border border-red-500/60 rounded-lg p-1.5 sm:p-2 text-[9px] sm:text-[10px] space-y-1 shadow">
                               <p className="text-red-200 font-semibold leading-tight line-clamp-2">
                                 ⚠️ {car.stopReason || "Истек техосмотр / страховка"}
@@ -508,8 +555,71 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                           ))}
                         </div>
 
-                        {/* Booking Bars */}
+                        {/* Booking & Availability Block Bars */}
                         <div className="absolute inset-0 flex items-center pointer-events-none">
+                          {/* Availability Block Bars (Manual closures) */}
+                          {car.availabilityBlocks?.map((block: any) => {
+                            const bStart = new Date(block.startDate);
+                            // If no endDate, it's indefinite: block to the end of visible days + 1 day
+                            const bEnd = block.endDate
+                              ? new Date(block.endDate)
+                              : new Date(days[days.length - 1]?.timestamp + 24 * 60 * 60 * 1000);
+
+                            const firstDayTimestamp = days[0]?.timestamp;
+                            const msPerDay = 24 * 60 * 60 * 1000;
+
+                            const startDiffDays = (bStart.getTime() - firstDayTimestamp) / msPerDay;
+                            const endDiffDays = (bEnd.getTime() - firstDayTimestamp) / msPerDay;
+
+                            const visibleStart = Math.max(0, startDiffDays);
+                            const visibleEnd = Math.min(days.length, endDiffDays);
+
+                            if (visibleEnd < 0 || visibleStart >= days.length) {
+                              return null;
+                            }
+
+                            const leftPercent = (visibleStart / days.length) * 100;
+                            const widthPercent = Math.max(1, ((visibleEnd - visibleStart) / days.length) * 100);
+
+                            return (
+                              <div
+                                key={block.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCarForDetails(car.id);
+                                  setCarModalTab("availability");
+                                }}
+                                style={{
+                                  left: `${leftPercent}%`,
+                                  width: `${widthPercent}%`,
+                                }}
+                                className="absolute h-16 rounded-xl p-2 cursor-pointer pointer-events-auto transition-all hover:scale-[1.01] hover:z-30 flex flex-col justify-between overflow-hidden bg-gradient-to-r from-red-950 via-rose-950 to-red-900 border-2 border-red-500/80 text-white shadow-lg shadow-red-950/60"
+                                title={`Доступность закрыта: ${block.reasonText || block.reason}. Нажмите для управления.`}
+                              >
+                                <div className="flex items-center justify-between text-[11px] font-bold leading-tight">
+                                  <span className="truncate max-w-[85%] flex items-center space-x-1.5 text-red-200">
+                                    <span className="text-red-400">⛔</span>
+                                    <span className="truncate uppercase tracking-wide text-[10px]">
+                                      {block.reasonText || (block.reason === "MAINTENANCE" ? "ТО / Ремонт" : block.reason === "SERVICE_TRIP" ? "Служебный выезд" : "Закрыто")}
+                                    </span>
+                                  </span>
+                                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-black/50 text-red-300 border border-red-500/30">
+                                    {block.endDate ? "В ПЕРИОДЕ" : "БЕССРОЧНО"}
+                                  </span>
+                                </div>
+
+                                <div className="text-[10px] text-red-200/90 truncate font-semibold">
+                                  {block.notes || (block.endDate ? `до ${new Date(block.endDate).toLocaleDateString("ru-RU")}` : "Бессрочно (до ручного открытия)")}
+                                </div>
+
+                                <div className="flex items-center justify-between text-[9px] text-red-300/80 leading-none">
+                                  <span>С {new Date(block.startDate).toLocaleDateString("ru-RU")}</span>
+                                  <span className="underline hover:text-white font-bold">Снять ➔</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+
                           {car.bookings.map((booking: any) => {
                             const bStart = new Date(booking.startDate);
                             const bEnd = new Date(booking.endDate);
@@ -967,6 +1077,31 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
           car={unblockCar}
           onUnblocked={() => {
             setUnblockCar(null);
+            fetchTimeline();
+          }}
+        />
+      )}
+
+      {/* Car Details & Presence City / Availability Modal */}
+      {selectedCarForDetails && (
+        <CarDetailsModal
+          carId={selectedCarForDetails}
+          isOpen={!!selectedCarForDetails}
+          initialTab={carModalTab}
+          onClose={() => setSelectedCarForDetails(null)}
+          onUpdated={() => {
+            fetchTimeline();
+          }}
+        />
+      )}
+
+      {/* New Car Modal */}
+      {isNewCarModalOpen && (
+        <NewCarModal
+          isOpen={isNewCarModalOpen}
+          defaultCityCode={selectedCity === "ALL" ? "BUS" : selectedCity}
+          onClose={() => setIsNewCarModalOpen(false)}
+          onCarCreated={() => {
             fetchTimeline();
           }}
         />
