@@ -81,6 +81,8 @@ export const FleetMaintenanceHub: React.FC = () => {
   const [docsTechPassportFrontUrl, setDocsTechPassportFrontUrl] = useState<string | null>(null);
   const [docsTechPassportBackUrl, setDocsTechPassportBackUrl] = useState<string | null>(null);
   const [docsInsurancePolicyPhotoUrl, setDocsInsurancePolicyPhotoUrl] = useState<string | null>(null);
+  const [docsInspectionDate, setDocsInspectionDate] = useState<string>("");
+  const [docsInspectionExpiryDate, setDocsInspectionExpiryDate] = useState<string>("");
   const [isUploadingDocsPhoto, setIsUploadingDocsPhoto] = useState<boolean>(false);
   const [docsInsuranceCompany, setDocsInsuranceCompany] = useState<string>("Aldagi");
   const [docsInsurancePolicy, setDocsInsurancePolicy] = useState<string>("");
@@ -316,6 +318,8 @@ export const FleetMaintenanceHub: React.FC = () => {
     setDocsTechPassportFrontUrl(car.techPassport?.frontUrl || car.techPassportFrontUrl || null);
     setDocsTechPassportBackUrl(car.techPassport?.backUrl || car.techPassportBackUrl || null);
     setDocsInsurancePolicyPhotoUrl(car.insurance?.photoUrl || car.insurancePolicyPhotoUrl || null);
+    setDocsInspectionDate(car.inspection?.inspectionDate ? car.inspection.inspectionDate.split("T")[0] : car.inspectionDate ? car.inspectionDate.split("T")[0] : "");
+    setDocsInspectionExpiryDate(car.inspection?.expiryDate ? car.inspection.expiryDate.split("T")[0] : car.inspectionExpiryDate ? car.inspectionExpiryDate.split("T")[0] : "");
     setDocsInsuranceCompany(car.insurance?.company || "Aldagi");
     setDocsInsurancePolicy(car.insurance?.policyNumber || "");
     setDocsInsuranceExpiry(car.insurance?.expiryDate ? car.insurance.expiryDate.split("T")[0] : "");
@@ -347,6 +351,8 @@ export const FleetMaintenanceHub: React.FC = () => {
           techPassportFrontUrl: docsTechPassportFrontUrl || null,
           techPassportBackUrl: docsTechPassportBackUrl || null,
           insurancePolicyPhotoUrl: docsInsurancePolicyPhotoUrl || null,
+          inspectionDate: docsInspectionDate || undefined,
+          inspectionExpiryDate: docsInspectionExpiryDate || undefined,
           insuranceCompany: docsInsuranceCompany,
           insurancePolicyNumber: docsInsurancePolicy,
           insuranceExpiryDate: docsInsuranceExpiry || undefined,
@@ -966,6 +972,7 @@ export const FleetMaintenanceHub: React.FC = () => {
                 <tr>
                   <th className="py-3.5 px-4">Автомобиль</th>
                   <th className="py-3.5 px-3">Техпаспорт (Номер & Фото)</th>
+                  <th className="py-3.5 px-3">Техосмотр (Срок)</th>
                   <th className="py-3.5 px-3">Страховая компания & Полис</th>
                   <th className="py-3.5 px-3">Срок действия КАСКО</th>
                   <th className="py-3.5 px-3">Франшиза</th>
@@ -1031,6 +1038,39 @@ export const FleetMaintenanceHub: React.FC = () => {
                             </span>
                           )}
                         </div>
+                      </td>
+
+                      {/* Inspection */}
+                      <td className="py-3.5 px-3">
+                        {car.inspection?.expiryDate ? (
+                          <div className="space-y-0.5">
+                            <div className="font-mono text-xs font-bold text-white">
+                              до {new Date(car.inspection.expiryDate).toLocaleDateString("ru-RU")}
+                            </div>
+                            {car.inspection.inspectionDate && (
+                              <div className="text-[10px] text-slate-500">
+                                от {new Date(car.inspection.inspectionDate).toLocaleDateString("ru-RU")}
+                              </div>
+                            )}
+                            <div>
+                              {car.inspection.status === "EXPIRED" ? (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                                  ⚠️ Просрочен!
+                                </span>
+                              ) : car.inspection.status === "EXPIRING_SOON" ? (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                  ⏳ {car.inspection.daysRemaining} дн.
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                  ✓ Действует
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-500">Не указан</span>
+                        )}
                       </td>
 
                       {/* Insurance Company & Policy */}
@@ -1806,6 +1846,39 @@ export const FleetMaintenanceHub: React.FC = () => {
                         />
                       </label>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* PTI Inspection (Техосмотр) */}
+              <div className="bg-emerald-950/20 p-3 rounded-xl border border-emerald-500/30 space-y-2">
+                <span className="text-emerald-300 font-bold block">🛡️ Государственный техосмотр (PTI):</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-slate-400 text-[10px] block mb-1">Дата прохождения ТО:</label>
+                    <input
+                      type="date"
+                      value={docsInspectionDate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setDocsInspectionDate(val);
+                        if (val && !docsInspectionExpiryDate) {
+                          const nextYear = new Date(val);
+                          nextYear.setFullYear(nextYear.getFullYear() + 1);
+                          setDocsInspectionExpiryDate(nextYear.toISOString().split("T")[0]);
+                        }
+                      }}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 text-[10px] block mb-1">Срок окончания ТО:</label>
+                    <input
+                      type="date"
+                      value={docsInspectionExpiryDate}
+                      onChange={(e) => setDocsInspectionExpiryDate(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono text-xs"
+                    />
                   </div>
                 </div>
               </div>

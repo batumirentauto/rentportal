@@ -72,6 +72,21 @@ export async function GET(request: Request) {
         totalWithoutTechPassport++;
       }
 
+      // PTI Inspection status (simple dates)
+      let inspectionDaysRemaining: number | null = null;
+      let inspectionStatus: "VALID" | "EXPIRING_SOON" | "EXPIRED" | "NOT_SET" = "NOT_SET";
+      if (car.inspectionExpiryDate) {
+        const diffMs = new Date(car.inspectionExpiryDate).getTime() - now.getTime();
+        inspectionDaysRemaining = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+        if (inspectionDaysRemaining <= 0) {
+          inspectionStatus = "EXPIRED";
+        } else if (inspectionDaysRemaining <= 30) {
+          inspectionStatus = "EXPIRING_SOON";
+        } else {
+          inspectionStatus = "VALID";
+        }
+      }
+
       // Insurance
       let insuranceDaysRemaining: number | null = null;
       let insuranceStatus: "ACTIVE" | "EXPIRING_SOON" | "EXPIRED" = "ACTIVE";
@@ -130,6 +145,12 @@ export async function GET(request: Request) {
           backUrl: car.techPassportBackUrl || null,
           hasPhotos: hasTechPassportPhotos,
           isMissing: isTechPassportMissing,
+        },
+        inspection: {
+          inspectionDate: car.inspectionDate,
+          expiryDate: car.inspectionExpiryDate,
+          status: inspectionStatus,
+          daysRemaining: inspectionDaysRemaining,
         },
         insurance: {
           company: car.insuranceCompany || "Aldagi",
@@ -354,6 +375,8 @@ export async function POST(request: Request) {
         techPassportNumber,
         techPassportFrontUrl,
         techPassportBackUrl,
+        inspectionDate,
+        inspectionExpiryDate,
         insuranceCompany,
         insurancePolicyNumber,
         insuranceExpiryDate,
@@ -377,6 +400,13 @@ export async function POST(request: Request) {
       if (techPassportNumber !== undefined) updateData.techPassportNumber = techPassportNumber;
       if (techPassportFrontUrl !== undefined) updateData.techPassportFrontUrl = techPassportFrontUrl || null;
       if (techPassportBackUrl !== undefined) updateData.techPassportBackUrl = techPassportBackUrl || null;
+      if (inspectionDate !== undefined) updateData.inspectionDate = inspectionDate ? new Date(inspectionDate) : null;
+      if (inspectionExpiryDate !== undefined) {
+        updateData.inspectionExpiryDate = inspectionExpiryDate ? new Date(inspectionExpiryDate) : null;
+        if (updateData.inspectionExpiryDate && updateData.inspectionExpiryDate > new Date()) {
+          updateData.inspectionStatus = "VALID";
+        }
+      }
       if (insurancePolicyPhotoUrl !== undefined) updateData.insurancePolicyPhotoUrl = insurancePolicyPhotoUrl || null;
       if (insuranceCompany) updateData.insuranceCompany = insuranceCompany;
       if (insurancePolicyNumber) updateData.insurancePolicyNumber = insurancePolicyNumber;

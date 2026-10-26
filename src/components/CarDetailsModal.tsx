@@ -76,6 +76,10 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
   const [insurancePolicyPhotoUrl, setInsurancePolicyPhotoUrl] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
 
+  // Technical Inspection (PTI Dates)
+  const [inspectionDate, setInspectionDate] = useState<string>("");
+  const [inspectionExpiryDate, setInspectionExpiryDate] = useState<string>("");
+
   // Form states - New Availability Block
   const [blockStartDate, setBlockStartDate] = useState<string>("");
   const [blockEndDate, setBlockEndDate] = useState<string>("");
@@ -120,6 +124,9 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
         setTechPassportFrontUrl(data.car.techPassportFrontUrl || null);
         setTechPassportBackUrl(data.car.techPassportBackUrl || null);
         setInsurancePolicyPhotoUrl(data.car.insurancePolicyPhotoUrl || null);
+
+        setInspectionDate(data.car.inspectionDate ? data.car.inspectionDate.split("T")[0] : "");
+        setInspectionExpiryDate(data.car.inspectionExpiryDate ? data.car.inspectionExpiryDate.split("T")[0] : "");
 
         setBlockStartDate(todayStr);
         setBlockEndDate("");
@@ -261,6 +268,8 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           techPassportFrontUrl,
           techPassportBackUrl,
           insurancePolicyPhotoUrl,
+          inspectionDate: inspectionDate || null,
+          inspectionExpiryDate: inspectionExpiryDate || null,
         }),
       });
       const data = await res.json();
@@ -728,6 +737,66 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                           <span>Списывать 10 ₾/мес с инвестора</span>
                         </label>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Техосмотр (PTI) - указание даты прохождения и срока окончания */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-md">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-base">🛡️</span>
+                        <div>
+                          <span className="text-xs font-bold text-slate-200 block">
+                            Техосмотр (PTI)
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Дата прохождения и срок окончания
+                          </span>
+                        </div>
+                      </div>
+                      {inspectionExpiryDate && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          new Date(inspectionExpiryDate) < new Date()
+                            ? "bg-red-950 text-red-300 border border-red-500/40"
+                            : "bg-emerald-950 text-emerald-300 border border-emerald-500/40"
+                        }`}>
+                          {new Date(inspectionExpiryDate) < new Date() ? "⚠️ Просрочен" : "✓ Действует"}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-slate-300 text-[10px] font-semibold block mb-1">
+                          Дата прохождения техосмотра:
+                        </label>
+                        <input
+                          type="date"
+                          value={inspectionDate}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setInspectionDate(val);
+                            if (val && !inspectionExpiryDate) {
+                              const d = new Date(val);
+                              d.setFullYear(d.getFullYear() + 1);
+                              setInspectionExpiryDate(d.toISOString().split("T")[0]);
+                            }
+                          }}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-amber-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-300 text-[10px] font-semibold block mb-1">
+                          Срок окончания техосмотра:
+                        </label>
+                        <input
+                          type="date"
+                          value={inspectionExpiryDate}
+                          onChange={(e) => setInspectionExpiryDate(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-amber-500"
+                        />
+                      </div>
                     </div>
                   </div>
 
