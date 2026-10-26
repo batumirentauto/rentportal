@@ -24,6 +24,7 @@ import {
 import { AdditionalDriversModal } from "./AdditionalDriversModal";
 import { BookingRefundModal } from "./BookingRefundModal";
 import { BookingExtensionModal } from "./BookingExtensionModal";
+import { CarSwapModal } from "./CarSwapModal";
 
 interface EditBookingModalProps {
   isOpen: boolean;
@@ -64,6 +65,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   const [isAdditionalDriversModalOpen, setIsAdditionalDriversModalOpen] = useState<boolean>(false);
   const [isRefundModalOpen, setIsRefundModalOpen] = useState<boolean>(false);
   const [isExtensionModalOpen, setIsExtensionModalOpen] = useState<boolean>(false);
+  const [isCarSwapModalOpen, setIsCarSwapModalOpen] = useState<boolean>(false);
 
   const [rentalDays, setRentalDays] = useState<number>(booking?.rentalDays || 3);
 
@@ -508,6 +510,16 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 >
                   <Clock className="w-3.5 h-3.5" />
                   <span>⏳ Продлить</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCarSwapModalOpen(true)}
+                  className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition"
+                  title="Заменить автомобиль в процессе аренды"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>🔄 Замена авто</span>
                 </button>
               </div>
             </div>
@@ -1053,6 +1065,22 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               if (updated) {
                 onBookingUpdated(updated);
               }
+            }}
+          />
+        )}
+
+        {/* Car Swap Modal */}
+        {isCarSwapModalOpen && (
+          <CarSwapModal
+            isOpen={isCarSwapModalOpen}
+            onClose={() => setIsCarSwapModalOpen(false)}
+            booking={booking}
+            onSwapCompleted={(result) => {
+              setIsCarSwapModalOpen(false);
+              if (onBookingUpdated && result?.newBooking) {
+                onBookingUpdated(result.newBooking);
+              }
+              onClose();
             }}
           />
         )}

@@ -33,6 +33,7 @@ import {
   ExternalLink,
   Copy,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
@@ -49,6 +50,7 @@ import { BookingHistoryModal } from "./BookingHistoryModal";
 import { BookingRefundModal } from "./BookingRefundModal";
 import { BookingExtensionModal } from "./BookingExtensionModal";
 import { AdditionalDriversModal } from "./AdditionalDriversModal";
+import { CarSwapModal } from "./CarSwapModal";
 
 interface FleetTimelineGridProps {
   onOpenContract?: (booking: any) => void;
@@ -130,6 +132,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [isEditBookingOpen, setIsEditBookingOpen] = useState<boolean>(false);
   const [isRefundModalOpen, setIsRefundModalOpen] = useState<boolean>(false);
   const [isExtensionModalOpen, setIsExtensionModalOpen] = useState<boolean>(false);
+  const [isCarSwapModalOpen, setIsCarSwapModalOpen] = useState<boolean>(false);
   const [isAdditionalDriversModalOpen, setIsAdditionalDriversModalOpen] = useState<boolean>(false);
   const [copiedPopupPhone, setCopiedPopupPhone] = useState<boolean>(false);
 
@@ -1157,6 +1160,13 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                                       <span>{booking.toCityCode}</span>
                                     </span>
                                   ) : null}
+
+                                  {(booking.swappedFromBookingId || booking.swappedToBookingId) && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-cyan-400 text-slate-950 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none" title="Замена автомобиля">
+                                      <span>🔄</span>
+                                      <span>Замена</span>
+                                    </span>
+                                  )}
                                 </div>
 
                                 {/* Line 2: Customer First Name */}
@@ -1675,6 +1685,26 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 </div>
               )}
 
+              {/* Swap Info Banner */}
+              {(selectedBooking.swappedToBookingId || selectedBooking.swappedFromBookingId) && (
+                <div className="bg-cyan-950/40 border border-cyan-500/40 rounded-xl p-2.5 text-xs space-y-1">
+                  <div className="flex items-center space-x-1.5 text-cyan-300 font-bold">
+                    <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Внимание: по этой аренде была выполнена замена автомобиля</span>
+                  </div>
+                  {selectedBooking.swappedToBookingId && (
+                    <div className="text-[11px] text-slate-300">
+                      Клиент пересажен на следующий автомобиль (создана продолженная активная бронь).
+                    </div>
+                  )}
+                  {selectedBooking.swappedFromBookingId && (
+                    <div className="text-[11px] text-slate-300">
+                      Это замещающий автомобиль (клиент ранее ехал на другой машине).
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Refunds list (если есть возвраты клиенту) */}
               {selectedBooking.refunds && selectedBooking.refunds.length > 0 && (
                 <div className="bg-rose-950/30 border border-rose-500/30 rounded-xl p-2.5 text-xs space-y-1.5">
@@ -1780,6 +1810,16 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
               >
                 <Clock className="w-3.5 h-3.5 text-purple-400" />
                 <span>Продлить</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsCarSwapModalOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 text-cyan-300 border border-cyan-500/40 rounded-xl text-xs font-bold transition active:scale-95"
+                title="Заменить автомобиль в процессе аренды (неисправность, не подошел, апгрейд)"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Заменить авто</span>
               </button>
 
               <button
@@ -1939,6 +1979,20 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 }
               })
               .catch(() => {});
+          }}
+        />
+      )}
+
+      {/* Car Swap Modal */}
+      {isCarSwapModalOpen && selectedBooking && (
+        <CarSwapModal
+          isOpen={isCarSwapModalOpen}
+          onClose={() => setIsCarSwapModalOpen(false)}
+          booking={selectedBooking}
+          onSwapCompleted={() => {
+            setIsCarSwapModalOpen(false);
+            setSelectedBooking(null);
+            fetchTimeline();
           }}
         />
       )}

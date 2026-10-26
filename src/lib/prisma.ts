@@ -147,6 +147,41 @@ function ensureSchema(dbFilePath: string) {
         CONSTRAINT "BookingExtension_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT "BookingExtension_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "FinancialAccount" ("id") ON DELETE SET NULL ON UPDATE CASCADE
       );
+
+      CREATE TABLE IF NOT EXISTS "BookingCarSwap" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "bookingId" TEXT NOT NULL,
+        "newBookingId" TEXT,
+        "oldCarId" TEXT NOT NULL,
+        "oldCarMileageAtReturn" INTEGER,
+        "oldCarFuelLevel" INTEGER,
+        "oldCarCleanliness" TEXT DEFAULT 'CLEAN',
+        "oldCarCondition" TEXT,
+        "oldCarNextStatus" TEXT DEFAULT 'AVAILABLE',
+        "daysOnOldCar" INTEGER NOT NULL DEFAULT 1,
+        "newCarId" TEXT NOT NULL,
+        "newCarMileageAtHandover" INTEGER,
+        "newCarFuelLevel" INTEGER,
+        "daysOnNewCar" INTEGER NOT NULL DEFAULT 1,
+        "swappedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "oldDailyRate" REAL NOT NULL DEFAULT 0,
+        "newDailyRate" REAL NOT NULL DEFAULT 0,
+        "originalTotalAmount" REAL NOT NULL DEFAULT 0,
+        "newTotalAmount" REAL NOT NULL DEFAULT 0,
+        "priceDifference" REAL NOT NULL DEFAULT 0,
+        "financialAction" TEXT NOT NULL DEFAULT 'NO_CHANGE',
+        "differencePaymentMethod" TEXT DEFAULT 'CASH',
+        "differencePaymentStatus" TEXT DEFAULT 'PENDING',
+        "swapReason" TEXT NOT NULL,
+        "reasonDetails" TEXT,
+        "managerName" TEXT NOT NULL DEFAULT 'Менеджер смены',
+        "notes" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "BookingCarSwap_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "BookingCarSwap_newBookingId_fkey" FOREIGN KEY ("newBookingId") REFERENCES "Booking" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+        CONSTRAINT "BookingCarSwap_oldCarId_fkey" FOREIGN KEY ("oldCarId") REFERENCES "Car" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+        CONSTRAINT "BookingCarSwap_newCarId_fkey" FOREIGN KEY ("newCarId") REFERENCES "Car" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+      );
     `);
 
     // 2. Check Car table columns
@@ -204,6 +239,15 @@ function ensureSchema(dbFilePath: string) {
       }
       if (!bookingColNames.has("deliveryLocationUrl")) {
         db.exec("ALTER TABLE Booking ADD COLUMN deliveryLocationUrl TEXT");
+      }
+      if (!bookingColNames.has("swappedFromBookingId")) {
+        db.exec("ALTER TABLE Booking ADD COLUMN swappedFromBookingId TEXT");
+      }
+      if (!bookingColNames.has("swappedToBookingId")) {
+        db.exec("ALTER TABLE Booking ADD COLUMN swappedToBookingId TEXT");
+      }
+      if (!bookingColNames.has("notes")) {
+        db.exec("ALTER TABLE Booking ADD COLUMN notes TEXT");
       }
     } catch {}
 

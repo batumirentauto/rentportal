@@ -126,6 +126,8 @@ model Car {
   checklists      CarTechnicalChecklist[]
   managerTasks    ManagerTask[]
   availabilityBlocks CarAvailabilityBlock[]
+  swappedOldBookings BookingCarSwap[] @relation("SwappedOldCars")
+  swappedNewBookings BookingCarSwap[] @relation("SwappedNewCars")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -235,9 +237,14 @@ model Booking {
   additionalDrivers   AdditionalDriver[]
   refunds             BookingRefund[]
   extensions          BookingExtension[]
+  swapsFrom           BookingCarSwap[] @relation("OriginalBookingSwaps")
+  swapsTo             BookingCarSwap[] @relation("NewBookingSwaps")
+  swappedFromBookingId String?
+  swappedToBookingId   String?
   extraHoursCount     Int?            @default(0) // Количество доп. часов
   extraHoursFee       Float?          @default(0) // Сумма за доп. часы
   isExtraHoursPaid    Boolean         @default(false) // Оплачены ли доп. часы
+  notes               String?
   
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
@@ -711,4 +718,52 @@ model BookingExtension {
   notes           String?
   createdAt       DateTime          @default(now())
 }
+
+// Замена автомобиля в процессе аренды
+model BookingCarSwap {
+  id                      String    @id @default(cuid())
+  bookingId               String    // ID исходного бронирования (старое авто)
+  booking                 Booking   @relation("OriginalBookingSwaps", fields: [bookingId], references: [id], onDelete: Cascade)
+  newBookingId            String?   // ID созданного бронирования (новое авто)
+  newBooking              Booking?  @relation("NewBookingSwaps", fields: [newBookingId], references: [id], onDelete: SetNull)
+  
+  // Старый автомобиль
+  oldCarId                String
+  oldCar                  Car       @relation("SwappedOldCars", fields: [oldCarId], references: [id])
+  oldCarMileageAtReturn   Int?
+  oldCarFuelLevel         Int?
+  oldCarCleanliness       String?   @default("CLEAN") // "CLEAN", "DIRTY_BODY", "DIRTY_INTERIOR", "NEEDS_WASH"
+  oldCarCondition         String?
+  oldCarNextStatus        String?   @default("AVAILABLE") // "AVAILABLE", "STOP", "NEEDS_WASH"
+  daysOnOldCar            Int       @default(1)
+  
+  // Новый автомобиль
+  newCarId                String
+  newCar                  Car       @relation("SwappedNewCars", fields: [newCarId], references: [id])
+  newCarMileageAtHandover  Int?
+  newCarFuelLevel         Int?
+  daysOnNewCar            Int       @default(1)
+  
+  // Дата и время замены
+  swappedAt               DateTime  @default(now())
+  
+  // Финансы и перерасчет
+  oldDailyRate            Float     @default(0)
+  newDailyRate            Float     @default(0)
+  originalTotalAmount     Float     @default(0)
+  newTotalAmount          Float     @default(0)
+  priceDifference         Float     @default(0) // Разница (+ = доплата с клиента, - = возврат)
+  financialAction         String    @default("NO_CHANGE") // "NO_CHANGE", "CHARGE_CLIENT", "REFUND_CLIENT", "COMPLIMENTARY"
+  differencePaymentMethod String?   @default("CASH") // "CASH", "CARD", "BANK_TRANSFER"
+  differencePaymentStatus String?   @default("PENDING") // "PAID", "PENDING", "WAIVED"
+  
+  // Причина и менеджер
+  swapReason              String    // "BREAKDOWN", "CLIENT_DISLIKED", "UPGRADE", "ACCIDENT", "OTHER"
+  reasonDetails           String?
+  managerName             String    @default("Менеджер смены")
+  notes                   String?
+  
+  createdAt               DateTime  @default(now())
+}
+
 
