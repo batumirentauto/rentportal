@@ -327,18 +327,18 @@ export default function Home() {
         onOpenHandover={(b) => setHandoverBooking(b)}
       />
 
-      {/* Floating Quick Team Chat Button */}
+      {/* Floating Quick Team Chat Button (Desktop only; on mobile the chat is permanently pinned in sticky top header) */}
       {activeTab !== "chats" && (
         <button
           onClick={() => setActiveTab("chats")}
-          className="fixed bottom-6 right-24 z-40 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white p-3.5 rounded-2xl shadow-2xl flex items-center space-x-2 transition-all active:scale-95 group border border-indigo-400/30"
+          className="hidden md:flex fixed bottom-6 right-52 z-40 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white p-3.5 rounded-2xl shadow-2xl items-center space-x-2 transition-all active:scale-95 group border border-indigo-400/30 hover:scale-105"
           title="Открыть корпоративный чат сотрудников"
         >
           <div className="relative">
             <MessageSquare className="w-5 h-5" />
             <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse ring-2 ring-indigo-900" />
           </div>
-          <span className="font-bold text-xs pr-1 hidden sm:inline-block">Чат команды</span>
+          <span className="font-bold text-xs pr-1">Чат команды</span>
         </button>
       )}
 

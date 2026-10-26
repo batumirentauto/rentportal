@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { saveUploadedFile } from "@/lib/storage";
 
 export async function POST(request: Request) {
   try {
@@ -19,17 +18,10 @@ export async function POST(request: Request) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
-      // Create uploads directory
-      const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
-      await mkdir(uploadDir, { recursive: true });
-
       const cleanFileName = file.name ? file.name.replace(/[^a-zA-Z0-9.-]/g, "_") : "document.jpg";
       const uniqueFileName = `${folder}-${Date.now()}-${cleanFileName}`;
-      const filePath = path.join(uploadDir, uniqueFileName);
 
-      await writeFile(filePath, buffer);
-
-      const publicUrl = `/uploads/${folder}/${uniqueFileName}`;
+      const publicUrl = await saveUploadedFile(buffer, folder, uniqueFileName);
 
       return NextResponse.json({
         success: true,
@@ -52,15 +44,9 @@ export async function POST(request: Request) {
       const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
       const buffer = Buffer.from(base64Data, "base64");
 
-      const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
-      await mkdir(uploadDir, { recursive: true });
-
       const uniqueFileName = `${folder}-${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-      const filePath = path.join(uploadDir, uniqueFileName);
 
-      await writeFile(filePath, buffer);
-
-      const publicUrl = `/uploads/${folder}/${uniqueFileName}`;
+      const publicUrl = await saveUploadedFile(buffer, folder, uniqueFileName);
 
       return NextResponse.json({
         success: true,
