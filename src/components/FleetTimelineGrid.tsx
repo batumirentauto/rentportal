@@ -436,12 +436,12 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       </div>
 
       {/* TIMELINE GANTT GRID CONTAINER */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <div className="min-w-[720px] sm:min-w-[980px]">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
+        <div className="overflow-x-auto rounded-2xl">
+          <div className="w-max min-w-full">
             {/* Header row: Cars column + Day columns - Sticky under main Header */}
-            <div className="grid grid-cols-[140px_1fr] sm:grid-cols-[240px_1fr] border-b border-slate-800 bg-slate-950 sticky top-14 sm:top-20 z-20 shadow-md">
-              <div className="p-2 sm:p-3 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-30 bg-slate-950">
+            <div className="flex border-b border-slate-800 bg-slate-950 sticky top-14 sm:top-20 z-30 shadow-md">
+              <div className="w-[140px] sm:w-[240px] shrink-0 p-2 sm:p-3 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-40 bg-slate-950 shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                 <div className="flex items-center space-x-1.5 truncate">
                   <span className="truncate">Автомобиль</span>
                   <span className="text-[10px] text-slate-500 hidden sm:inline">({filteredCars.length})</span>
@@ -458,9 +458,10 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
               {/* Day headers */}
               <div
-                className="grid"
+                className="grid flex-1"
                 style={{
-                  gridTemplateColumns: `repeat(${days.length}, minmax(46px, 1fr))`,
+                  gridTemplateColumns: `repeat(${days.length}, minmax(48px, 1fr))`,
+                  minWidth: `${days.length * 48}px`,
                 }}
               >
                 {days.map((day: any) => {
@@ -514,11 +515,11 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                   return (
                     <div
                       key={car.id}
-                      className={`grid grid-cols-[140px_1fr] sm:grid-cols-[240px_1fr] hover:bg-slate-800/30 transition-colors group ${
+                      className={`flex hover:bg-slate-800/30 transition-colors group ${
                         isSelectionMode ? "cursor-pointer" : ""
                       } ${isSelected ? "bg-purple-950/20" : ""}`}
                     >
-                      {/* Left: Car Details & Distinct City Color Border (Clickable to open Car Details Modal) */}
+                      {/* Left: Car Details & Distinct City Color Border - Pinned horizontally */}
                       <div
                         onClick={(e) => {
                           if (isSelectionMode) {
@@ -528,7 +529,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                             setCarModalTab("general");
                           }
                         }}
-                        className={`sticky left-0 z-10 p-2 sm:p-3 border-r border-slate-800 bg-slate-900/95 flex items-center space-x-1.5 sm:space-x-2.5 transition-all cursor-pointer hover:bg-slate-850 group/car ${
+                        className={`w-[140px] sm:w-[240px] shrink-0 sticky left-0 z-20 p-2 sm:p-3 border-r border-slate-800 bg-slate-900 shadow-[4px_0_12px_rgba(0,0,0,0.6)] flex items-center space-x-1.5 sm:space-x-2.5 transition-colors cursor-pointer hover:bg-slate-850 group/car ${
                           isSelected ? "bg-purple-950/40 ring-1 ring-purple-500/70" : ""
                         } ${cityTheme.borderL}`}
                         title="Нажмите, чтобы открыть карточку автомобиля, сменить город присутствия или закрыть доступность"
@@ -649,12 +650,17 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                       </div>
 
                       {/* Right: Days Timeline with Booking Bars */}
-                      <div className="relative h-20 sm:h-24 overflow-hidden bg-slate-950/40">
+                      <div
+                        className="relative flex-1 min-h-[80px] sm:min-h-[96px] bg-slate-950/40"
+                        style={{
+                          minWidth: `${days.length * 48}px`,
+                        }}
+                      >
                         {/* Day vertical grid lines & clickable slots */}
                         <div
                           className="grid h-full absolute inset-0"
                           style={{
-                            gridTemplateColumns: `repeat(${days.length}, minmax(46px, 1fr))`,
+                            gridTemplateColumns: `repeat(${days.length}, minmax(48px, 1fr))`,
                           }}
                         >
                           {days.map((day: any) => (
