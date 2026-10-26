@@ -30,6 +30,7 @@ import {
   Database,
   Users,
   DollarSign,
+  ExternalLink,
 } from "lucide-react";
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
@@ -1340,6 +1341,36 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                   <span className="text-[10px] text-slate-400 block mt-1 truncate">
                     {selectedBooking.pickupLocation?.name}
                   </span>
+                  {selectedBooking.pickupAddress && (
+                    <div className="mt-2 pt-1.5 border-t border-slate-800/80">
+                      <span className="text-[10px] text-amber-400 font-bold block">
+                        📍 Адрес / локация доставки:
+                      </span>
+                      {selectedBooking.pickupAddress.startsWith("http") ? (
+                        <a
+                          href={selectedBooking.pickupAddress}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-sky-400 hover:text-sky-300 underline font-medium flex items-center space-x-1 mt-0.5 break-all"
+                        >
+                          <span>{selectedBooking.pickupAddress}</span>
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                        </a>
+                      ) : (
+                        <div className="flex items-center justify-between mt-0.5">
+                          <span className="text-xs text-slate-200 font-medium">{selectedBooking.pickupAddress}</span>
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedBooking.pickupAddress)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-amber-400 hover:text-amber-300 underline shrink-0 ml-1.5"
+                          >
+                            Карта ↗
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
@@ -1351,6 +1382,36 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                   <span className="text-[10px] text-slate-400 block mt-1 truncate">
                     {selectedBooking.returnLocation?.name}
                   </span>
+                  {selectedBooking.returnAddress && (
+                    <div className="mt-2 pt-1.5 border-t border-slate-800/80">
+                      <span className="text-[10px] text-amber-400 font-bold block">
+                        📍 Адрес возврата / забора:
+                      </span>
+                      {selectedBooking.returnAddress.startsWith("http") ? (
+                        <a
+                          href={selectedBooking.returnAddress}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-sky-400 hover:text-sky-300 underline font-medium flex items-center space-x-1 mt-0.5 break-all"
+                        >
+                          <span>{selectedBooking.returnAddress}</span>
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                        </a>
+                      ) : (
+                        <div className="flex items-center justify-between mt-0.5">
+                          <span className="text-xs text-slate-200 font-medium">{selectedBooking.returnAddress}</span>
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedBooking.returnAddress)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-amber-400 hover:text-amber-300 underline shrink-0 ml-1.5"
+                          >
+                            Карта ↗
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -31,21 +31,30 @@ const DEFAULT_LOCATIONS = [
   // Tbilisi
   { id: "cmvm9rndl0003987mlxa6fb1n", name: "🏢 Офис Тбилиси (пр. Руставели, 24)", type: "OFFICE", address: "пр. Руставели, 24", city: { code: "TBS", nameRu: "Тбилиси" } },
   { id: "cmvm9rndm0004987m53jzk5i5", name: "✈️ Аэропорт Тбилиси (TBS им. Шота Руставели)", type: "AIRPORT", address: "Аэропорт Тбилиси", city: { code: "TBS", nameRu: "Тбилиси" } },
-  { id: "loc-tbs-delivery", name: "🏨 Доставка по адресу / Отель (Тбилиси)", type: "CUSTOM", address: "Адрес в Тбилиси", city: { code: "TBS", nameRu: "Тбилиси" } },
-  { id: "loc-tbs-railway", name: "🚆 Ж/д вокзал Тбилиси (Центральный)", type: "OFFICE", address: "Вокзальная пл., 1", city: { code: "TBS", nameRu: "Тбилиси" } },
+  { id: "cmvotfpkj00041d7mc1ric1y8", name: "🏨 Доставка по адресу / Отель (Тбилиси)", type: "CUSTOM", address: "Адрес в Тбилиси", city: { code: "TBS", nameRu: "Тбилиси" } },
+  { id: "cmvotfpkm00051d7mt29ztmdh", name: "🚆 Ж/д вокзал Тбилиси (Центральный)", type: "OFFICE", address: "Вокзальная пл., 1", city: { code: "TBS", nameRu: "Тбилиси" } },
 
   // Batumi
   { id: "cmvm9rndo0005987m86bj6j2j", name: "🏢 Офис Батуми (ул. Зураба Горгиладзе, 54)", type: "OFFICE", address: "ул. Горгиладзе, 54", city: { code: "BUS", nameRu: "Батуми" } },
   { id: "cmvm9rndq0006987mek4queb1", name: "✈️ Аэропорт Батуми (BUS Александр Картвели)", type: "AIRPORT", address: "Аэропорт Батуми", city: { code: "BUS", nameRu: "Батуми" } },
-  { id: "loc-bus-delivery", name: "🏨 Доставка по адресу / Отель (Батуми)", type: "CUSTOM", address: "Адрес в Батуми", city: { code: "BUS", nameRu: "Батуми" } },
-  { id: "loc-bus-railway", name: "🚆 Ж/д вокзал Батуми (Центральный)", type: "OFFICE", address: "шоссе Маяковского, 1", city: { code: "BUS", nameRu: "Батуми" } },
+  { id: "cmvotfpk400001d7mgiom5uu3", name: "🏨 Доставка по адресу / Отель (Батуми)", type: "CUSTOM", address: "Адрес в Батуми", city: { code: "BUS", nameRu: "Батуми" } },
+  { id: "cmvotfpkb00011d7m0rf1tl5j", name: "🚆 Ж/д вокзал Батуми (Центральный)", type: "OFFICE", address: "шоссе Маяковского, 1", city: { code: "BUS", nameRu: "Батуми" } },
 
   // Kutaisi
-  { id: "cmvm9rndv0008987mma17vehw", name: "✈️ Аэропорт Кутаиси (KUT Давид Строитель / Копитнари)", type: "AIRPORT", address: "Аэропорт Кутаиси", city: { code: "KUT", nameRu: "Кутаиси" } },
   { id: "cmvm9rndt0007987mgofng31w", name: "🏢 Офис Кутаиси (ул. Церетели, 12 / Центр)", type: "OFFICE", address: "ул. Церетели, 12", city: { code: "KUT", nameRu: "Кутаиси" } },
-  { id: "loc-kut-delivery", name: "🏨 Доставка по адресу / Отель (Кутаиси)", type: "CUSTOM", address: "Адрес в Кутаиси", city: { code: "KUT", nameRu: "Кутаиси" } },
-  { id: "loc-kut-railway", name: "🚆 Ж/д вокзал Кутаиси", type: "OFFICE", address: "пр. Ильи Чавчавадзе", city: { code: "KUT", nameRu: "Кутаиси" } },
+  { id: "cmvm9rndv0008987mma17vehw", name: "✈️ Аэропорт Кутаиси (KUT Давид Строитель / Копитнари)", type: "AIRPORT", address: "Аэропорт Кутаиси", city: { code: "KUT", nameRu: "Кутаиси" } },
+  { id: "cmvotfpkd00021d7m2jbe3tne", name: "🏨 Доставка по адресу / Отель (Кутаиси)", type: "CUSTOM", address: "Адрес в Кутаиси", city: { code: "KUT", nameRu: "Кутаиси" } },
+  { id: "cmvotfpkg00031d7mcyl0etew", name: "🚆 Ж/д вокзал Кутаиси", type: "OFFICE", address: "пр. Ильи Чавчавадзе", city: { code: "KUT", nameRu: "Кутаиси" } },
 ];
+
+const getBaseLocationForCity = (cityCode: string, list: any[]) => {
+  const cityLocs = list.filter((l: any) => l.city?.code === cityCode);
+  return (
+    cityLocs.find((l: any) => l.type === "OFFICE" && (l.name?.toLowerCase().includes("офис") || l.name?.toLowerCase().includes("база"))) ||
+    cityLocs.find((l: any) => l.type === "OFFICE") ||
+    cityLocs[0]
+  );
+};
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -187,6 +196,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [returnCityCode, setReturnCityCode] = useState<string>("TBS");
   const [returnLocationId, setReturnLocationId] = useState<string>("");
   const [returnType, setReturnType] = useState<string>("OFFICE");
+  const [returnAddress, setReturnAddress] = useState<string>("");
 
   const [dailyRate, setDailyRate] = useState<number>(65);
   const [rentalTotal, setRentalTotal] = useState<number>(65);
@@ -280,11 +290,14 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           locRes.json(),
         ]);
 
+        const availableCars = carsJson.success ? (carsJson.cars || []) : [];
         if (carsJson.success) {
-          setCars(carsJson.cars || []);
-          if (!carId && carsJson.cars?.length > 0) {
-            setCarId(initialCarId || carsJson.cars[0].id);
-          }
+          setCars(availableCars);
+        }
+
+        const effectiveCarId = initialCarId || (availableCars.length > 0 ? availableCars[0].id : "");
+        if (effectiveCarId && !carId) {
+          setCarId(effectiveCarId);
         }
 
         if (custJson.success && custJson.customers) {
@@ -294,18 +307,21 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           }
         }
 
-        if (locJson.success && locJson.locations?.length > 0) {
-          setLocations(locJson.locations);
-          const defaultPickup = locJson.locations.find((l: any) => l.city?.code === pickupCityCode) || locJson.locations[0];
-          if (defaultPickup) {
-            setPickupLocationId(defaultPickup.id);
-            setReturnLocationId(defaultPickup.id);
-          }
-        } else {
-          // Использовать надежные дефолтные локации
-          const defaultPickup = DEFAULT_LOCATIONS.find((l: any) => l.city?.code === pickupCityCode) || DEFAULT_LOCATIONS[0];
-          setPickupLocationId(defaultPickup.id);
-          setReturnLocationId(defaultPickup.id);
+        const locList = locJson.success && locJson.locations?.length > 0 ? locJson.locations : DEFAULT_LOCATIONS;
+        setLocations(locList);
+
+        const carObj = availableCars.find((c: any) => c.id === effectiveCarId);
+        const initialCity = carObj?.city?.code || "TBS";
+
+        setPickupCityCode(initialCity);
+        setReturnCityCode(initialCity);
+
+        const baseLoc = getBaseLocationForCity(initialCity, locList);
+        if (baseLoc) {
+          setPickupLocationId(baseLoc.id);
+          setReturnLocationId(baseLoc.id);
+          setPickupType(baseLoc.type || "OFFICE");
+          setReturnType("OFFICE");
         }
       } catch (e) {
         console.error(e);
@@ -345,6 +361,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     setPickupType("OFFICE");
     setPickupAddress("");
     setReturnType("OFFICE");
+    setReturnAddress("");
 
     setAcknowledgedRelocation(false);
     setAcknowledgedStopBlock(false);
@@ -369,7 +386,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     setAcknowledgedBlacklist(false);
   }, [customerId]);
 
-  // Auto-set pricing when car changes
+  // Auto-set pricing and default locations when car changes
   useEffect(() => {
     if (selectedCar) {
       if (selectedCar.clientStandardDailyRate) {
@@ -380,8 +397,20 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
       if (selectedCar.defaultOwnerDailyRate) {
         setOwnerDailyRate(selectedCar.defaultOwnerDailyRate);
       }
+      const carCity = selectedCar.city?.code;
+      if (carCity) {
+        setPickupCityCode(carCity);
+        setReturnCityCode(carCity);
+        const baseLoc = getBaseLocationForCity(carCity, locations);
+        if (baseLoc) {
+          setPickupLocationId(baseLoc.id);
+          setReturnLocationId(baseLoc.id);
+          setPickupType(baseLoc.type || "OFFICE");
+          setReturnType("OFFICE");
+        }
+      }
     }
-  }, [selectedCar]);
+  }, [selectedCar, locations]);
 
   // Determine car's projected city on the chosen startDate
   const projectedCityOnStartDate = useMemo(() => {
@@ -432,18 +461,119 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     return locations.filter((l) => l.city?.code === returnCityCode);
   }, [locations, returnCityCode]);
 
-  // Update default locations on city change
+  // Handlers for switching cities & locations with default to base office
+  const handleSelectPickupCity = (newCity: string) => {
+    setPickupCityCode(newCity);
+    const baseLoc = getBaseLocationForCity(newCity, locations);
+    if (baseLoc) {
+      setPickupLocationId(baseLoc.id);
+      setPickupType(baseLoc.type || "OFFICE");
+    }
+    // По умолчанию возврат авто должен быть в том же городе на базе
+    setReturnCityCode(newCity);
+    if (baseLoc) {
+      setReturnLocationId(baseLoc.id);
+      setReturnType("OFFICE");
+    }
+  };
+
+  const handleSelectReturnCity = (newCity: string) => {
+    setReturnCityCode(newCity);
+    const baseLoc = getBaseLocationForCity(newCity, locations);
+    if (baseLoc) {
+      setReturnLocationId(baseLoc.id);
+      setReturnType("OFFICE");
+    }
+  };
+
+  const handlePickupLocationChange = (locId: string) => {
+    setPickupLocationId(locId);
+    const loc = locations.find((l) => l.id === locId);
+    const isDeliv =
+      loc?.type === "CUSTOM" ||
+      loc?.type === "DELIVERY" ||
+      loc?.id?.includes("delivery") ||
+      loc?.name?.toLowerCase().includes("доставк") ||
+      loc?.name?.toLowerCase().includes("отель") ||
+      loc?.name?.toLowerCase().includes("адрес");
+
+    if (isDeliv) {
+      setPickupType("DELIVERY");
+    } else {
+      setPickupType(loc?.type || "OFFICE");
+    }
+  };
+
+  const handleReturnLocationChange = (locId: string) => {
+    setReturnLocationId(locId);
+    const loc = locations.find((l) => l.id === locId);
+    const isDeliv =
+      loc?.type === "CUSTOM" ||
+      loc?.type === "DELIVERY" ||
+      loc?.id?.includes("delivery") ||
+      loc?.name?.toLowerCase().includes("доставк") ||
+      loc?.name?.toLowerCase().includes("отель") ||
+      loc?.name?.toLowerCase().includes("адрес");
+
+    if (isDeliv) {
+      setReturnType("DELIVERY");
+    } else {
+      setReturnType(loc?.type || "OFFICE");
+    }
+  };
+
+  const isPickupDelivery = useMemo(() => {
+    const loc = locations.find((l) => l.id === pickupLocationId);
+    return (
+      pickupType === "DELIVERY" ||
+      loc?.type === "CUSTOM" ||
+      loc?.type === "DELIVERY" ||
+      loc?.id?.includes("delivery") ||
+      loc?.name?.toLowerCase().includes("доставк") ||
+      loc?.name?.toLowerCase().includes("отель") ||
+      loc?.name?.toLowerCase().includes("адрес")
+    );
+  }, [pickupLocationId, pickupType, locations]);
+
+  const isReturnDelivery = useMemo(() => {
+    const loc = locations.find((l) => l.id === returnLocationId);
+    return (
+      returnType === "DELIVERY" ||
+      loc?.type === "CUSTOM" ||
+      loc?.type === "DELIVERY" ||
+      loc?.id?.includes("delivery") ||
+      loc?.name?.toLowerCase().includes("доставк") ||
+      loc?.name?.toLowerCase().includes("отель") ||
+      loc?.name?.toLowerCase().includes("адрес")
+    );
+  }, [returnLocationId, returnType, locations]);
+
+  // Update default locations on city change if current location is invalid
   useEffect(() => {
     if (pickupLocationsForCity.length > 0) {
-      setPickupLocationId(pickupLocationsForCity[0].id);
+      const isValid = pickupLocationsForCity.some((l) => l.id === pickupLocationId);
+      if (!isValid) {
+        const baseLoc = getBaseLocationForCity(pickupCityCode, pickupLocationsForCity);
+        if (baseLoc) {
+          setPickupLocationId(baseLoc.id);
+          setPickupType(baseLoc.type || "OFFICE");
+        }
+      }
     }
-  }, [pickupCityCode, pickupLocationsForCity]);
+  }, [pickupCityCode, pickupLocationsForCity, pickupLocationId]);
 
   useEffect(() => {
     if (returnLocationsForCity.length > 0) {
-      setReturnLocationId(returnLocationsForCity[0].id);
+      const isValid = returnLocationsForCity.some((l) => l.id === returnLocationId);
+      if (!isValid) {
+        const baseLoc = getBaseLocationForCity(returnCityCode, returnLocationsForCity);
+        if (baseLoc) {
+          setReturnLocationId(baseLoc.id);
+          setReturnType("OFFICE");
+        }
+      }
     }
-  }, [returnCityCode, returnLocationsForCity]);
+  }, [returnCityCode, returnLocationsForCity, returnLocationId]);
 
   if (!isOpen) return null;
 
@@ -534,6 +664,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           pickupAddress: pickupAddress || undefined,
           returnLocationId,
           returnType,
+          returnAddress: returnAddress || undefined,
           dailyRate,
           rentalTotal,
           deliveryFee: oneWayFee,
@@ -1333,7 +1464,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               <div className="flex space-x-1">
                 <button
                   type="button"
-                  onClick={() => setPickupCityCode("TBS")}
+                  onClick={() => handleSelectPickupCity("TBS")}
                   className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold border transition ${
                     pickupCityCode === "TBS"
                       ? "bg-amber-500 text-slate-950 border-amber-400 font-black"
@@ -1344,7 +1475,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPickupCityCode("BUS")}
+                  onClick={() => handleSelectPickupCity("BUS")}
                   className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold border transition ${
                     pickupCityCode === "BUS"
                       ? "bg-cyan-400 text-slate-950 border-cyan-300 font-black"
@@ -1355,7 +1486,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPickupCityCode("KUT")}
+                  onClick={() => handleSelectPickupCity("KUT")}
                   className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold border transition ${
                     pickupCityCode === "KUT"
                       ? "bg-emerald-500 text-slate-950 border-emerald-400 font-black"
@@ -1368,7 +1499,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
               <select
                 value={pickupLocationId}
-                onChange={(e) => setPickupLocationId(e.target.value)}
+                onChange={(e) => handlePickupLocationChange(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white focus:outline-none focus:border-amber-500"
               >
                 {pickupLocationsForCity.map((loc) => (
@@ -1377,12 +1508,69 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                   </option>
                 ))}
               </select>
+
+              {/* Delivery Address or Link input (opens when delivery location is chosen) */}
+              {isPickupDelivery && (
+                <div className="p-2.5 bg-amber-950/40 border border-amber-500/50 rounded-xl space-y-1.5 animate-in fade-in duration-200">
+                  <label className="text-[11px] font-bold text-amber-300 flex items-center justify-between">
+                    <span className="flex items-center space-x-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Адрес доставки или ссылка на локацию: <span className="text-red-400">*</span></span>
+                    </span>
+                    <span className="text-[9px] text-amber-400/80">Google Maps / Яндекс / адрес</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required={isPickupDelivery}
+                      value={pickupAddress}
+                      onChange={(e) => setPickupAddress(e.target.value)}
+                      placeholder="Например: ул. Пушкина 10, отель Rooms или https://maps.app.goo.gl/..."
+                      className="w-full bg-slate-900 border border-amber-500/60 rounded-xl py-2 pl-2.5 pr-20 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400 font-medium"
+                    />
+                    {pickupAddress && (
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                        {pickupAddress.startsWith("http") ? (
+                          <a
+                            href={pickupAddress}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2 py-0.5 rounded flex items-center space-x-1"
+                          >
+                            <span>Проверить</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        ) : (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickupAddress)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] bg-slate-800 hover:bg-slate-700 text-amber-300 px-2 py-0.5 rounded flex items-center space-x-1 border border-slate-700"
+                          >
+                            <span>Карта ↗</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    💡 При выдаче менеджер и водитель смогут открыть маршрут в Google Maps в 1 клик.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Return */}
             <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-300">Локация сдачи:</span>
+                <div className="flex items-center space-x-1.5 flex-wrap">
+                  <span className="font-bold text-slate-300">Локация сдачи:</span>
+                  {returnCityCode === pickupCityCode && (
+                    <span className="text-[10px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">
+                      🏢 На базе ({returnCityCode})
+                    </span>
+                  )}
+                </div>
                 {isOneWay && (
                   <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1.5 py-0.5 rounded font-bold">
                     ⇄ One-Way (+{oneWayFee} ₾)
@@ -1393,7 +1581,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               <div className="flex space-x-1">
                 <button
                   type="button"
-                  onClick={() => setReturnCityCode("TBS")}
+                  onClick={() => handleSelectReturnCity("TBS")}
                   className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold border transition ${
                     returnCityCode === "TBS"
                       ? "bg-amber-500 text-slate-950 border-amber-400 font-black"
@@ -1404,7 +1592,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setReturnCityCode("BUS")}
+                  onClick={() => handleSelectReturnCity("BUS")}
                   className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold border transition ${
                     returnCityCode === "BUS"
                       ? "bg-cyan-400 text-slate-950 border-cyan-300 font-black"
@@ -1415,7 +1603,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setReturnCityCode("KUT")}
+                  onClick={() => handleSelectReturnCity("KUT")}
                   className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold border transition ${
                     returnCityCode === "KUT"
                       ? "bg-emerald-500 text-slate-950 border-emerald-400 font-black"
@@ -1428,7 +1616,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
               <select
                 value={returnLocationId}
-                onChange={(e) => setReturnLocationId(e.target.value)}
+                onChange={(e) => handleReturnLocationChange(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white focus:outline-none focus:border-amber-500"
               >
                 {returnLocationsForCity.map((loc) => (
@@ -1437,6 +1625,51 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                   </option>
                 ))}
               </select>
+
+              {/* Return Delivery Address or Link input */}
+              {isReturnDelivery && (
+                <div className="p-2.5 bg-amber-950/40 border border-amber-500/50 rounded-xl space-y-1.5 animate-in fade-in duration-200">
+                  <label className="text-[11px] font-bold text-amber-300 flex items-center justify-between">
+                    <span className="flex items-center space-x-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Адрес возврата / забора авто или ссылка на карту:</span>
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={returnAddress}
+                      onChange={(e) => setReturnAddress(e.target.value)}
+                      placeholder="Адрес забора авто или ссылка на геопозицию"
+                      className="w-full bg-slate-900 border border-amber-500/60 rounded-xl py-2 pl-2.5 pr-20 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400 font-medium"
+                    />
+                    {returnAddress && (
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                        {returnAddress.startsWith("http") ? (
+                          <a
+                            href={returnAddress}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2 py-0.5 rounded flex items-center space-x-1"
+                          >
+                            <span>Проверить</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        ) : (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(returnAddress)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] bg-slate-800 hover:bg-slate-700 text-amber-300 px-2 py-0.5 rounded flex items-center space-x-1 border border-slate-700"
+                          >
+                            <span>Карта ↗</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -17,6 +17,7 @@ import {
   Users,
   DollarSign,
   Plus,
+  ExternalLink,
 } from "lucide-react";
 import { AdditionalDriversModal } from "./AdditionalDriversModal";
 import { BookingRefundModal } from "./BookingRefundModal";
@@ -215,6 +216,64 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   const returnLocations = useMemo(() => {
     return allLocations.filter((l) => l.city?.code === returnCityCode);
   }, [allLocations, returnCityCode]);
+
+  const handlePickupLocationChange = (locId: string) => {
+    setPickupLocationId(locId);
+    const loc = allLocations.find((l) => l.id === locId);
+    const isDeliv =
+      loc?.type === "CUSTOM" ||
+      loc?.type === "DELIVERY" ||
+      loc?.id?.includes("delivery") ||
+      loc?.name?.toLowerCase().includes("доставк") ||
+      loc?.name?.toLowerCase().includes("отель");
+    if (isDeliv) {
+      setPickupType("DELIVERY");
+    } else {
+      setPickupType(loc?.type || "OFFICE");
+    }
+  };
+
+  const handleReturnLocationChange = (locId: string) => {
+    setReturnLocationId(locId);
+    const loc = allLocations.find((l) => l.id === locId);
+    const isDeliv =
+      loc?.type === "CUSTOM" ||
+      loc?.type === "DELIVERY" ||
+      loc?.id?.includes("delivery") ||
+      loc?.name?.toLowerCase().includes("доставк") ||
+      loc?.name?.toLowerCase().includes("отель");
+    if (isDeliv) {
+      setReturnType("DELIVERY");
+    } else {
+      setReturnType(loc?.type || "OFFICE");
+    }
+  };
+
+  const isPickupDelivery = useMemo(() => {
+    const loc = allLocations.find((l) => l.id === pickupLocationId);
+    return (
+      pickupType === "DELIVERY" ||
+      loc?.type === "CUSTOM" ||
+      loc?.type === "DELIVERY" ||
+      loc?.id?.includes("delivery") ||
+      loc?.name?.toLowerCase().includes("доставк") ||
+      loc?.name?.toLowerCase().includes("отель") ||
+      Boolean(pickupAddress)
+    );
+  }, [pickupLocationId, pickupType, allLocations, pickupAddress]);
+
+  const isReturnDelivery = useMemo(() => {
+    const loc = allLocations.find((l) => l.id === returnLocationId);
+    return (
+      returnType === "DELIVERY" ||
+      loc?.type === "CUSTOM" ||
+      loc?.type === "DELIVERY" ||
+      loc?.id?.includes("delivery") ||
+      loc?.name?.toLowerCase().includes("доставк") ||
+      loc?.name?.toLowerCase().includes("отель") ||
+      Boolean(returnAddress)
+    );
+  }, [returnLocationId, returnType, allLocations, returnAddress]);
 
   // Recalculate all financials
   const handleRecalculateTotals = () => {
@@ -599,7 +658,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
                 <select
                   value={pickupLocationId}
-                  onChange={(e) => setPickupLocationId(e.target.value)}
+                  onChange={(e) => handlePickupLocationChange(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white text-[11px]"
                 >
                   {pickupLocations.map((l) => (
@@ -608,6 +667,51 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                     </option>
                   ))}
                 </select>
+
+                {/* Delivery address or link for Pickup */}
+                {isPickupDelivery && (
+                  <div className="pt-1.5 border-t border-slate-800 space-y-1">
+                    <label className="text-[10px] font-bold text-amber-300 flex items-center justify-between">
+                      <span className="flex items-center space-x-1">
+                        <MapPin className="w-3 h-3 text-amber-400" />
+                        <span>Адрес доставки или ссылка на карту:</span>
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={pickupAddress}
+                        onChange={(e) => setPickupAddress(e.target.value)}
+                        placeholder="Адрес или ссылка Google Maps"
+                        className="w-full bg-slate-950 border border-amber-500/50 rounded-lg p-1.5 text-white text-[11px] pr-16 focus:outline-none focus:border-amber-400"
+                      />
+                      {pickupAddress && (
+                        <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                          {pickupAddress.startsWith("http") ? (
+                            <a
+                              href={pickupAddress}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[9px] bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-1.5 py-0.5 rounded flex items-center space-x-0.5"
+                            >
+                              <span>Тест</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          ) : (
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickupAddress)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[9px] bg-slate-800 hover:bg-slate-700 text-amber-300 px-1.5 py-0.5 rounded border border-slate-700"
+                            >
+                              Карта ↗
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Return location */}
@@ -621,7 +725,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                         type="button"
                         onClick={() => {
                           setReturnCityCode(c);
-                          const firstLoc = allLocations.find((l) => l.city?.code === c);
+                          const firstLoc = allLocations.find((l) => l.city?.code === c && (l.type === "OFFICE" || l.name?.toLowerCase().includes("офис") || l.name?.toLowerCase().includes("база"))) || allLocations.find((l) => l.city?.code === c);
                           if (firstLoc) setReturnLocationId(firstLoc.id);
                         }}
                         className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
@@ -638,7 +742,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
                 <select
                   value={returnLocationId}
-                  onChange={(e) => setReturnLocationId(e.target.value)}
+                  onChange={(e) => handleReturnLocationChange(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white text-[11px]"
                 >
                   {returnLocations.map((l) => (
@@ -647,6 +751,51 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                     </option>
                   ))}
                 </select>
+
+                {/* Delivery address or link for Return */}
+                {isReturnDelivery && (
+                  <div className="pt-1.5 border-t border-slate-800 space-y-1">
+                    <label className="text-[10px] font-bold text-amber-300 flex items-center justify-between">
+                      <span className="flex items-center space-x-1">
+                        <MapPin className="w-3 h-3 text-amber-400" />
+                        <span>Адрес забора авто или ссылка на карту:</span>
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={returnAddress}
+                        onChange={(e) => setReturnAddress(e.target.value)}
+                        placeholder="Адрес или ссылка Google Maps"
+                        className="w-full bg-slate-950 border border-amber-500/50 rounded-lg p-1.5 text-white text-[11px] pr-16 focus:outline-none focus:border-amber-400"
+                      />
+                      {returnAddress && (
+                        <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                          {returnAddress.startsWith("http") ? (
+                            <a
+                              href={returnAddress}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[9px] bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-1.5 py-0.5 rounded flex items-center space-x-0.5"
+                            >
+                              <span>Тест</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          ) : (
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(returnAddress)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[9px] bg-slate-800 hover:bg-slate-700 text-amber-300 px-1.5 py-0.5 rounded border border-slate-700"
+                            >
+                              Карта ↗
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

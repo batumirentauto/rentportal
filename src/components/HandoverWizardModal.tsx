@@ -18,6 +18,8 @@ import {
   Clock,
   Calendar,
   Sparkles,
+  MapPin,
+  ExternalLink,
 } from "lucide-react";
 
 interface HandoverWizardModalProps {
@@ -264,6 +266,31 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 <div>
                   <span className="text-xs text-slate-400">Место встречи:</span>
                   <p className="font-semibold text-amber-400">{booking.pickupLocation.name}</p>
+                  {booking.pickupAddress && (
+                    <div className="mt-1 flex items-center space-x-1.5 flex-wrap">
+                      <span className="text-xs text-emerald-400 font-medium">📍 {booking.pickupAddress}</span>
+                      {booking.pickupAddress.startsWith("http") ? (
+                        <a
+                          href={booking.pickupAddress}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] text-sky-400 hover:text-sky-300 underline flex items-center space-x-0.5"
+                        >
+                          <span>Карта</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      ) : (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.pickupAddress)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] text-sky-400 hover:text-sky-300 underline"
+                        >
+                          (Google Maps ↗)
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
