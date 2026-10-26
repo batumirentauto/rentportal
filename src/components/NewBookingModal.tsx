@@ -15,6 +15,13 @@ import {
   ShieldAlert,
   Crown,
   UserPlus,
+  Sparkles,
+  Upload,
+  Loader2,
+  FileText,
+  CreditCard,
+  Trash2,
+  ExternalLink,
 } from "lucide-react";
 import { getCityTheme } from "./FleetTimelineGrid";
 
@@ -73,6 +80,78 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [newCustomerLicense, setNewCustomerLicense] = useState<string>("");
   const [newCustomerCountry, setNewCustomerCountry] = useState<string>("Грузия / Международный");
   const [newCustomerNotes, setNewCustomerNotes] = useState<string>("");
+
+  // Customer document uploads (Optional) & AI OCR
+  const [newCustomerPassportUrl, setNewCustomerPassportUrl] = useState<string | null>(null);
+  const [newCustomerLicenseFrontUrl, setNewCustomerLicenseFrontUrl] = useState<string | null>(null);
+  const [newCustomerLicenseBackUrl, setNewCustomerLicenseBackUrl] = useState<string | null>(null);
+  const [newCustomerBirthDate, setNewCustomerBirthDate] = useState<string>("");
+  const [newCustomerLicenseExpiry, setNewCustomerLicenseExpiry] = useState<string>("");
+  const [isUploadingDocSlot, setIsUploadingDocSlot] = useState<string | null>(null);
+  const [isRecognizingDocs, setIsRecognizingDocs] = useState<boolean>(false);
+  const [docAiNotice, setDocAiNotice] = useState<string | null>(null);
+
+  const handleUploadDoc = async (file: File, slot: "passport" | "licenseFront" | "licenseBack") => {
+    try {
+      setIsUploadingDocSlot(slot);
+      setDocAiNotice(null);
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "customer_docs");
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const json = await res.json();
+      if (json.success && json.url) {
+        if (slot === "passport") setNewCustomerPassportUrl(json.url);
+        if (slot === "licenseFront") setNewCustomerLicenseFrontUrl(json.url);
+        if (slot === "licenseBack") setNewCustomerLicenseBackUrl(json.url);
+      } else {
+        alert(json.error || "Не удалось загрузить фото");
+      }
+    } catch (e: any) {
+      alert("Ошибка при загрузке: " + e.message);
+    } finally {
+      setIsUploadingDocSlot(null);
+    }
+  };
+
+  const handleRecognizeDocs = async () => {
+    if (!newCustomerPassportUrl && !newCustomerLicenseFrontUrl && !newCustomerLicenseBackUrl) {
+      alert("Сначала прикрепите фото паспорта или водительского удостоверения!");
+      return;
+    }
+    try {
+      setIsRecognizingDocs(true);
+      setDocAiNotice(null);
+      const res = await fetch("/api/ai/recognize-documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          passportPhotoUrl: newCustomerPassportUrl,
+          driverLicensePhotoUrl: newCustomerLicenseFrontUrl,
+          driverLicenseBackPhotoUrl: newCustomerLicenseBackUrl,
+        }),
+      });
+      const json = await res.json();
+      if (json.success && json.extractedData) {
+        const d = json.extractedData;
+        if (d.fullName) setNewCustomerName(d.fullName);
+        if (d.passportNumber) setNewCustomerPassport(d.passportNumber);
+        if (d.passportCountry) setNewCustomerCountry(d.passportCountry);
+        if (d.driverLicenseNumber) setNewCustomerLicense(d.driverLicenseNumber);
+        if (d.birthDate) setNewCustomerBirthDate(d.birthDate);
+        if (d.driverLicenseExpiry) setNewCustomerLicenseExpiry(d.driverLicenseExpiry);
+        if (d.notes && !newCustomerNotes) setNewCustomerNotes(d.notes);
+        setIsNewCustomerMode(true);
+        setDocAiNotice("✓ Данные успешно распознаны нейросетью и подставлены в поля!");
+      } else {
+        alert(json.error || "Не удалось распознать данные на фото");
+      }
+    } catch (e: any) {
+      alert("Ошибка распознавания: " + (e.message || "Сбой"));
+    } finally {
+      setIsRecognizingDocs(false);
+    }
+  };
 
   const [startDate, setStartDate] = useState<string>(
     initialDate || new Date().toISOString().split("T")[0]
@@ -297,6 +376,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             passportNumber: newCustomerPassport.trim() || "Не указан",
             driverLicenseNumber: newCustomerLicense.trim() || "Не указаны",
             passportCountry: newCustomerCountry.trim() || "Грузия / Международный",
+            passportPhotoUrl: newCustomerPassportUrl || null,
+            driverLicensePhotoUrl: newCustomerLicenseFrontUrl || null,
+            driverLicenseBackPhotoUrl: newCustomerLicenseBackUrl || null,
+            birthDate: newCustomerBirthDate || null,
+            driverLicenseExpiry: newCustomerLicenseExpiry || null,
             notes: newCustomerNotes.trim() || "Создан из формы бронирования",
             isLoyalClient: true,
             discountPercent: 10,
@@ -538,6 +622,141 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                     >
                       ✕ Отмена
                     </button>
+                  </div>
+
+                  {/* Optional Document Upload & AI OCR */}
+                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-amber-300 flex items-center space-x-1">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Документы клиента (Паспорт и Права с 2-х сторон) — Опционально:</span>
+                      </span>
+                      <span className="text-[9px] text-slate-400">ИИ распознает данные с фото</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* Slot 1: Passport */}
+                      <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 text-center space-y-1">
+                        <span className="text-[10px] text-slate-300 font-semibold block truncate">Паспорт</span>
+                        {newCustomerPassportUrl ? (
+                          <div className="flex items-center justify-center space-x-1">
+                            <span className="text-[9px] text-emerald-400 font-bold">✓ Загружен</span>
+                            <button
+                              type="button"
+                              onClick={() => setNewCustomerPassportUrl(null)}
+                              className="text-[9px] text-red-400 hover:underline"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="text-[10px] text-blue-400 hover:text-blue-300 font-bold cursor-pointer block truncate">
+                            {isUploadingDocSlot === "passport" ? "..." : "+ Фото паспорта"}
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="hidden"
+                              disabled={Boolean(isUploadingDocSlot)}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadDoc(f, "passport");
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {/* Slot 2: License Front */}
+                      <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 text-center space-y-1">
+                        <span className="text-[10px] text-slate-300 font-semibold block truncate">Права (Лицевая)</span>
+                        {newCustomerLicenseFrontUrl ? (
+                          <div className="flex items-center justify-center space-x-1">
+                            <span className="text-[9px] text-emerald-400 font-bold">✓ Загружена</span>
+                            <button
+                              type="button"
+                              onClick={() => setNewCustomerLicenseFrontUrl(null)}
+                              className="text-[9px] text-red-400 hover:underline"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="text-[10px] text-purple-400 hover:text-purple-300 font-bold cursor-pointer block truncate">
+                            {isUploadingDocSlot === "licenseFront" ? "..." : "+ Фото лица ВУ"}
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="hidden"
+                              disabled={Boolean(isUploadingDocSlot)}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadDoc(f, "licenseFront");
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {/* Slot 3: License Back */}
+                      <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 text-center space-y-1">
+                        <span className="text-[10px] text-slate-300 font-semibold block truncate">Права (Оборот)</span>
+                        {newCustomerLicenseBackUrl ? (
+                          <div className="flex items-center justify-center space-x-1">
+                            <span className="text-[9px] text-emerald-400 font-bold">✓ Загружена</span>
+                            <button
+                              type="button"
+                              onClick={() => setNewCustomerLicenseBackUrl(null)}
+                              className="text-[9px] text-red-400 hover:underline"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold cursor-pointer block truncate">
+                            {isUploadingDocSlot === "licenseBack" ? "..." : "+ Фото оборота"}
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="hidden"
+                              disabled={Boolean(isUploadingDocSlot)}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadDoc(f, "licenseBack");
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* AI OCR button if any doc is attached */}
+                    {(newCustomerPassportUrl || newCustomerLicenseFrontUrl || newCustomerLicenseBackUrl) && (
+                      <div className="pt-1 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={handleRecognizeDocs}
+                          disabled={isRecognizingDocs}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center space-x-1 transition active:scale-95"
+                        >
+                          {isRecognizingDocs ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>ИИ распознаёт...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3 h-3" />
+                              <span>✨ Распознать ИИ и заполнить поля</span>
+                            </>
+                          )}
+                        </button>
+                        {docAiNotice && (
+                          <span className="text-[10px] text-emerald-400 font-bold">
+                            {docAiNotice}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

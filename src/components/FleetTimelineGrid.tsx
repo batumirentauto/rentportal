@@ -33,6 +33,7 @@ import { StopUnblockModal } from "./StopUnblockModal";
 import { CarDetailsModal } from "./CarDetailsModal";
 import { NewCarModal } from "./NewCarModal";
 import { AvailabilitySearchModal } from "./AvailabilitySearchModal";
+import { CustomerDocumentUploadModal } from "./CustomerDocumentUploadModal";
 
 interface FleetTimelineGridProps {
   onOpenContract?: (booking: any) => void;
@@ -107,6 +108,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   
   // Selected booking for popup details
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+  const [isDocsUploadModalOpen, setIsDocsUploadModalOpen] = useState<boolean>(false);
 
   // New Booking Modal state
   const [isNewBookingOpen, setIsNewBookingOpen] = useState<boolean>(false);
@@ -893,7 +895,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
             {/* Content */}
             <div className="space-y-3 text-xs">
               {/* Customer */}
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-300 flex items-center space-x-1.5">
                     <User className="w-4 h-4 text-amber-400" />
@@ -906,6 +908,69 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 <p className="text-[11px] text-slate-400">
                   Паспорт: {selectedBooking.customer.passportNumber} • Права: {selectedBooking.customer.driverLicenseNumber}
                 </p>
+
+                {/* Customer Documents badges & AI upload trigger */}
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                    <span className="text-[10px] text-slate-400">Документы:</span>
+                    {selectedBooking.customer.passportPhotoUrl ? (
+                      <a
+                        href={selectedBooking.customer.passportPhotoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:underline"
+                        title="Открыть фото паспорта"
+                      >
+                        ✓ Паспорт
+                      </a>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-500 border border-slate-800">
+                        Паспорт —
+                      </span>
+                    )}
+
+                    {selectedBooking.customer.driverLicensePhotoUrl ? (
+                      <a
+                        href={selectedBooking.customer.driverLicensePhotoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:underline"
+                        title="Открыть лицевую сторону прав"
+                      >
+                        ✓ Права (лицо)
+                      </a>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-500 border border-slate-800">
+                        Права (лицо) —
+                      </span>
+                    )}
+
+                    {selectedBooking.customer.driverLicenseBackPhotoUrl ? (
+                      <a
+                        href={selectedBooking.customer.driverLicenseBackPhotoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:underline"
+                        title="Открыть оборотную сторону прав"
+                      >
+                        ✓ Права (оборот)
+                      </a>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-500 border border-slate-800">
+                        Права (оборот) —
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsDocsUploadModalOpen(true)}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gradient-to-r from-amber-500/20 to-purple-500/20 hover:from-amber-500/30 hover:to-purple-500/30 text-amber-300 border border-amber-500/40 flex items-center space-x-1 transition shadow-sm active:scale-95"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-400" />
+                    <span>🪪 Загрузить / Распознать</span>
+                  </button>
+                </div>
               </div>
 
               {/* Dates & Place */}
@@ -1085,6 +1150,23 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
         initialDate={bookingInitialDate}
         initialDays={bookingInitialDays}
       />
+
+      {/* Customer Document Upload & AI OCR Modal */}
+      {isDocsUploadModalOpen && selectedBooking?.customer && (
+        <CustomerDocumentUploadModal
+          isOpen={isDocsUploadModalOpen}
+          onClose={() => setIsDocsUploadModalOpen(false)}
+          customer={selectedBooking.customer}
+          bookingId={selectedBooking.id}
+          bookingNumber={selectedBooking.bookingNumber}
+          onCustomerUpdated={(updatedCust) => {
+            setSelectedBooking((prev: any) =>
+              prev ? { ...prev, customer: { ...prev.customer, ...updatedCust } } : null
+            );
+            fetchTimeline();
+          }}
+        />
+      )}
 
       {/* Availability Search & Matcher Modal */}
       {isAvailabilitySearchOpen && (

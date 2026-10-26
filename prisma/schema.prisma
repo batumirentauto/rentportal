@@ -151,6 +151,9 @@ model Customer {
   passportPhotoUrl   String?
   driverLicenseNumber String
   driverLicensePhotoUrl String?
+  driverLicenseBackPhotoUrl String?
+  birthDate          String?
+  driverLicenseExpiry String?
   isLoyalClient      Boolean   @default(true) // Постоянный клиент (VIP)
   discountPercent    Int       @default(10)   // Персональная скидка постоянного клиента (%)
   loyaltyTier        String    @default("GOLD_VIP") // "GOLD_VIP", "PLATINUM_VIP"

@@ -44,6 +44,9 @@ export interface CustomerItem {
   passportPhotoUrl?: string | null;
   driverLicenseNumber: string;
   driverLicensePhotoUrl?: string | null;
+  driverLicenseBackPhotoUrl?: string | null;
+  birthDate?: string | null;
+  driverLicenseExpiry?: string | null;
   isLoyalClient: boolean;
   discountPercent: number;
   loyaltyTier: string;
@@ -636,6 +639,44 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                         {copiedId === `dl-${c.id}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                       </button>
                     </div>
+
+                    {(c.passportPhotoUrl || c.driverLicensePhotoUrl || c.driverLicenseBackPhotoUrl) && (
+                      <div className="flex items-center space-x-1.5 pt-1 flex-wrap">
+                        {c.passportPhotoUrl && (
+                          <a
+                            href={c.passportPhotoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:underline"
+                            title="Открыть скан паспорта"
+                          >
+                            📷 Паспорт
+                          </a>
+                        )}
+                        {c.driverLicensePhotoUrl && (
+                          <a
+                            href={c.driverLicensePhotoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:underline"
+                            title="Открыть лицевую сторону прав"
+                          >
+                            📷 Права (лицо)
+                          </a>
+                        )}
+                        {c.driverLicenseBackPhotoUrl && (
+                          <a
+                            href={c.driverLicenseBackPhotoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:underline"
+                            title="Открыть оборотную сторону прав"
+                          >
+                            📷 Права (оборот)
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Tags & Manager Notes */}

@@ -104,7 +104,19 @@ export async function POST(request: Request) {
     // Автоматическое создание нового клиента, если данные переданы в бронировании
     let finalCustomerId = customerId;
     if ((!finalCustomerId || finalCustomerId === "NEW_CUSTOMER") && body.newCustomer) {
-      const { fullName, phone, passportNumber, driverLicenseNumber, passportCountry, notes } = body.newCustomer;
+      const {
+        fullName,
+        phone,
+        passportNumber,
+        driverLicenseNumber,
+        passportCountry,
+        passportPhotoUrl,
+        driverLicensePhotoUrl,
+        driverLicenseBackPhotoUrl,
+        birthDate,
+        driverLicenseExpiry,
+        notes,
+      } = body.newCustomer;
       if (fullName && phone) {
         const createdCustomer = await prisma.customer.create({
           data: {
@@ -114,6 +126,11 @@ export async function POST(request: Request) {
             passportNumber: passportNumber?.trim() || "Не указан",
             driverLicenseNumber: driverLicenseNumber?.trim() || "Не указаны",
             passportCountry: passportCountry?.trim() || "Грузия / Международный",
+            passportPhotoUrl: passportPhotoUrl || null,
+            driverLicensePhotoUrl: driverLicensePhotoUrl || null,
+            driverLicenseBackPhotoUrl: driverLicenseBackPhotoUrl || null,
+            birthDate: birthDate?.trim() || null,
+            driverLicenseExpiry: driverLicenseExpiry?.trim() || null,
             notes: notes?.trim() || "Создан из формы бронирования",
             isLoyalClient: true,
             discountPercent: 10,
