@@ -119,6 +119,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [daysCount, setDaysCount] = useState<number>(14);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL"); // "ALL", "COMPLETED", "AVAILABLE", "RENTED", "ONE_WAY"
+  const [timelineError, setTimelineError] = useState<string | null>(null);
   
   // Selected booking for popup details
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
@@ -199,6 +200,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
   const fetchTimeline = async () => {
     setLoading(true);
+    setTimelineError(null);
     try {
       const includeArchived = statusFilter === "ARCHIVED";
       const res = await fetch(
@@ -207,9 +209,12 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       const json = await res.json();
       if (json.success) {
         setData(json);
+      } else {
+        setTimelineError(json.error || "Не удалось загрузить данные шахматки");
       }
     } catch (e) {
       console.error("Error loading timeline:", e);
+      setTimelineError("Ошибка соединения с сервером");
     } finally {
       setLoading(false);
     }
@@ -753,9 +758,31 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
             {/* Cars Rows */}
             <div className="divide-y divide-slate-800/70">
-              {filteredCars.length === 0 ? (
-                <div className="p-12 text-center text-slate-400 text-xs">
-                  Нет автомобилей, соответствующих выбранным фильтрам.
+              {timelineError ? (
+                <div className="p-12 text-center text-rose-400 text-xs space-y-3">
+                  <p className="font-bold text-sm">⚠️ {timelineError}</p>
+                  <p className="text-slate-400 text-[11px]">Произошла ошибка при получении данных автопарка</p>
+                  <button
+                    onClick={fetchTimeline}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition"
+                  >
+                    Повторить загрузку
+                  </button>
+                </div>
+              ) : filteredCars.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-xs space-y-2">
+                  <p>Нет автомобилей, соответствующих выбранным фильтрам.</p>
+                  {(searchQuery || statusFilter !== "ALL" || selectedCity !== "ALL") && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setStatusFilter("ALL");
+                      }}
+                      className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-lg transition"
+                    >
+                      Сбросить фильтры
+                    </button>
+                  )}
                 </div>
               ) : (
                 filteredCars.map((car: any) => {

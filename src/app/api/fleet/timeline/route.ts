@@ -24,43 +24,82 @@ export async function GET(request: Request) {
       carWhere.city = { code: cityCode };
     }
 
-    const cars = await prisma.car.findMany({
-      where: carWhere,
-      include: {
-        city: true,
-        availabilityBlocks: {
-          where: { isActive: true },
-          orderBy: { startDate: "asc" },
-        },
-        bookings: {
-          where: {
-            status: { notIn: ["CANCELLED"] },
+    let cars: any[] = [];
+    try {
+      cars = await prisma.car.findMany({
+        where: carWhere,
+        include: {
+          city: true,
+          availabilityBlocks: {
+            where: { isActive: true },
+            orderBy: { startDate: "asc" },
           },
-          include: {
-            customer: true,
-            pickupLocation: {
-              include: { city: true },
+          bookings: {
+            where: {
+              status: { notIn: ["CANCELLED"] },
             },
-            returnLocation: {
-              include: { city: true },
+            include: {
+              customer: true,
+              pickupLocation: {
+                include: { city: true },
+              },
+              returnLocation: {
+                include: { city: true },
+              },
+              handoverReport: true,
+              returnReport: true,
+              payments: true,
+              additionalDrivers: true,
+              refunds: true,
+              extensions: true,
             },
-            handoverReport: true,
-            returnReport: true,
-            payments: true,
-            additionalDrivers: true,
-            refunds: true,
-            extensions: true,
-          },
-          orderBy: {
-            startDate: "asc",
+            orderBy: {
+              startDate: "asc",
+            },
           },
         },
-      },
-      orderBy: [
-        { city: { nameRu: "asc" } },
-        { brand: "asc" },
-      ],
-    });
+        orderBy: [
+          { city: { nameRu: "asc" } },
+          { brand: "asc" },
+        ],
+      });
+    } catch (queryErr) {
+      console.warn("Full car timeline query failed, falling back to basic query:", queryErr);
+      cars = await prisma.car.findMany({
+        where: carWhere,
+        include: {
+          city: true,
+          availabilityBlocks: {
+            where: { isActive: true },
+            orderBy: { startDate: "asc" },
+          },
+          bookings: {
+            where: {
+              status: { notIn: ["CANCELLED"] },
+            },
+            include: {
+              customer: true,
+              pickupLocation: {
+                include: { city: true },
+              },
+              returnLocation: {
+                include: { city: true },
+              },
+              handoverReport: true,
+              returnReport: true,
+              payments: true,
+            },
+            orderBy: {
+              startDate: "asc",
+            },
+          },
+        },
+        orderBy: [
+          { city: { nameRu: "asc" } },
+          { brand: "asc" },
+        ],
+      });
+    }
 
     // Формируем дни
     const days = [];
@@ -90,10 +129,10 @@ export async function GET(request: Request) {
     // Обогащаем автомобили и брони логистической информацией о смене городов
     const enrichedCars = cars.map((car) => {
       // Ищем все брони, где город выдачи != городу возврата
-      const processedBookings = car.bookings.map((b) => {
-        const isOneWay = b.pickupLocation.cityId !== b.returnLocation.cityId;
-        const fromCity = b.pickupLocation.city;
-        const toCity = b.returnLocation.city;
+      const processedBookings = (car.bookings || []).map((b: any) => {
+        const isOneWay = b.pickupLocation?.cityId && b.returnLocation?.cityId ? b.pickupLocation.cityId !== b.returnLocation.cityId : false;
+        const fromCity = b.pickupLocation?.city || car.city;
+        const toCity = b.returnLocation?.city || car.city;
 
         if (isOneWay && b.status === "ACTIVE") {
           oneWayActiveCount++;
@@ -102,13 +141,13 @@ export async function GET(request: Request) {
         return {
           ...b,
           isOneWay,
-          fromCityName: fromCity.nameRu,
-          fromCityCode: fromCity.code,
-          toCityName: toCity.nameRu,
-          toCityCode: toCity.code,
+          fromCityName: fromCity?.nameRu || "Батуми",
+          fromCityCode: fromCity?.code || "BUS",
+          toCityName: toCity?.nameRu || "Батуми",
+          toCityCode: toCity?.code || "BUS",
           routeSummary: isOneWay
-            ? `${fromCity.code} ➔ ${toCity.code} (${toCity.nameRu})`
-            : `${fromCity.nameRu}`,
+            ? `${fromCity?.code || "BUS"} ➔ ${toCity?.code || "BUS"} (${toCity?.nameRu || ""})`
+            : `${fromCity?.nameRu || ""}`,
         };
       });
 
@@ -135,13 +174,13 @@ export async function GET(request: Request) {
         }
       }
 
-      const isBusyToday = processedBookings.some((b) => {
+      const isBusyToday = processedBookings.some((b: any) => {
         const bStart = new Date(b.startDate);
         const bEnd = new Date(b.endDate);
         return today >= bStart && today <= bEnd;
       });
 
-      const isBlockedToday = car.isStopBlocked || car.availabilityBlocks.some((b) => {
+      const isBlockedToday = car.isStopBlocked || (car.availabilityBlocks || []).some((b: any) => {
         const bStart = new Date(b.startDate);
         const bEnd = b.endDate ? new Date(b.endDate) : null;
         return today >= bStart && (!bEnd || today <= bEnd);
