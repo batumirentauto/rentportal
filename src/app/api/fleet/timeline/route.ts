@@ -45,6 +45,11 @@ export async function GET(request: Request) {
               include: { city: true },
             },
             handoverReport: true,
+            returnReport: true,
+            payments: true,
+            additionalDrivers: true,
+            refunds: true,
+            extensions: true,
           },
           orderBy: {
             startDate: "asc",

@@ -22,6 +22,8 @@ import {
   CreditCard,
   Trash2,
   ExternalLink,
+  Users,
+  Plus,
 } from "lucide-react";
 import { getCityTheme } from "./FleetTimelineGrid";
 
@@ -215,6 +217,50 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [acknowledgedStopBlock, setAcknowledgedStopBlock] = useState<boolean>(false);
   const [acknowledgedBlacklist, setAcknowledgedBlacklist] = useState<boolean>(false);
 
+  // Additional Drivers (до 4х с фото прав)
+  const [additionalDrivers, setAdditionalDrivers] = useState<Array<{
+    fullName: string;
+    licenseNumber: string;
+    phone: string;
+    licensePhotoUrl: string;
+    licenseBackPhotoUrl: string;
+  }>>([]);
+
+  const handleAddAdditionalDriver = () => {
+    if (additionalDrivers.length >= 4) return;
+    setAdditionalDrivers((prev) => [
+      ...prev,
+      { fullName: "", licenseNumber: "", phone: "", licensePhotoUrl: "", licenseBackPhotoUrl: "" },
+    ]);
+  };
+
+  const handleUpdateAdditionalDriver = (index: number, field: string, val: string) => {
+    setAdditionalDrivers((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: val };
+      return next;
+    });
+  };
+
+  const handleRemoveAdditionalDriver = (index: number) => {
+    setAdditionalDrivers((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUploadDriverPhoto = async (index: number, file: File, isBack = false) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "driver-licenses");
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.success && data.url) {
+        handleUpdateAdditionalDriver(index, isBack ? "licenseBackPhotoUrl" : "licensePhotoUrl", data.url);
+      }
+    } catch (err) {
+      console.error("Upload driver license photo error:", err);
+    }
+  };
+
   // Load cars, locations, customers
   useEffect(() => {
     if (!isOpen) return;
@@ -294,6 +340,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     setBookingSource("WHATSAPP");
     setNewCustomerInstagram("");
     setNewCustomerTelegram("");
+    setAdditionalDrivers([]);
 
     setPickupType("OFFICE");
     setPickupAddress("");
@@ -497,6 +544,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           currency: "GEL",
           ownerDailyRate,
           isAddedDuringDay: true,
+          additionalDrivers: additionalDrivers.filter((d) => d.fullName.trim()),
         }),
       });
 
@@ -1017,6 +1065,178 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Additional Drivers Section (до 4х с фото прав) */}
+          <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-200 flex items-center space-x-1.5 text-xs">
+                <Users className="w-4 h-4 text-blue-400" />
+                <span>Дополнительные водители (до 4-х):</span>
+                {additionalDrivers.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                    {additionalDrivers.length} / 4
+                  </span>
+                )}
+              </span>
+
+              {additionalDrivers.length < 4 && (
+                <button
+                  type="button"
+                  onClick={handleAddAdditionalDriver}
+                  className="px-2.5 py-1 bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 rounded-lg text-xs font-bold transition flex items-center space-x-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Добавить водителя</span>
+                </button>
+              )}
+            </div>
+
+            {additionalDrivers.length === 0 ? (
+              <p className="text-[11px] text-slate-500 italic">
+                Нет дополнительных водителей. Можно добавить до 4 человек с фото прав при необходимости.
+              </p>
+            ) : (
+              <div className="space-y-3 pt-1">
+                {additionalDrivers.map((driver, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-2 text-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-blue-300 text-xs">
+                        Водитель #{idx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAdditionalDriver(idx)}
+                        className="text-slate-500 hover:text-rose-400 p-1"
+                        title="Удалить водителя"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">ФИО водителя *:</label>
+                        <input
+                          type="text"
+                          required
+                          value={driver.fullName}
+                          onChange={(e) => handleUpdateAdditionalDriver(idx, "fullName", e.target.value)}
+                          placeholder="Иванов Иван"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white text-xs focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Номер прав:</label>
+                        <input
+                          type="text"
+                          value={driver.licenseNumber}
+                          onChange={(e) => handleUpdateAdditionalDriver(idx, "licenseNumber", e.target.value)}
+                          placeholder="99XX 123456"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Телефон:</label>
+                        <input
+                          type="tel"
+                          value={driver.phone}
+                          onChange={(e) => handleUpdateAdditionalDriver(idx, "phone", e.target.value)}
+                          placeholder="+995 ..."
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* License Photos Upload */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-1">
+                          Фото прав (лицевая сторона):
+                        </label>
+                        {driver.licensePhotoUrl ? (
+                          <div className="flex items-center space-x-1.5 bg-slate-950 p-1.5 rounded-lg border border-slate-700">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <a
+                              href={driver.licensePhotoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] text-blue-300 truncate hover:underline flex-1"
+                            >
+                              Фото загружено ✓
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateAdditionalDriver(idx, "licensePhotoUrl", "")}
+                              className="text-slate-500 hover:text-rose-400"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="border border-dashed border-slate-700 hover:border-blue-500 rounded-lg p-1.5 flex items-center justify-center space-x-1 cursor-pointer bg-slate-950 text-[10px] text-slate-400 hover:text-white transition">
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Загрузить фото (лицо)</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadDriverPhoto(idx, f, false);
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-1">
+                          Фото прав (оборотная сторона):
+                        </label>
+                        {driver.licenseBackPhotoUrl ? (
+                          <div className="flex items-center space-x-1.5 bg-slate-950 p-1.5 rounded-lg border border-slate-700">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <a
+                              href={driver.licenseBackPhotoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] text-cyan-300 truncate hover:underline flex-1"
+                            >
+                              Фото загружено ✓
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateAdditionalDriver(idx, "licenseBackPhotoUrl", "")}
+                              className="text-slate-500 hover:text-rose-400"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="border border-dashed border-slate-700 hover:border-blue-500 rounded-lg p-1.5 flex items-center justify-center space-x-1 cursor-pointer bg-slate-950 text-[10px] text-slate-400 hover:text-white transition">
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Загрузить фото (оборот)</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadDriverPhoto(idx, f, true);
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Dates & Duration & Times */}

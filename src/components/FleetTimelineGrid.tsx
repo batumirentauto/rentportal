@@ -28,6 +28,8 @@ import {
   RotateCcw,
   Edit3,
   Database,
+  Users,
+  DollarSign,
 } from "lucide-react";
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
@@ -41,6 +43,9 @@ import { EditBookingModal } from "./EditBookingModal";
 import { FleetCityDistributorModal } from "./FleetCityDistributorModal";
 import { DatabaseBackupModal } from "./DatabaseBackupModal";
 import { BookingHistoryModal } from "./BookingHistoryModal";
+import { BookingRefundModal } from "./BookingRefundModal";
+import { BookingExtensionModal } from "./BookingExtensionModal";
+import { AdditionalDriversModal } from "./AdditionalDriversModal";
 
 interface FleetTimelineGridProps {
   onOpenContract?: (booking: any) => void;
@@ -119,6 +124,9 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [isDocsUploadModalOpen, setIsDocsUploadModalOpen] = useState<boolean>(false);
   const [isCustomerDossierOpen, setIsCustomerDossierOpen] = useState<boolean>(false);
   const [isEditBookingOpen, setIsEditBookingOpen] = useState<boolean>(false);
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState<boolean>(false);
+  const [isExtensionModalOpen, setIsExtensionModalOpen] = useState<boolean>(false);
+  const [isAdditionalDriversModalOpen, setIsAdditionalDriversModalOpen] = useState<boolean>(false);
 
   // New Booking Modal state
   const [isNewBookingOpen, setIsNewBookingOpen] = useState<boolean>(false);
@@ -1370,6 +1378,144 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 </div>
               </div>
 
+              {/* Additional Drivers Section (до 4х с фото прав) */}
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-200">
+                    <Users className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Дополнительные водители:</span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      {selectedBooking.additionalDrivers?.length || 0} / 4
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAdditionalDriversModalOpen(true)}
+                    className="text-[11px] font-bold text-blue-400 hover:text-blue-300 underline flex items-center space-x-1"
+                  >
+                    <span>+ Добавить / Фото</span>
+                  </button>
+                </div>
+
+                {selectedBooking.additionalDrivers && selectedBooking.additionalDrivers.length > 0 ? (
+                  <div className="space-y-1.5 pt-1">
+                    {selectedBooking.additionalDrivers.map((driver: any, idx: number) => (
+                      <div
+                        key={driver.id || idx}
+                        className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800/80 text-xs"
+                      >
+                        <div>
+                          <strong className="text-white block font-medium">
+                            {idx + 1}. {driver.fullName}
+                          </strong>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {driver.licenseNumber ? `Права: ${driver.licenseNumber}` : "Права не указаны"}
+                            {driver.phone ? ` • ${driver.phone}` : ""}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          {driver.licensePhotoUrl && (
+                            <a
+                              href={driver.licensePhotoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:underline"
+                            >
+                              Права (лицо)
+                            </a>
+                          )}
+                          {driver.licenseBackPhotoUrl && (
+                            <a
+                              href={driver.licenseBackPhotoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:underline"
+                            >
+                              Права (оборот)
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-500 italic">
+                    Дополнительные водители не добавлены. Можно добавить до 4-х человек с фото прав.
+                  </p>
+                )}
+              </div>
+
+              {/* Extensions list (если есть продления) */}
+              {selectedBooking.extensions && selectedBooking.extensions.length > 0 && (
+                <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-2.5 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between text-amber-300 font-bold">
+                    <span className="flex items-center space-x-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Продления аренды ({selectedBooking.extensions.length}):</span>
+                    </span>
+                  </div>
+                  {selectedBooking.extensions.map((ext: any, idx: number) => (
+                    <div
+                      key={ext.id || idx}
+                      className="p-1.5 bg-slate-900/80 rounded-lg text-[11px] flex justify-between items-center text-slate-300"
+                    >
+                      <div>
+                        <span>
+                          {ext.type === "DAYS" ? `+${ext.extraDays} дн.` : `+${ext.extraHours} ч.`}{" "}
+                          до {new Date(ext.newEndDate).toLocaleDateString("ru-RU")}{" "}
+                          {new Date(ext.newEndDate).toLocaleTimeString("ru-RU", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        {ext.notes && <span className="text-slate-500 block text-[10px]">{ext.notes}</span>}
+                      </div>
+                      <div className="text-right font-mono">
+                        <strong className="text-amber-400">+{ext.amount} ₾</strong>
+                        <span
+                          className={`block text-[9px] ${
+                            ext.paymentStatus === "PAID" ? "text-emerald-400" : "text-amber-400 font-bold"
+                          }`}
+                        >
+                          {ext.paymentStatus === "PAID" ? "✓ Оплачено" : "К оплате при сдаче"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Refunds list (если есть возвраты клиенту) */}
+              {selectedBooking.refunds && selectedBooking.refunds.length > 0 && (
+                <div className="bg-rose-950/30 border border-rose-500/30 rounded-xl p-2.5 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between text-rose-300 font-bold">
+                    <span className="flex items-center space-x-1.5">
+                      <DollarSign className="w-3.5 h-3.5" />
+                      <span>Оформленные возвраты средств клиенту ({selectedBooking.refunds.length}):</span>
+                    </span>
+                    <span className="font-mono text-rose-400 font-bold">
+                      -{selectedBooking.refunds.reduce((s: number, r: any) => s + (r.amount || 0), 0)} ₾
+                    </span>
+                  </div>
+                  {selectedBooking.refunds.map((rf: any, idx: number) => (
+                    <div
+                      key={rf.id || idx}
+                      className="p-1.5 bg-slate-900/80 rounded-lg text-[11px] flex justify-between items-center text-slate-300"
+                    >
+                      <div>
+                        <span className="text-rose-200 font-bold">{rf.reason}</span>
+                        {rf.notes && <span className="text-slate-400 block text-[10px]">{rf.notes}</span>}
+                        <span className="text-[9px] text-slate-500 block">
+                          {new Date(rf.createdAt || rf.date).toLocaleDateString("ru-RU")} •{" "}
+                          {rf.managerName || "Менеджер"}
+                        </span>
+                      </div>
+                      <strong className="font-mono text-rose-400 font-black">-{rf.amount} ₾</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Overdue No-Show Warning */}
               {selectedBooking.status !== "ACTIVE" &&
                 selectedBooking.status !== "COMPLETED" &&
@@ -1425,7 +1571,27 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
             </div>
 
             {/* Actions */}
-            <div className="pt-2 flex justify-end space-x-2 border-t border-slate-800">
+            <div className="pt-2 flex flex-wrap gap-2 justify-end border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsRefundModalOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-bold transition active:scale-95"
+                title="Оформить возврат клиенту денег (уменьшение срока аренды или по вине автопроката)"
+              >
+                <DollarSign className="w-3.5 h-3.5 text-rose-400" />
+                <span>Возврат денег</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsExtensionModalOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-bold transition active:scale-95"
+                title="Продлить срок аренды выданного авто на дни или часы"
+              >
+                <Clock className="w-3.5 h-3.5 text-purple-400" />
+                <span>Продлить</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setIsEditBookingOpen(true)}
@@ -1532,6 +1698,57 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
           onBookingUpdated={(updatedBooking) => {
             setSelectedBooking(updatedBooking);
             fetchTimeline();
+          }}
+        />
+      )}
+
+      {/* Booking Refund Modal */}
+      {isRefundModalOpen && selectedBooking && (
+        <BookingRefundModal
+          isOpen={isRefundModalOpen}
+          onClose={() => setIsRefundModalOpen(false)}
+          booking={selectedBooking}
+          onRefundCompleted={(updatedBooking) => {
+            if (updatedBooking) {
+              setSelectedBooking(updatedBooking);
+            }
+            fetchTimeline();
+          }}
+        />
+      )}
+
+      {/* Booking Extension Modal */}
+      {isExtensionModalOpen && selectedBooking && (
+        <BookingExtensionModal
+          isOpen={isExtensionModalOpen}
+          onClose={() => setIsExtensionModalOpen(false)}
+          booking={selectedBooking}
+          onExtensionCompleted={(updatedBooking) => {
+            if (updatedBooking) {
+              setSelectedBooking(updatedBooking);
+            }
+            fetchTimeline();
+          }}
+        />
+      )}
+
+      {/* Additional Drivers Modal (up to 4 with license photos) */}
+      {isAdditionalDriversModalOpen && selectedBooking && (
+        <AdditionalDriversModal
+          isOpen={isAdditionalDriversModalOpen}
+          onClose={() => setIsAdditionalDriversModalOpen(false)}
+          bookingId={selectedBooking.id}
+          bookingNumber={selectedBooking.bookingNumber}
+          onDriversUpdated={() => {
+            fetchTimeline();
+            fetch(`/api/bookings/${selectedBooking.id}`)
+              .then((r) => r.json())
+              .then((d) => {
+                if (d.success && d.booking) {
+                  setSelectedBooking(d.booking);
+                }
+              })
+              .catch(() => {});
           }}
         />
       )}

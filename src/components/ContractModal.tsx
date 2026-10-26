@@ -26,6 +26,20 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
   const [secondDriverLicense, setSecondDriverLicense] = useState<string>("");
   const [showEditControls, setShowEditControls] = useState<boolean>(false);
 
+  const additionalDriversList: any[] = booking?.additionalDrivers || [];
+  const getExtraDriver = (idx: number) => {
+    if (additionalDriversList[idx]) {
+      return {
+        name: additionalDriversList[idx].fullName,
+        license: additionalDriversList[idx].licenseNumber || "—",
+      };
+    }
+    if (idx === 0 && secondDriverName) {
+      return { name: secondDriverName, license: secondDriverLicense || "—" };
+    }
+    return null;
+  };
+
   if (!booking) return null;
 
   const handlePrint = () => {
@@ -453,30 +467,17 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
                       <td className="border border-slate-300 p-1 font-mono">{customerLicense}</td>
                       <td className="border border-slate-300 p-1">Действительно</td>
                     </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">2.</td>
-                      <td className="border border-slate-300 p-1">{secondDriverName || "—"}</td>
-                      <td className="border border-slate-300 p-1 font-mono">{secondDriverLicense || "—"}</td>
-                      <td className="border border-slate-300 p-1">{secondDriverName ? "Действительно" : "—"}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">3.</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">4.</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">5.</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                    </tr>
+                    {[0, 1, 2, 3].map((idx) => {
+                      const d = getExtraDriver(idx);
+                      return (
+                        <tr key={idx}>
+                          <td className="border border-slate-300 p-1 text-center font-bold">{idx + 2}.</td>
+                          <td className="border border-slate-300 p-1">{d?.name || (idx === 0 ? "—" : "\u00A0")}</td>
+                          <td className="border border-slate-300 p-1 font-mono">{d?.license || (idx === 0 ? "—" : "\u00A0")}</td>
+                          <td className="border border-slate-300 p-1">{d ? "Действительно" : (idx === 0 ? "—" : "\u00A0")}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -780,30 +781,17 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
                       <td className="border border-slate-300 p-1 font-mono">{customerLicense}</td>
                       <td className="border border-slate-300 p-1">მოქმედი</td>
                     </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">2.</td>
-                      <td className="border border-slate-300 p-1">{secondDriverName || "—"}</td>
-                      <td className="border border-slate-300 p-1 font-mono">{secondDriverLicense || "—"}</td>
-                      <td className="border border-slate-300 p-1">{secondDriverName ? "მოქმედი" : "—"}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">3.</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">4.</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">5.</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                    </tr>
+                    {[0, 1, 2, 3].map((idx) => {
+                      const d = getExtraDriver(idx);
+                      return (
+                        <tr key={idx}>
+                          <td className="border border-slate-300 p-1 text-center font-bold">{idx + 2}.</td>
+                          <td className="border border-slate-300 p-1">{d?.name || (idx === 0 ? "—" : "\u00A0")}</td>
+                          <td className="border border-slate-300 p-1 font-mono">{d?.license || (idx === 0 ? "—" : "\u00A0")}</td>
+                          <td className="border border-slate-300 p-1">{d ? "მოქმედი" : (idx === 0 ? "—" : "\u00A0")}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1105,30 +1093,17 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
                       <td className="border border-slate-300 p-1 font-mono">{customerLicense}</td>
                       <td className="border border-slate-300 p-1">Valid</td>
                     </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">2.</td>
-                      <td className="border border-slate-300 p-1">{secondDriverName || "—"}</td>
-                      <td className="border border-slate-300 p-1 font-mono">{secondDriverLicense || "—"}</td>
-                      <td className="border border-slate-300 p-1">{secondDriverName ? "Valid" : "—"}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">3.</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">4.</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-1 text-center font-bold">5.</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                      <td className="border border-slate-300 p-1">&nbsp;</td>
-                    </tr>
+                    {[0, 1, 2, 3].map((idx) => {
+                      const d = getExtraDriver(idx);
+                      return (
+                        <tr key={idx}>
+                          <td className="border border-slate-300 p-1 text-center font-bold">{idx + 2}.</td>
+                          <td className="border border-slate-300 p-1">{d?.name || (idx === 0 ? "—" : "\u00A0")}</td>
+                          <td className="border border-slate-300 p-1 font-mono">{d?.license || (idx === 0 ? "—" : "\u00A0")}</td>
+                          <td className="border border-slate-300 p-1">{d ? "Valid" : (idx === 0 ? "—" : "\u00A0")}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

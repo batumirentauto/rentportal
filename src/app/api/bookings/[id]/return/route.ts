@@ -32,6 +32,9 @@ export async function POST(
       selectedFineIds = [],
       depositAmount = 0,
       changeReturnedToClient = 0,
+      extraHoursCount = 0,
+      extraHoursFee = 0,
+      isExtraHoursPaid = false,
       deductionsTotal = 0,
       finalBalanceType = "ZERO_SETTLED", // "REFUND_TO_CLIENT" | "PAYMENT_BY_CLIENT" | "ZERO_SETTLED"
       finalBalanceAmount = 0,
@@ -156,8 +159,27 @@ export async function POST(
       data: {
         status: "COMPLETED",
         endDate: now,
+        extraHoursCount: Number(extraHoursCount) || 0,
+        extraHoursFee: Number(extraHoursFee) || 0,
+        isExtraHoursPaid: Boolean(isExtraHoursPaid),
       },
     });
+
+    // 2.5. Проводка оплаты доп. часов при сдаче авто, если не были оплачены ранее
+    if (Number(extraHoursFee) > 0 && !isExtraHoursPaid) {
+      await prisma.payment.create({
+        data: {
+          bookingId: id,
+          type: "EXTRA",
+          amount: Number(extraHoursFee),
+          currency: booking.currency || "GEL",
+          method: settlementMethod,
+          status: "PAID",
+          managerName,
+          notes: `Оплата доп. часов при сдаче автомобиля (+${extraHoursCount} ч).`,
+        },
+      });
+    }
 
     // 3. Обработка штрафов: если клиент оплатил штрафы компании при возврате
     if (finesPaidByClientToCompany && Array.isArray(selectedFineIds) && selectedFineIds.length > 0) {

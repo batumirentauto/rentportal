@@ -232,6 +232,12 @@ model Booking {
   extras              BookingExtra[]
   washTasks           CarWashTask[]
   trafficFines        TrafficFine[]
+  additionalDrivers   AdditionalDriver[]
+  refunds             BookingRefund[]
+  extensions          BookingExtension[]
+  extraHoursCount     Int?            @default(0) // Количество доп. часов
+  extraHoursFee       Float?          @default(0) // Сумма за доп. часы
+  isExtraHoursPaid    Boolean         @default(false) // Оплачены ли доп. часы
   
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
@@ -356,6 +362,8 @@ model FinancialAccount {
   isManagerCash      Boolean   @default(false) // Признак персональной наличной кассы менеджера
   payments           Payment[]
   expenses           Expense[]
+  refunds            BookingRefund[]
+  extensions         BookingExtension[]
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 }
@@ -648,5 +656,59 @@ model ChatMessage {
   carPlate   String?   // Связанный автомобиль (если обсуждается конкретное авто)
   bookingId  String?   // Связанная бронь
   createdAt  DateTime  @default(now())
+}
+
+// Дополнительные водители (до 4х на бронирование с фото прав)
+model AdditionalDriver {
+  id                  String   @id @default(cuid())
+  bookingId           String
+  booking             Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  fullName            String
+  licenseNumber       String?
+  phone               String?
+  birthDate           String?
+  licensePhotoUrl     String?  // Фото лицевой стороны прав
+  licenseBackPhotoUrl String?  // Фото оборотной стороны прав
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// Возвраты клиенту денег (уменьшение срока аренды, по вине автопроката)
+model BookingRefund {
+  id             String            @id @default(cuid())
+  bookingId      String
+  booking        Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount         Float             // Сумма возврата в GEL
+  reason         String            // "Уменьшение срока аренды", "По вине автопроката", etc.
+  notes          String?           // Комментарий
+  method         String            @default("CASH") // "CASH", "CARD_POS", "TBC_BANK", "BOG_BANK", "CRYPTO"
+  accountId      String?
+  account        FinancialAccount? @relation(fields: [accountId], references: [id])
+  managerName    String?
+  date           DateTime          @default(now())
+  createdAt      DateTime          @default(now())
+}
+
+// Продление аренды выданного авто (на дни или доп. часы)
+model BookingExtension {
+  id              String            @id @default(cuid())
+  bookingId       String
+  booking         Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  type            String            @default("DAYS") // "DAYS", "HOURS"
+  extraDays       Int               @default(0)
+  extraHours      Int               @default(0)
+  previousEndDate DateTime
+  newEndDate      DateTime
+  dailyRate       Float?            // Тариф за сутки на продление
+  amount          Float             // Сумма к доплате за продление
+  paymentTiming   String            @default("ON_RETURN") // "IMMEDIATE", "ON_RETURN"
+  paymentMethod   String?           // "BANK_TRANSFER", "CASH", "CRYPTO", "CARD"
+  paymentStatus   String            @default("PENDING") // "PAID", "PENDING"
+  accountId       String?
+  account         FinancialAccount? @relation(fields: [accountId], references: [id])
+  managerName     String?
+  notes           String?
+  createdAt       DateTime          @default(now())
 }
 

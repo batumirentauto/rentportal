@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { calculateExtraHoursFee } from "@/lib/extra-hours";
 import {
   X,
   CheckCircle2,
@@ -173,6 +174,24 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const depositAmount = booking.depositAmount ?? 0;
   const hasDeposit = depositAmount > 0;
 
+  // 6.5. Дополнительные часы (Extra hours) при задержке возврата
+  const scheduledEndDate = new Date(booking.endDate);
+  const delayMs = Date.now() - scheduledEndDate.getTime();
+  const autoDetectedDelayHours = delayMs > 15 * 60 * 1000
+    ? Math.ceil(delayMs / (60 * 60 * 1000))
+    : 0;
+
+  const [extraHours, setExtraHours] = useState<number>(
+    booking.extraHoursCount || autoDetectedDelayHours
+  );
+  const [isExtraHoursPaid, setIsExtraHoursPaid] = useState<boolean>(
+    booking.isExtraHoursPaid || false
+  );
+
+  const hoursCalc = calculateExtraHoursFee(extraHours, booking.dailyRate || 50);
+  const extraHoursFee = hoursCalc.totalFee;
+  const extraHoursToDeduct = !isExtraHoursPaid ? extraHoursFee : 0;
+
   // 7. Взаиморасчет
   const [managerName, setManagerName] = useState<string>("Менеджер смены (Грузия)");
   const [settlementMethod, setSettlementMethod] = useState<string>("CASH");
@@ -184,7 +203,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   // Общие начисления/удержания:
   const finesToDeduct = finesPaidByClientToCompany ? selectedFinesTotalUSD : 0;
   const lostPassportFee = !techPassportReturned ? lostTechPassportCharge : 0;
-  const deductionsTotal = fuelChargeAmount + (hasNewDamages ? damageChargeAmount : 0) + finesToDeduct + extraWashFee + lostPassportFee;
+  const deductionsTotal = fuelChargeAmount + (hasNewDamages ? damageChargeAmount : 0) + finesToDeduct + extraWashFee + lostPassportFee + extraHoursToDeduct;
 
   // Итоговый баланс:
   // Если есть залог: Баланс = (Залог + Сдача) - Удержания
@@ -237,6 +256,9 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
           selectedFineIds: finesPaidByClientToCompany ? selectedFineIds : [],
           depositAmount,
           changeReturnedToClient,
+          extraHoursCount: extraHours,
+          extraHoursFee,
+          isExtraHoursPaid,
           deductionsTotal,
           finalBalanceType,
           finalBalanceAmount,
@@ -905,6 +927,101 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
               )}
             </div>
 
+            {/* 4.5. Дополнительные часы / Задержка возврата авто */}
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-200 flex items-center space-x-1.5 text-xs">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                  <span>Дополнительные часы / Задержка возврата:</span>
+                </span>
+                <span className="text-[11px] font-mono text-slate-400">
+                  Согласованный возврат:{" "}
+                  <strong className="text-white">
+                    {scheduledEndDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                  </strong>
+                </span>
+              </div>
+
+              {/* Quick Hours Buttons */}
+              <div>
+                <label className="text-[11px] text-slate-400 block mb-1.5">
+                  Часов задержки / продления:
+                </label>
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5 mb-2">
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map((h) => (
+                    <button
+                      type="button"
+                      key={h}
+                      onClick={() => setExtraHours(h)}
+                      className={`py-1.5 px-1 rounded-lg text-xs font-bold border transition text-center ${
+                        extraHours === h
+                          ? "bg-amber-500/20 border-amber-500 text-amber-300 ring-1 ring-amber-400"
+                          : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {h === 0 ? "Вовремя" : h === 1 ? "+1 ч (0 ₾)" : `+${h} ч`}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center space-x-2 text-xs">
+                  <span className="text-slate-400 text-[11px]">Или указать точное число часов:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={extraHours}
+                    onChange={(e) => setExtraHours(Math.max(0, Number(e.target.value)))}
+                    className="w-16 bg-slate-900 border border-slate-700 rounded-lg p-1 text-center font-mono font-bold text-white text-xs"
+                  />
+                  <span className="text-slate-400 text-[11px]">ч.</span>
+                </div>
+              </div>
+
+              {/* Extra Hours Rule & Calculation Box */}
+              <div className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-300 font-semibold flex items-center space-x-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Тариф доп. часов:</span>
+                  </span>
+                  <span className="font-mono font-bold text-amber-300">
+                    {hoursCalc.ratePerHour} ₾/ч (при цене авто {booking.dailyRate || 50} ₾/сутки)
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  +1 час бесплатно • Следующие 6 часов (2-7 ч): 10/15/20 ₾/ч • Свыше 7 часов: полные сутки
+                </p>
+
+                <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between text-xs font-bold">
+                  <span className="text-slate-300">Начислено:</span>
+                  <span className="font-mono font-black text-amber-400">
+                    {extraHoursFee > 0 ? `${extraHoursFee} ₾ (${hoursCalc.explanation})` : "0 ₾ (Без доплаты)"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Paid earlier toggle */}
+              {extraHoursFee > 0 && (
+                <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <label htmlFor="hoursPaidEarlier" className="text-xs text-slate-300 cursor-pointer flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="hoursPaidEarlier"
+                      checked={isExtraHoursPaid}
+                      onChange={(e) => setIsExtraHoursPaid(e.target.checked)}
+                      className="rounded bg-slate-800 border-slate-700 text-amber-500 focus:ring-amber-500"
+                    />
+                    <span>Оплачено ранее (при выдаче авто или продлении по звонку)</span>
+                  </label>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isExtraHoursPaid ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
+                  }`}>
+                    {isExtraHoursPaid ? "Оплачено" : "К удержанию"}
+                  </span>
+                </div>
+              )}
+            </div>
+
             {/* 5. Проверка штрафов (protocol.ge) */}
             <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
@@ -1125,6 +1242,15 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <div className="flex justify-between text-rose-300">
                     <span>Штрафы ПДД (клиент оплачивает компании):</span>
                     <span className="font-mono font-bold">-${finesToDeduct} USD ({selectedFinesTotalGEL} GEL)</span>
+                  </div>
+                )}
+
+                {extraHoursFee > 0 && (
+                  <div className="flex justify-between text-amber-300">
+                    <span>Доп. часы (+{extraHours} ч{isExtraHoursPaid ? " — оплачено ранее" : ""}):</span>
+                    <span className="font-mono font-bold">
+                      {isExtraHoursPaid ? "0 ₾ (Оплачено)" : `-${extraHoursFee} ₾`}
+                    </span>
                   </div>
                 )}
               </div>

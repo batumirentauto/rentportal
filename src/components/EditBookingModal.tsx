@@ -14,7 +14,13 @@ import {
   RefreshCw,
   ArrowRight,
   User,
+  Users,
+  DollarSign,
+  Plus,
 } from "lucide-react";
+import { AdditionalDriversModal } from "./AdditionalDriversModal";
+import { BookingRefundModal } from "./BookingRefundModal";
+import { BookingExtensionModal } from "./BookingExtensionModal";
 
 interface EditBookingModalProps {
   isOpen: boolean;
@@ -51,6 +57,10 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   const [returnTimeStr, setReturnTimeStr] = useState<string>(
     initialEnd.toTimeString().slice(0, 5) || "10:00"
   );
+
+  const [isAdditionalDriversModalOpen, setIsAdditionalDriversModalOpen] = useState<boolean>(false);
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState<boolean>(false);
+  const [isExtensionModalOpen, setIsExtensionModalOpen] = useState<boolean>(false);
 
   const [rentalDays, setRentalDays] = useState<number>(booking?.rentalDays || 3);
 
@@ -365,6 +375,40 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 >
                   <span>📸</span>
                   <span>Instagram</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Additional Drivers and Operations */}
+            <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAdditionalDriversModalOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-bold transition"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>👥 Доп. водители ({booking.additionalDrivers?.length || 0}/4)</span>
+              </button>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRefundModalOpen(true)}
+                  className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition"
+                  title="Оформить возврат клиенту денег"
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  <span>💸 Возврат</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsExtensionModalOpen(true)}
+                  className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition"
+                  title="Продлить срок аренды на дни или часы"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>⏳ Продлить</span>
                 </button>
               </div>
             </div>
@@ -775,6 +819,54 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
           </div>
 
         </form>
+
+        {/* Additional Drivers Modal */}
+        {isAdditionalDriversModalOpen && (
+          <AdditionalDriversModal
+            isOpen={isAdditionalDriversModalOpen}
+            onClose={() => setIsAdditionalDriversModalOpen(false)}
+            bookingId={booking.id}
+            bookingNumber={booking.bookingNumber}
+            onDriversUpdated={() => {
+              fetch(`/api/bookings/${booking.id}`)
+                .then((r) => r.json())
+                .then((d) => {
+                  if (d.success && d.booking) {
+                    onBookingUpdated(d.booking);
+                  }
+                })
+                .catch(() => {});
+            }}
+          />
+        )}
+
+        {/* Booking Refund Modal */}
+        {isRefundModalOpen && (
+          <BookingRefundModal
+            isOpen={isRefundModalOpen}
+            onClose={() => setIsRefundModalOpen(false)}
+            booking={booking}
+            onRefundCompleted={(updated) => {
+              if (updated) {
+                onBookingUpdated(updated);
+              }
+            }}
+          />
+        )}
+
+        {/* Booking Extension Modal */}
+        {isExtensionModalOpen && (
+          <BookingExtensionModal
+            isOpen={isExtensionModalOpen}
+            onClose={() => setIsExtensionModalOpen(false)}
+            booking={booking}
+            onExtensionCompleted={(updated) => {
+              if (updated) {
+                onBookingUpdated(updated);
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   );

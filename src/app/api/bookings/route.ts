@@ -65,6 +65,9 @@ export async function GET(request: Request) {
         returnReport: true,
         trafficFines: true,
         payments: true,
+        additionalDrivers: true,
+        refunds: { include: { account: true } },
+        extensions: { include: { account: true } },
       },
       orderBy: {
         startDate: order,
@@ -232,6 +235,19 @@ export async function POST(request: Request) {
         status: "CONFIRMED",
         notifiedManager: false,
         isAddedDuringDay,
+        additionalDrivers: Array.isArray(body.additionalDrivers) && body.additionalDrivers.length > 0
+          ? {
+              create: body.additionalDrivers.slice(0, 4).map((d: any) => ({
+                fullName: d.fullName?.trim() || "Дополнительный водитель",
+                licenseNumber: d.licenseNumber?.trim() || null,
+                phone: d.phone?.trim() || null,
+                birthDate: d.birthDate?.trim() || null,
+                licensePhotoUrl: d.licensePhotoUrl || null,
+                licenseBackPhotoUrl: d.licenseBackPhotoUrl || null,
+                notes: d.notes?.trim() || null,
+              })),
+            }
+          : undefined,
         extras: {
           create: extras.map((e: any) => ({
             type: e.type,
@@ -252,6 +268,9 @@ export async function POST(request: Request) {
         pickupLocation: true,
         returnLocation: true,
         extras: true,
+        additionalDrivers: true,
+        refunds: true,
+        extensions: true,
       },
     });
 

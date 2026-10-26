@@ -32,6 +32,9 @@ export async function GET(
         returnReport: true,
         trafficFines: true,
         payments: true,
+        additionalDrivers: true,
+        refunds: { include: { account: true } },
+        extensions: { include: { account: true } },
       },
     });
 
@@ -188,6 +191,9 @@ export async function PATCH(
         returnReport: true,
         trafficFines: true,
         payments: true,
+        additionalDrivers: true,
+        refunds: { include: { account: true } },
+        extensions: { include: { account: true } },
       },
     });
 
