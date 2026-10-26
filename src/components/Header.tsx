@@ -32,22 +32,19 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-20">
-          {/* Logo & Subtitle */}
-          <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center shadow-md">
-              <Car className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+          {/* Logo & Subtitle - Hidden on mobile, visible on desktop */}
+          <div className="hidden md:flex items-center space-x-2.5 sm:space-x-3 shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
+              <span className="font-extrabold text-slate-950 text-sm sm:text-base">VSL</span>
             </div>
             <div>
               <div className="flex items-center space-x-1.5 sm:space-x-2">
-                <span className="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-amber-400 via-orange-300 to-amber-200 bg-clip-text text-transparent">
-                  VSL
-                </span>
-                <span className="text-[10px] sm:text-xs bg-red-600/90 text-white px-1.5 sm:px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                  Грузия
+                <span className="font-extrabold text-base sm:text-lg tracking-tight text-white">
+                  Автопрокат
                 </span>
               </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
-                Батуми • Тбилиси • Кутаиси | Рабочее место менеджера выдачи
+              <p className="text-xs text-slate-400 hidden lg:block">
+                Батуми • Тбилиси • Кутаиси | Рабочее место менеджера
               </p>
             </div>
           </div>
@@ -99,48 +96,48 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Actions: New Booking, Record Expense, Notification bell & Demo */}
-          <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
+          {/* Actions: New Booking, Record Expense, Chat, Backup, Notifications */}
+          <div className="flex items-center justify-between md:justify-end w-full md:w-auto gap-1.5 sm:gap-2">
             {/* Real New Booking Button - Sticky in Header */}
             <button
               onClick={onOpenNewBooking}
-              title="Создать новую бронь автомобиля (зафиксировано в шапке)"
-              className="flex items-center space-x-1 sm:space-x-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl font-black shadow-lg shadow-amber-500/20 transition-all active:scale-95 border border-amber-300/40"
+              title="Создать новую бронь автомобиля"
+              className="flex items-center space-x-1 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl font-black shadow-md border border-amber-300/40 shrink-0 active:scale-95 transition-all"
             >
-              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950" />
-              <span>+ Новая бронь</span>
+              <PlusCircle className="w-3.5 h-3.5 text-slate-950" />
+              <span>+ Бронь</span>
             </button>
 
             {/* Record Expense Button */}
             <button
               onClick={onOpenRecordExpense}
               title="Зафиксировать расход (топливо, мойка, ТО, парковка)"
-              className="flex items-center space-x-1 sm:space-x-1.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl font-bold shadow-md transition-all active:scale-95"
+              className="flex items-center space-x-1 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl font-bold shadow-md shrink-0 active:scale-95 transition-all"
             >
               <Receipt className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">+ Расход</span>
+              <span>+ Расход</span>
             </button>
 
-            {/* Simulation button */}
+            {/* Simulation button (desktop only) */}
             <button
               onClick={onSimulateNewBooking}
               disabled={isSimulating}
               title="Тестовая эмуляция: появление новой брони в течение дня"
-              className="hidden lg:flex items-center space-x-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] px-2 py-1.5 rounded-lg font-medium border border-slate-700 transition-all active:scale-95 disabled:opacity-50"
+              className="hidden lg:flex items-center space-x-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] px-2 py-1.5 rounded-lg font-medium border border-slate-700 transition-all active:scale-95 disabled:opacity-50 shrink-0"
             >
               <RefreshCw className={`w-3 h-3 ${isSimulating ? "animate-spin" : ""}`} />
-              <span>{isSimulating ? "..." : "Тест-бронь"}</span>
+              <span>{isSimulating ? "..." : "Тест"}</span>
             </button>
 
             {/* Team Chat Quick Launcher */}
             <button
               onClick={() => setActiveTab("chats")}
-              className={`relative p-1.5 sm:p-2 rounded-xl transition-colors ${
+              className={`relative p-2 rounded-xl transition-colors shrink-0 ${
                 activeTab === "chats"
                   ? "bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400"
                   : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
               }`}
-              title="Внутренние чаты команды VSL"
+              title="Внутренние чаты команды"
             >
               <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-900 animate-pulse" />
@@ -150,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenBackup}
               title="Сохранность данных, статус постоянного диска и бэкап базы данных"
-              className="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-slate-700 transition-colors shadow-sm"
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-slate-700 transition-colors shadow-sm shrink-0"
             >
               <Database className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
             </button>
@@ -158,7 +155,8 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Notification Bell */}
             <button
               onClick={onOpenNotifications}
-              className="relative p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors"
+              className="relative p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors shrink-0"
+              title="Уведомления"
             >
               <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
               {unreadCount > 0 && (
