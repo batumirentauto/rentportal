@@ -158,7 +158,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
       setEndDateStr(start.toISOString().split("T")[0]);
     }
     // Auto recalculate total
-    const rentTot = d * dailyRate;
+    const rentTot = Math.round(d * dailyRate);
     setTotalAmount(rentTot + deliveryFee + extrasTotal);
   };
 
@@ -170,16 +170,28 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     if (e > s) {
       const days = Math.max(1, Math.round((e - s) / (24 * 60 * 60 * 1000)));
       setRentalDays(days);
-      const rentTot = days * dailyRate;
+      const rentTot = Math.round(days * dailyRate);
       setTotalAmount(rentTot + deliveryFee + extrasTotal);
     }
   };
 
   // When dailyRate changes, update total
-  const handleDailyRateChange = (rate: number) => {
+  const handleDailyRateChange = (val: number | string) => {
+    const rate = val === "" ? 0 : Number(val);
     setDailyRate(rate);
-    const rentTot = rentalDays * rate;
+    const rentTot = Math.round(rentalDays * rate);
     setTotalAmount(rentTot + deliveryFee + extrasTotal);
+  };
+
+  // When totalAmount changes, update dailyRate
+  const handleTotalAmountChange = (val: number | string) => {
+    const total = val === "" ? 0 : Number(val);
+    setTotalAmount(total);
+    const rentTot = Math.max(0, total - deliveryFee - extrasTotal);
+    if (rentalDays > 0) {
+      const calculatedRate = Math.round((rentTot / rentalDays) * 10) / 10;
+      setDailyRate(calculatedRate);
+    }
   };
 
   // One-way calculation
@@ -199,7 +211,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     const autoOneWay = isOneWay ? 50 : 0;
     const computedDelivery = deliveryFee > 0 ? deliveryFee : autoOneWay;
     setDeliveryFee(computedDelivery);
-    const rentTot = rentalDays * dailyRate;
+    const rentTot = Math.round(rentalDays * dailyRate);
     setTotalAmount(rentTot + computedDelivery + extrasTotal);
   };
 
@@ -619,11 +631,15 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 </label>
                 <input
                   type="number"
-                  value={dailyRate}
-                  onChange={(e) => handleDailyRateChange(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono font-bold"
+                  min="0"
+                  step="any"
+                  value={dailyRate === 0 ? "" : dailyRate}
+                  onChange={(e) => handleDailyRateChange(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono font-bold focus:outline-none focus:border-amber-500"
                   required
                 />
+                <span className="text-[9px] text-slate-500 block mt-0.5">Взаимозаменяемо с итого</span>
               </div>
 
               <div>
@@ -632,14 +648,18 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 </label>
                 <input
                   type="number"
-                  value={deliveryFee}
+                  min="0"
+                  step="any"
+                  value={deliveryFee === 0 ? "" : deliveryFee}
                   onChange={(e) => {
-                    const fee = Number(e.target.value);
+                    const fee = e.target.value === "" ? 0 : Number(e.target.value);
                     setDeliveryFee(fee);
-                    setTotalAmount(rentalDays * dailyRate + fee + extrasTotal);
+                    setTotalAmount(Math.round(rentalDays * dailyRate) + fee + extrasTotal);
                   }}
+                  placeholder="0"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono"
                 />
+                <span className="text-[9px] text-slate-500 block mt-0.5">Доп. сбор</span>
               </div>
 
               <div>
@@ -648,11 +668,15 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 </label>
                 <input
                   type="number"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(Number(e.target.value))}
+                  min="0"
+                  step="any"
+                  value={depositAmount === 0 ? "" : depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value === "" ? 0 : Number(e.target.value))}
+                  placeholder="0"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono"
                   required
                 />
+                <span className="text-[9px] text-slate-500 block mt-0.5">0 ₾ по умолчанию</span>
               </div>
 
               <div>
@@ -661,11 +685,15 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 </label>
                 <input
                   type="number"
-                  value={totalAmount}
-                  onChange={(e) => setTotalAmount(Number(e.target.value))}
-                  className="w-full bg-slate-900 border-2 border-amber-500/50 rounded-lg p-1.5 text-amber-300 font-mono font-black text-sm"
+                  min="0"
+                  step="any"
+                  value={totalAmount === 0 ? "" : totalAmount}
+                  onChange={(e) => handleTotalAmountChange(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-slate-900 border-2 border-amber-500/50 rounded-lg p-1.5 text-amber-300 font-mono font-black text-sm focus:outline-none focus:border-amber-400"
                   required
                 />
+                <span className="text-[9px] text-amber-400/80 block mt-0.5">Взаимозаменяемо с тарифом</span>
               </div>
             </div>
           </div>

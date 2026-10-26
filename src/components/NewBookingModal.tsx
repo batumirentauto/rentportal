@@ -187,7 +187,29 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [returnType, setReturnType] = useState<string>("OFFICE");
 
   const [dailyRate, setDailyRate] = useState<number>(65);
+  const [rentalTotal, setRentalTotal] = useState<number>(65);
   const [ownerDailyRate, setOwnerDailyRate] = useState<number>(25);
+
+  const handleDailyRateChange = (val: number | string) => {
+    const rate = val === "" ? 0 : Number(val);
+    setDailyRate(rate);
+    setRentalTotal(Math.round(rate * rentalDays));
+  };
+
+  const handleRentalTotalChange = (val: number | string) => {
+    const total = val === "" ? 0 : Number(val);
+    setRentalTotal(total);
+    if (rentalDays > 0) {
+      const calculatedRate = Math.round((total / rentalDays) * 10) / 10;
+      setDailyRate(calculatedRate);
+    }
+  };
+
+  const handleRentalDaysChange = (newDays: number) => {
+    setRentalDays(newDays);
+    setRentalTotal(Math.round(dailyRate * newDays));
+  };
+
   const [depositAmount, setDepositAmount] = useState<number>(0);
   const [acknowledgedRelocation, setAcknowledgedRelocation] = useState<boolean>(false);
   const [acknowledgedStopBlock, setAcknowledgedStopBlock] = useState<boolean>(false);
@@ -264,7 +286,10 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     setStartDate(initialDate || new Date().toISOString().split("T")[0]);
     setStartTime("10:00");
     setReturnTime("10:00");
-    setRentalDays(initialDays || 1);
+    const initDays = initialDays || 1;
+    setRentalDays(initDays);
+    setDailyRate(65);
+    setRentalTotal(65 * initDays);
     setDepositAmount(0);
     setBookingSource("WHATSAPP");
     setNewCustomerInstagram("");
@@ -301,7 +326,9 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   useEffect(() => {
     if (selectedCar) {
       if (selectedCar.clientStandardDailyRate) {
-        setDailyRate(selectedCar.clientStandardDailyRate);
+        const rate = selectedCar.clientStandardDailyRate;
+        setDailyRate(rate);
+        setRentalTotal(Math.round(rate * rentalDays));
       }
       if (selectedCar.defaultOwnerDailyRate) {
         setOwnerDailyRate(selectedCar.defaultOwnerDailyRate);
@@ -343,7 +370,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   // One-way drop-off detection & Pricing calculations
   const isOneWay = pickupCityCode !== returnCityCode;
   const oneWayFee = isOneWay ? 50 : 0;
-  const rentalTotal = rentalDays * dailyRate;
   const totalAmount = rentalTotal + oneWayFee;
   const ownerTotalPayout = ownerDailyRate * rentalDays;
   const companyMargin = totalAmount - ownerTotalPayout;
@@ -1023,7 +1049,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <label className="text-slate-400 font-semibold block mb-1">⏳ Дней аренды:</label>
                 <select
                   value={rentalDays}
-                  onChange={(e) => setRentalDays(Number(e.target.value))}
+                  onChange={(e) => handleRentalDaysChange(Number(e.target.value))}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white font-mono font-bold focus:outline-none focus:border-amber-500 cursor-pointer"
                 >
                   {[
@@ -1322,7 +1348,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
-                      onClick={() => setDailyRate(selectedCar.clientMinDailyRate || 35)}
+                      onClick={() => handleDailyRateChange(selectedCar.clientMinDailyRate || 35)}
                       className={`py-1.5 px-2 rounded-lg border text-left transition ${
                         dailyRate === (selectedCar.clientMinDailyRate || 35)
                           ? "bg-blue-600/30 border-blue-400 text-blue-200 font-bold ring-1 ring-blue-400"
@@ -1337,7 +1363,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => setDailyRate(selectedCar.clientStandardDailyRate || 50)}
+                      onClick={() => handleDailyRateChange(selectedCar.clientStandardDailyRate || 50)}
                       className={`py-1.5 px-2 rounded-lg border text-left transition ${
                         dailyRate === (selectedCar.clientStandardDailyRate || 50)
                           ? "bg-amber-500/30 border-amber-400 text-amber-200 font-bold ring-1 ring-amber-400"
@@ -1352,7 +1378,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => setDailyRate(selectedCar.clientMaxDailyRate || 75)}
+                      onClick={() => handleDailyRateChange(selectedCar.clientMaxDailyRate || 75)}
                       className={`py-1.5 px-2 rounded-lg border text-left transition ${
                         dailyRate === (selectedCar.clientMaxDailyRate || 75)
                           ? "bg-orange-600/30 border-orange-400 text-orange-200 font-bold ring-1 ring-orange-400"
@@ -1369,7 +1395,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               </div>
             )}
 
-            {/* Manual Price Inputs */}
+            {/* Manual Price Inputs (Interchangeable: Daily Rate or Total Amount) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="text-slate-300 font-bold block mb-1">
@@ -1379,13 +1405,15 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                   <span className="absolute left-3 top-2 text-slate-500 font-mono font-bold">₾</span>
                   <input
                     type="number"
-                    min="1"
-                    value={dailyRate}
-                    onChange={(e) => setDailyRate(Number(e.target.value))}
+                    min="0"
+                    step="any"
+                    value={dailyRate === 0 ? "" : dailyRate}
+                    onChange={(e) => handleDailyRateChange(e.target.value)}
+                    placeholder="0"
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl py-2 pl-7 pr-3 text-white font-mono font-bold focus:outline-none focus:border-amber-500"
                   />
                 </div>
-                <span className="text-[10px] text-slate-500 mt-0.5 block">Вручную за 1 день</span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">За 1 день аренды</span>
               </div>
 
               <div>
@@ -1396,18 +1424,15 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                   <span className="absolute left-3 top-2 text-slate-500 font-mono font-bold">₾</span>
                   <input
                     type="number"
-                    min="1"
-                    value={rentalTotal}
-                    onChange={(e) => {
-                      const total = Number(e.target.value);
-                      if (rentalDays > 0) {
-                        setDailyRate(Math.round(total / rentalDays));
-                      }
-                    }}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl py-2 pl-7 pr-3 text-white font-mono font-bold focus:outline-none focus:border-amber-500"
+                    min="0"
+                    step="any"
+                    value={rentalTotal === 0 ? "" : rentalTotal}
+                    onChange={(e) => handleRentalTotalChange(e.target.value)}
+                    placeholder="0"
+                    className="w-full bg-slate-900 border-2 border-amber-500/50 rounded-xl py-2 pl-7 pr-3 text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-400"
                   />
                 </div>
-                <span className="text-[10px] text-slate-500 mt-0.5 block">Вручную общая сумма</span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">Вся сумма (автопересчет)</span>
               </div>
 
               <div>
