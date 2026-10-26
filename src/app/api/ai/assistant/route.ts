@@ -430,6 +430,8 @@ const SYSTEM_PROMPT = `Ты — встроенный интеллектуаль�
 - Если тебя просят поставить задачу менеджеру (например "поставь задачу помыть Escape"), ОБЯЗАТЕЛЬНО вызови инструмент create_manager_task и подтверди создание задачи с указанием времени и исполнителя!
 - Если тебя спрашивают о свободных авто, наличии машин или ТО — вызови соответствующий инструмент и используй реальные данные из базы.`;
 
+import { getGeminiApiKey } from "@/lib/gemini-config";
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -440,7 +442,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Сообщение не может быть пустым" }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = getGeminiApiKey();
     if (!apiKey) {
       return NextResponse.json(
         { error: "GEMINI_API_KEY не задан в переменных окружения" },

@@ -5,12 +5,13 @@ import * as path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import "dotenv/config";
+import { getGeminiApiKey } from "../lib/gemini-config";
 
 const execAsync = promisify(exec);
 
 // Config
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8823130269:AAF6d1LSo3LbDiLTkI9cZCgd3-mD6qIeB3c";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = getGeminiApiKey();
 const WORKSPACE_DIR = process.cwd();
 
 let ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID ? Number(process.env.TELEGRAM_ADMIN_CHAT_ID) : null;

@@ -11,6 +11,8 @@ const AI_MODELS = [
   "gemini-3.8-flash",
 ];
 
+import { getGeminiApiKey } from "@/lib/gemini-config";
+
 const TECH_PASSPORT_OCR_PROMPT = `Ты — экспертный модуль компьютерного зрения и OCR для распознавания свидетельств о регистрации транспортных средств (техпаспортов автомобилей) Грузии (საქართველო / GEORGIA Vehicle Registration Certificate) и международного образца.
 Тебе предоставлены изображения лицевой и/или оборотной стороны техпаспорта автомобиля.
 
@@ -39,11 +41,32 @@ const TECH_PASSPORT_OCR_PROMPT = `Ты — экспертный модуль к�
 
 Если какой-то параметр смазан или не виден, верни null для этого поля. Не придумывай данные!`;
 
+async function loadBase64FromUrl(url: string): Promise<{ mimeType: string; data: string } | null> {
+  if (!url) return null;
+  try {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      const resp = await fetch(url);
+      if (!resp.ok) return null;
+      const arrayBuf = await resp.arrayBuffer();
+      const mime = resp.headers.get("content-type") || "image/jpeg";
+      return { mimeType: mime, data: Buffer.from(arrayBuf).toString("base64") };
+    } else {
+      const cleanPath = url.startsWith("/") ? url.slice(1) : url;
+      const filePath = path.join(process.cwd(), "public", cleanPath);
+      const buffer = await readFile(filePath);
+      return { mimeType: "image/jpeg", data: buffer.toString("base64") };
+    }
+  } catch (err) {
+    console.warn("Failed to load image from url:", url, err);
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const contentType = request.headers.get("content-type") || "";
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = getGeminiApiKey();
     if (!apiKey) {
       return NextResponse.json(
         { success: false, error: "GEMINI_API_KEY не настроен на сервере" },
@@ -117,14 +140,9 @@ export async function POST(request: Request) {
         await writeFile(path.join(uploadDir, fileName), buffer);
         techPassportFrontUrl = `/uploads/tech_passports/${fileName}`;
         imageParts.push({ mimeType: "image/jpeg", data: cleanBase64 });
-      } else if (techPassportFrontUrl && techPassportFrontUrl.startsWith("/uploads/")) {
-        try {
-          const filePath = path.join(process.cwd(), "public", techPassportFrontUrl);
-          const buffer = await readFile(filePath);
-          imageParts.push({ mimeType: "image/jpeg", data: buffer.toString("base64") });
-        } catch (e) {
-          console.warn("Could not read local front file:", techPassportFrontUrl, e);
-        }
+      } else if (techPassportFrontUrl) {
+        const part = await loadBase64FromUrl(techPassportFrontUrl);
+        if (part) imageParts.push(part);
       }
 
       if (body.backBase64) {
@@ -134,14 +152,9 @@ export async function POST(request: Request) {
         await writeFile(path.join(uploadDir, fileName), buffer);
         techPassportBackUrl = `/uploads/tech_passports/${fileName}`;
         imageParts.push({ mimeType: "image/jpeg", data: cleanBase64 });
-      } else if (techPassportBackUrl && techPassportBackUrl.startsWith("/uploads/")) {
-        try {
-          const filePath = path.join(process.cwd(), "public", techPassportBackUrl);
-          const buffer = await readFile(filePath);
-          imageParts.push({ mimeType: "image/jpeg", data: buffer.toString("base64") });
-        } catch (e) {
-          console.warn("Could not read local back file:", techPassportBackUrl, e);
-        }
+      } else if (techPassportBackUrl) {
+        const part = await loadBase64FromUrl(techPassportBackUrl);
+        if (part) imageParts.push(part);
       }
     }
 

@@ -11,6 +11,8 @@ const AI_MODELS = [
   "gemini-3.8-flash",
 ];
 
+import { getGeminiApiKey } from "@/lib/gemini-config";
+
 const OCR_PROMPT = `Ты — высокоточный OCR-интеллект и эксперт по проверке и распознаванию документов клиентов сервиса автопроката в Грузии (VSL).
 Тебе переданы изображения документов клиента (это может быть Главный разворот паспорта, Лицевая сторона водительского удостоверения и/или Оборотная сторона водительского удостоверения).
 
@@ -31,11 +33,32 @@ const OCR_PROMPT = `Ты — высокоточный OCR-интеллект и 
 
 Если какое-то поле невозможно определить по представленным фото, укажи null. Не придумывай данные! Не используй markdown-разметку, верни чистый JSON.`;
 
+async function loadBase64FromUrl(url: string): Promise<{ mimeType: string; data: string } | null> {
+  if (!url) return null;
+  try {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      const resp = await fetch(url);
+      if (!resp.ok) return null;
+      const arrayBuf = await resp.arrayBuffer();
+      const mime = resp.headers.get("content-type") || "image/jpeg";
+      return { mimeType: mime, data: Buffer.from(arrayBuf).toString("base64") };
+    } else {
+      const cleanPath = url.startsWith("/") ? url.slice(1) : url;
+      const filePath = path.join(process.cwd(), "public", cleanPath);
+      const buffer = await readFile(filePath);
+      return { mimeType: "image/jpeg", data: buffer.toString("base64") };
+    }
+  } catch (err) {
+    console.warn("Failed to load image from url:", url, err);
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const contentType = request.headers.get("content-type") || "";
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = getGeminiApiKey();
     if (!apiKey) {
       return NextResponse.json(
         { success: false, error: "GEMINI_API_KEY не настроен на сервере" },
@@ -134,14 +157,9 @@ export async function POST(request: Request) {
         await writeFile(path.join(uploadDir, fileName), buffer);
         passportPhotoUrl = `/uploads/customer_docs/${fileName}`;
         imageParts.push({ mimeType: "image/jpeg", data: cleanBase64 });
-      } else if (passportPhotoUrl && passportPhotoUrl.startsWith("/uploads/")) {
-        try {
-          const filePath = path.join(process.cwd(), "public", passportPhotoUrl);
-          const buffer = await readFile(filePath);
-          imageParts.push({ mimeType: "image/jpeg", data: buffer.toString("base64") });
-        } catch (e) {
-          console.warn("Could not read local file:", passportPhotoUrl, e);
-        }
+      } else if (passportPhotoUrl) {
+        const part = await loadBase64FromUrl(passportPhotoUrl);
+        if (part) imageParts.push(part);
       }
 
       if (body.licenseFrontBase64) {
@@ -151,14 +169,9 @@ export async function POST(request: Request) {
         await writeFile(path.join(uploadDir, fileName), buffer);
         driverLicensePhotoUrl = `/uploads/customer_docs/${fileName}`;
         imageParts.push({ mimeType: "image/jpeg", data: cleanBase64 });
-      } else if (driverLicensePhotoUrl && driverLicensePhotoUrl.startsWith("/uploads/")) {
-        try {
-          const filePath = path.join(process.cwd(), "public", driverLicensePhotoUrl);
-          const buffer = await readFile(filePath);
-          imageParts.push({ mimeType: "image/jpeg", data: buffer.toString("base64") });
-        } catch (e) {
-          console.warn("Could not read local file:", driverLicensePhotoUrl, e);
-        }
+      } else if (driverLicensePhotoUrl) {
+        const part = await loadBase64FromUrl(driverLicensePhotoUrl);
+        if (part) imageParts.push(part);
       }
 
       if (body.licenseBackBase64) {
@@ -168,14 +181,9 @@ export async function POST(request: Request) {
         await writeFile(path.join(uploadDir, fileName), buffer);
         driverLicenseBackPhotoUrl = `/uploads/customer_docs/${fileName}`;
         imageParts.push({ mimeType: "image/jpeg", data: cleanBase64 });
-      } else if (driverLicenseBackPhotoUrl && driverLicenseBackPhotoUrl.startsWith("/uploads/")) {
-        try {
-          const filePath = path.join(process.cwd(), "public", driverLicenseBackPhotoUrl);
-          const buffer = await readFile(filePath);
-          imageParts.push({ mimeType: "image/jpeg", data: buffer.toString("base64") });
-        } catch (e) {
-          console.warn("Could not read local file:", driverLicenseBackPhotoUrl, e);
-        }
+      } else if (driverLicenseBackPhotoUrl) {
+        const part = await loadBase64FromUrl(driverLicenseBackPhotoUrl);
+        if (part) imageParts.push(part);
       }
     }
 
