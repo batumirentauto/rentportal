@@ -23,6 +23,7 @@ import { TeamAccessHub } from "@/components/TeamAccessHub";
 import { TeamMessengerHub } from "@/components/TeamMessengerHub";
 import { AiAssistantModal } from "@/components/AiAssistantModal";
 import { RecordExpenseModal } from "@/components/RecordExpenseModal";
+import { DatabaseBackupModal } from "@/components/DatabaseBackupModal";
 import { RefreshCw, MessageSquare } from "lucide-react";
 
 export default function Home() {
@@ -45,6 +46,7 @@ export default function Home() {
   const [handoverBooking, setHandoverBooking] = useState<any | null>(null);
   const [returnBooking, setReturnBooking] = useState<any | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
 
   // Fetch bookings based on city filter
   const fetchBookings = useCallback(async () => {
@@ -180,6 +182,7 @@ export default function Home() {
         onSimulateNewBooking={handleSimulateNewBooking}
         onOpenRecordExpense={() => setIsExpenseModalOpen(true)}
         onOpenNewBooking={handleOpenGlobalNewBooking}
+        onOpenBackup={() => setIsBackupModalOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isSimulating={isSimulating}
@@ -339,6 +342,17 @@ export default function Home() {
         onClose={() => setIsExpenseModalOpen(false)}
         onExpenseCreated={() => {
           fetchBookings();
+        }}
+      />
+
+      {/* Global Database Backup & Storage Status Modal */}
+      <DatabaseBackupModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
+        onDataRestored={() => {
+          fetchBookings();
+          fetchNotifications();
+          window.dispatchEvent(new CustomEvent("fleet-timeline-refresh"));
         }}
       />
     </div>

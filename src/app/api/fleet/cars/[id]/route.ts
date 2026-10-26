@@ -67,6 +67,11 @@ export async function PATCH(
     // 1. Принудительная смена города присутствия (дислокации)
     if (body.cityId !== undefined && body.cityId !== car.cityId) {
       updateData.cityId = body.cityId;
+    } else if (body.cityCode) {
+      const targetCity = await prisma.city.findUnique({ where: { code: body.cityCode } });
+      if (targetCity) {
+        updateData.cityId = targetCity.id;
+      }
     }
 
     // 2. Статус авто

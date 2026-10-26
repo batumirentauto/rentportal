@@ -27,6 +27,7 @@ import {
   ImageIcon,
   RotateCcw,
   Edit3,
+  Database,
 } from "lucide-react";
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
@@ -37,6 +38,8 @@ import { AvailabilitySearchModal } from "./AvailabilitySearchModal";
 import { CustomerDocumentUploadModal } from "./CustomerDocumentUploadModal";
 import { CustomerDossierModal } from "./CustomerDossierModal";
 import { EditBookingModal } from "./EditBookingModal";
+import { FleetCityDistributorModal } from "./FleetCityDistributorModal";
+import { DatabaseBackupModal } from "./DatabaseBackupModal";
 
 interface FleetTimelineGridProps {
   onOpenContract?: (booking: any) => void;
@@ -152,6 +155,8 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [selectedCarForDetails, setSelectedCarForDetails] = useState<string | null>(null);
   const [carModalTab, setCarModalTab] = useState<"general" | "availability">("general");
   const [isNewCarModalOpen, setIsNewCarModalOpen] = useState<boolean>(false);
+  const [isCityDistributorOpen, setIsCityDistributorOpen] = useState<boolean>(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
 
   const toggleCarSelection = (carId: string) => {
     setSelectedCarIds((prev) =>
@@ -387,6 +392,26 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
           >
             <Share2 className="w-4 h-4" />
             <span>{isSelectionMode ? "Отменить подборку" : "📤 Подборка для клиента"}</span>
+          </button>
+
+          {/* Quick City Distributor CTA */}
+          <button
+            onClick={() => setIsCityDistributorOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold shadow transition"
+            title="Быстро распределить города для всех автомобилей автопарка"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>📍 Города авто</span>
+          </button>
+
+          {/* Database Backup CTA */}
+          <button
+            onClick={() => setIsBackupModalOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold shadow transition"
+            title="Резервное копирование и статус сохранности базы данных"
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>💾 Бэкап</span>
           </button>
 
           {/* New Car CTA */}
@@ -1351,6 +1376,28 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
           defaultCityCode={selectedCity === "ALL" ? "BUS" : selectedCity}
           onClose={() => setIsNewCarModalOpen(false)}
           onCarCreated={() => {
+            fetchTimeline();
+          }}
+        />
+      )}
+
+      {/* Fleet City Distributor Modal */}
+      {isCityDistributorOpen && (
+        <FleetCityDistributorModal
+          isOpen={isCityDistributorOpen}
+          onClose={() => setIsCityDistributorOpen(false)}
+          onCitiesUpdated={() => {
+            fetchTimeline();
+          }}
+        />
+      )}
+
+      {/* Database Backup & Storage Modal */}
+      {isBackupModalOpen && (
+        <DatabaseBackupModal
+          isOpen={isBackupModalOpen}
+          onClose={() => setIsBackupModalOpen(false)}
+          onDataRestored={() => {
             fetchTimeline();
           }}
         />

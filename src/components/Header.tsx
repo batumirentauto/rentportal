@@ -1,5 +1,5 @@
 import React from "react";
-import { Car, Building2, Bell, RefreshCw, PlusCircle, CheckCircle2, Receipt, MessageSquare } from "lucide-react";
+import { Car, Building2, Bell, RefreshCw, PlusCircle, CheckCircle2, Receipt, MessageSquare, Database } from "lucide-react";
 
 interface HeaderProps {
   selectedCity: string;
@@ -9,6 +9,7 @@ interface HeaderProps {
   onSimulateNewBooking: () => void;
   onOpenRecordExpense?: () => void;
   onOpenNewBooking?: () => void;
+  onOpenBackup?: () => void;
   activeTab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats";
   setActiveTab: (tab: "timeline" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats") => void;
   isSimulating: boolean;
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSimulateNewBooking,
   onOpenRecordExpense,
   onOpenNewBooking,
+  onOpenBackup,
   activeTab,
   setActiveTab,
   isSimulating,
@@ -142,6 +144,15 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-900 animate-pulse" />
+            </button>
+
+            {/* Database & Backup Button */}
+            <button
+              onClick={onOpenBackup}
+              title="Сохранность данных, статус постоянного диска и бэкап базы данных"
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-slate-700 transition-colors shadow-sm"
+            >
+              <Database className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
             </button>
 
             {/* Notification Bell */}
