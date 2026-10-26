@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     const cityCode = searchParams.get("city"); // "TBS", "BUS", "KUT" or "ALL"
     const startDateParam = searchParams.get("startDate");
     const daysCount = parseInt(searchParams.get("days") || "14", 10);
+    const includeArchived = searchParams.get("includeArchived") === "true";
 
     const baseDate = startDateParam ? new Date(startDateParam) : new Date();
     baseDate.setHours(0, 0, 0, 0);
@@ -16,6 +17,9 @@ export async function GET(request: Request) {
     endDate.setHours(23, 59, 59, 999);
 
     const carWhere: any = {};
+    if (!includeArchived) {
+      carWhere.isArchived = false;
+    }
     if (cityCode && cityCode !== "ALL") {
       carWhere.city = { code: cityCode };
     }

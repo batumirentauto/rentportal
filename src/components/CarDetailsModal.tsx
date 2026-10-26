@@ -25,6 +25,8 @@ import {
   FileCheck,
   ExternalLink,
   Loader2,
+  Trash2,
+  Archive,
 } from "lucide-react";
 
 interface CarDetailsModalProps {
@@ -50,6 +52,11 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
   const [owners, setOwners] = useState<any[]>([]);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Decommission / Archive states (быстрое удаление из шахматки)
+  const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState<boolean>(false);
+  const [archiveReason, setArchiveReason] = useState<string>("RETURNED_TO_OWNER");
+  const [archiveNotes, setArchiveNotes] = useState<string>("");
 
   // Form states - General
   const [cityId, setCityId] = useState<string>("");
@@ -430,6 +437,69 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
     }
   };
 
+  const getArchiveReasonText = (reason?: string) => {
+    switch (reason) {
+      case "RETURNED_TO_OWNER":
+        return "Возврат собственнику / инвестору";
+      case "SOLD":
+        return "Продан";
+      case "TOTAL_LOSS":
+        return "Списание / Тотал / ДТП";
+      case "LONG_TERM_STORAGE":
+        return "Длительная консервация";
+      default:
+        return "Выведен из эксплуатации";
+    }
+  };
+
+  const handleArchiveCar = async () => {
+    try {
+      setSaving(true);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+      const url = `/api/fleet/cars/${carId}?reason=${encodeURIComponent(archiveReason)}&notes=${encodeURIComponent(archiveNotes)}`;
+      const res = await fetch(url, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        setIsArchiveConfirmOpen(false);
+        setCar(data.car);
+        setSuccessMsg(data.message || "Автомобиль успешно выведен из автопарка и удален из шахматки!");
+        if (onUpdated) onUpdated();
+      } else {
+        setErrorMsg(data.error || "Не удалось вывести автомобиль из парка");
+      }
+    } catch (e: any) {
+      setErrorMsg("Ошибка сервера: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRestoreCar = async () => {
+    try {
+      setSaving(true);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+      const res = await fetch(`/api/fleet/cars/${carId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isArchived: false }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCar(data.car);
+        setSuccessMsg("Автомобиль успешно восстановлен в автопарк и возвращен в шахматку!");
+        if (onUpdated) onUpdated();
+      } else {
+        setErrorMsg(data.error || "Не удалось восстановить автомобиль");
+      }
+    } catch (e: any) {
+      setErrorMsg("Ошибка сервера: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
@@ -465,7 +535,12 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                       <span>{car.city.nameRu}</span>
                     </span>
                   )}
-                  {car?.isStopBlocked ? (
+                  {car?.isArchived ? (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full font-black bg-rose-950 text-rose-300 border border-rose-500/50 flex items-center space-x-1 shadow">
+                      <span>📦</span>
+                      <span>В архиве ({getArchiveReasonText(car.archiveReason)})</span>
+                    </span>
+                  ) : car?.isStopBlocked ? (
                     <span className="text-xs px-2 py-0.5 rounded-full font-black bg-red-600 text-white animate-pulse shadow-sm shadow-red-900">
                       ⛔ НА СТОПЕ
                     </span>
@@ -540,6 +615,36 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           <div className="mx-4 mt-3 p-3 bg-red-950/90 border border-red-500/80 text-red-200 text-xs font-semibold rounded-2xl flex items-center space-x-2 shadow-lg animate-in fade-in">
             <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
             <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Decommissioned / Archived Notice */}
+        {car?.isArchived && (
+          <div className="mx-4 mt-3 p-3.5 bg-rose-950/80 border-2 border-rose-500/60 text-rose-200 text-xs rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl animate-in fade-in">
+            <div className="flex items-start space-x-2.5">
+              <div className="p-2 bg-rose-900/60 rounded-xl text-rose-300 shrink-0 mt-0.5">
+                <Archive className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="font-black text-white text-sm flex items-center space-x-1.5">
+                  <span>Автомобиль выведен из автопарка</span>
+                  <span className="text-rose-300 font-bold">({getArchiveReasonText(car.archiveReason)})</span>
+                </div>
+                <div className="text-[11px] text-rose-200/80 mt-0.5">
+                  Удален из активной шахматки {car.archivedAt ? new Date(car.archivedAt).toLocaleDateString("ru-RU") : ""}. Все финансовые показатели, статистика и прошлые брони сохранены в базе.
+                  {car.archiveNotes && <span className="block italic mt-0.5 text-slate-300">«{car.archiveNotes}»</span>}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleRestoreCar}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-black rounded-xl text-xs transition active:scale-95 shrink-0 shadow flex items-center space-x-1.5 self-start sm:self-center"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Вернуть в автопарк</span>
+            </button>
           </div>
         )}
 
@@ -1168,21 +1273,46 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-2 flex justify-end space-x-3 border-t border-slate-800">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="px-4 py-2 text-slate-400 hover:text-white"
-                    >
-                      Закрыть
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl shadow-lg transition active:scale-95"
-                    >
-                      {saving ? "Сохранение..." : "Сохранить параметры"}
-                    </button>
+                  <div className="pt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800">
+                    {car?.isArchived ? (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={handleRestoreCar}
+                        className="px-4 py-2 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/50 text-emerald-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 active:scale-95"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Восстановить в автопарк</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => setIsArchiveConfirmOpen(true)}
+                        className="px-3.5 py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 active:scale-95"
+                        title="Быстро вывести автомобиль из активной шахматки (продажа, возврат инвестору, списание). Все исторические показатели сохранятся."
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                        <span>Вывести из автопарка</span>
+                      </button>
+                    )}
+
+                    <div className="flex items-center space-x-2 ml-auto">
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
+                      >
+                        Закрыть
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl shadow-lg transition active:scale-95"
+                      >
+                        {saving ? "Сохранение..." : "Сохранить параметры"}
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}
@@ -1479,6 +1609,77 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Decommission Confirmation Modal */}
+      {isArchiveConfirmOpen && (
+        <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-slate-900 border-2 border-rose-500/70 text-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-start space-x-3">
+              <div className="p-3 bg-rose-500/20 border border-rose-500/40 rounded-2xl text-rose-400 shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Вывод из автопарка</h3>
+                <p className="text-xs text-slate-300 font-semibold mt-0.5">
+                  {car?.brand} {car?.model} <span className="font-mono text-amber-400">({car?.plateNumber})</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-rose-950/40 border border-rose-500/30 rounded-2xl text-xs text-rose-200/90 leading-relaxed">
+              ⚠️ Автомобиль будет <strong>немедленно убран из шахматки занятости</strong> и выбора клиентами. При этом <strong>все прошлые бронирования, доходы, расходы и статистика сохранятся в базе</strong> навсегда.
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Причина вывода из шахматки:</label>
+                <select
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:border-rose-500 font-semibold cursor-pointer"
+                >
+                  <option value="RETURNED_TO_OWNER">🤝 Возврат собственнику / инвестору (забрали авто)</option>
+                  <option value="SOLD">💰 Продан (выбыл из автопарка)</option>
+                  <option value="DECOMMISSIONED">🛑 Выведен из эксплуатации</option>
+                  <option value="TOTAL_LOSS">💥 Списание / Тотал / ДТП</option>
+                  <option value="LONG_TERM_STORAGE">⏸️ Длительная консервация</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Примечание / Комментарий (необязательно):</label>
+                <textarea
+                  value={archiveNotes}
+                  onChange={(e) => setArchiveNotes(e.target.value)}
+                  placeholder="Например: Забрал собственник Георгий, договор расторгнут..."
+                  rows={2}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:border-rose-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setIsArchiveConfirmOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={handleArchiveCar}
+                className="px-5 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 text-white font-black rounded-xl text-xs shadow-lg transition active:scale-95 flex items-center space-x-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{saving ? "Вывод..." : "Удалить из шахматки"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

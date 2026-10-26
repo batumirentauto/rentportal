@@ -176,8 +176,9 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const fetchTimeline = async () => {
     setLoading(true);
     try {
+      const includeArchived = statusFilter === "ARCHIVED";
       const res = await fetch(
-        `/api/fleet/timeline?startDate=${currentStartDate}&days=${daysCount}&city=${selectedCity}`
+        `/api/fleet/timeline?startDate=${currentStartDate}&days=${daysCount}&city=${selectedCity}&includeArchived=${includeArchived}`
       );
       const json = await res.json();
       if (json.success) {
@@ -192,7 +193,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
   useEffect(() => {
     fetchTimeline();
-  }, [currentStartDate, daysCount, selectedCity]);
+  }, [currentStartDate, daysCount, selectedCity, statusFilter]);
 
   const handleSwitchToArchive = () => {
     const d = new Date();
@@ -251,13 +252,16 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
       if (!matchesSearch) return false;
 
-      if (statusFilter === "AVAILABLE") return car.status === "AVAILABLE";
-      if (statusFilter === "RENTED") return car.status === "RENTED";
+      if (statusFilter === "AVAILABLE") return car.status === "AVAILABLE" && !car.isArchived;
+      if (statusFilter === "RENTED") return car.status === "RENTED" && !car.isArchived;
       if (statusFilter === "COMPLETED") {
         return car.bookings.some((b: any) => b.status === "COMPLETED");
       }
       if (statusFilter === "ONE_WAY") {
         return car.bookings.some((b: any) => b.isOneWay);
+      }
+      if (statusFilter === "ARCHIVED") {
+        return car.isArchived;
       }
 
       return true;
@@ -529,6 +533,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
               <option value="ONE_WAY">⇄ Только One-Way (междугородние)</option>
               <option value="AVAILABLE">Только свободные</option>
               <option value="RENTED">Только в поездке</option>
+              <option value="ARCHIVED">📦 Выведенные из автопарка</option>
             </select>
 
             {/* Selection Mode Button for Client Offer */}
@@ -789,7 +794,11 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                             <span className="text-[9px] sm:text-[11px] font-mono font-bold text-amber-400 bg-slate-950 px-1 py-0.5 rounded border border-slate-800">
                               {car.plateNumber}
                             </span>
-                            {car.isStopBlocked ? (
+                            {car.isArchived ? (
+                              <span className="text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-500/50 shadow">
+                                📦 В архиве
+                              </span>
+                            ) : car.isStopBlocked ? (
                               <span className="text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full bg-red-600 text-white animate-pulse shadow-sm shadow-red-900">
                                 СТОП
                               </span>

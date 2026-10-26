@@ -64,7 +64,9 @@ export async function GET(request: Request) {
     }
 
     // 3. Query Fleet
-    const carWhere: any = {};
+    const carWhere: any = {
+      isArchived: false,
+    };
     if (cityCode !== "ALL") {
       carWhere.city = { code: cityCode };
     }

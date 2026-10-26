@@ -108,6 +108,12 @@ model Car {
   gpsMonthlyFee              Float           @default(10)    // Ежемесячная абонплата за GPS (10 GEL)
   isGpsFeeChargedToOwner     Boolean         @default(true)  // Опция: удерживать ли с владельца авто
   
+  // Вывод из автопарка / архив (быстрое удаление из активной шахматки с сохранением истории)
+  isArchived            Boolean         @default(false)
+  archivedAt            DateTime?
+  archiveReason         String?         // "SOLD" (Продан), "RETURNED_TO_OWNER" (Возврат инвестору), "TOTAL_LOSS" (Тотал), "DECOMMISSIONED" (Выведен)
+  archiveNotes          String?
+
   cityId          String
   city            City             @relation(fields: [cityId], references: [id])
   bookings        Booking[]

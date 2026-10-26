@@ -89,7 +89,34 @@ export function isPersistentStorageActive(): { active: boolean; path: string; is
   };
 }
 
+function ensureSchema(dbFilePath: string) {
+  try {
+    if (!fs.existsSync(dbFilePath)) return;
+    const Database = require("better-sqlite3");
+    const db = new Database(dbFilePath);
+    const columns = db.prepare("PRAGMA table_info(Car)").all();
+    const colNames = new Set(columns.map((c: any) => c.name));
+
+    if (!colNames.has("isArchived")) {
+      db.exec("ALTER TABLE Car ADD COLUMN isArchived INTEGER DEFAULT 0");
+    }
+    if (!colNames.has("archivedAt")) {
+      db.exec("ALTER TABLE Car ADD COLUMN archivedAt TEXT");
+    }
+    if (!colNames.has("archiveReason")) {
+      db.exec("ALTER TABLE Car ADD COLUMN archiveReason TEXT");
+    }
+    if (!colNames.has("archiveNotes")) {
+      db.exec("ALTER TABLE Car ADD COLUMN archiveNotes TEXT");
+    }
+    db.close();
+  } catch (e) {
+    console.warn("[Database] Schema check/migration notice:", e);
+  }
+}
+
 const dbPath = getDatabasePath();
+ensureSchema(dbPath);
 const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { MapPin, Search, CheckCircle2, Car, RefreshCw, X, Building2, Save } from "lucide-react";
+import { MapPin, Search, CheckCircle2, Car, RefreshCw, X, Building2, Save, Trash2 } from "lucide-react";
 
 interface FleetCityDistributorModalProps {
   isOpen: boolean;
@@ -76,6 +76,31 @@ export const FleetCityDistributorModal: React.FC<FleetCityDistributorModalProps>
         );
         setSavedNotice(`Город для ${carTitle} изменен на ${cityCode === "TBS" ? "Тбилиси" : cityCode === "BUS" ? "Батуми" : "Кутаиси"}`);
         setTimeout(() => setSavedNotice(null), 2500);
+        onCitiesUpdated();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUpdatingCarId(null);
+    }
+  };
+
+  const handleQuickArchive = async (car: any) => {
+    const reason = prompt(
+      `Вывести автомобиль ${car.brand} ${car.model} (${car.plateNumber}) из шахматки?\n\nВсе показатели, история броней и финансы сохранятся в базе данных.\n\nУкажите причину (например: Возврат собственнику, Продан, Списание):`,
+      "Возврат собственнику"
+    );
+    if (!reason) return;
+
+    try {
+      setUpdatingCarId(car.id);
+      const url = `/api/fleet/cars/${car.id}?reason=RETURNED_TO_OWNER&notes=${encodeURIComponent(reason)}`;
+      const res = await fetch(url, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        setCars((prev) => prev.filter((c) => c.id !== car.id));
+        setSavedNotice(`Автомобиль ${car.brand} ${car.model} выведен из автопарка и удален из шахматки`);
+        setTimeout(() => setSavedNotice(null), 3500);
         onCitiesUpdated();
       }
     } catch (e) {
@@ -289,6 +314,16 @@ export const FleetCityDistributorModal: React.FC<FleetCityDistributorModalProps>
                       >
                         <span>🌿</span>
                         <span>Кутаиси</span>
+                      </button>
+
+                      {/* Quick Decommission / Archive */}
+                      <button
+                        onClick={() => handleQuickArchive(car)}
+                        disabled={isUpdating}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 border border-slate-800 hover:border-rose-500/40 transition ml-0.5"
+                        title="Вывести авто из автопарка (удалить из шахматки с сохранением истории и показателей)"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

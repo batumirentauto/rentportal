@@ -143,6 +143,23 @@ export async function PATCH(
     if (body.model !== undefined && body.model) updateData.model = body.model.trim();
     if (body.color !== undefined && body.color) updateData.color = body.color.trim();
 
+    // 12. Вывод из автопарка / Архив / Деактивация (быстрое удаление из шахматки с сохранением истории)
+    if (body.isArchived !== undefined) {
+      updateData.isArchived = Boolean(body.isArchived);
+      if (updateData.isArchived) {
+        updateData.archivedAt = new Date();
+        updateData.status = "ARCHIVED";
+        if (body.archiveReason) updateData.archiveReason = body.archiveReason;
+        if (body.archiveNotes !== undefined) updateData.archiveNotes = body.archiveNotes;
+      } else {
+        // Восстановление автомобиля в автопарк
+        updateData.archivedAt = null;
+        updateData.archiveReason = null;
+        updateData.archiveNotes = null;
+        updateData.status = "AVAILABLE";
+      }
+    }
+
     const updatedCar = await prisma.car.update({
       where: { id },
       data: updateData,
@@ -170,5 +187,48 @@ export async function PATCH(
   } catch (error: any) {
     console.error("Error updating car:", error);
     return NextResponse.json({ success: false, error: "Ошибка обновления автомобиля: " + error.message }, { status: 500 });
+  }
+}
+
+// Быстрое оперативное удаление (вывод) автомобиля из шахматки с сохранением истории и показателей
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const reason = searchParams.get("reason") || "DECOMMISSIONED";
+    const notes = searchParams.get("notes") || "Выведен из автопарка";
+
+    const car = await prisma.car.findUnique({ where: { id } });
+    if (!car) {
+      return NextResponse.json({ success: false, error: "Автомобиль не найден" }, { status: 404 });
+    }
+
+    // Soft delete: сохраняем все связанные брони, расходы, пробеги и штрафы,
+    // но удаляем автомобиль из активной шахматки и подбора
+    const archivedCar = await prisma.car.update({
+      where: { id },
+      data: {
+        isArchived: true,
+        archivedAt: new Date(),
+        archiveReason: reason,
+        archiveNotes: notes,
+        status: "ARCHIVED",
+      },
+      include: {
+        city: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Автомобиль ${car.brand} ${car.model} (${car.plateNumber}) успешно выведен из автопарка и удален из шахматки. Все показатели сохранены.`,
+      car: archivedCar,
+    });
+  } catch (error: any) {
+    console.error("Error archiving car:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

@@ -5,8 +5,12 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const cityCode = searchParams.get("city");
+    const includeArchived = searchParams.get("includeArchived") === "true";
 
     const where: any = {};
+    if (!includeArchived) {
+      where.isArchived = false;
+    }
     if (cityCode && cityCode !== "ALL") {
       where.city = { code: cityCode };
     }
