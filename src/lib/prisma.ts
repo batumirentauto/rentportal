@@ -30,6 +30,23 @@ export function getDatabasePath(): string {
             console.log(`[Database] Initialized persistent SQLite at ${persistentDbPath} from template.`);
           }
         }
+
+        // Ensure persistent uploads directory
+        const dataUploads = path.join(dir, "uploads");
+        if (!fs.existsSync(dataUploads)) {
+          fs.mkdirSync(dataUploads, { recursive: true });
+        }
+        const publicUploads = path.join(process.cwd(), "public", "uploads");
+        if (!fs.existsSync(publicUploads)) {
+          try {
+            fs.mkdirSync(path.join(process.cwd(), "public"), { recursive: true });
+            fs.symlinkSync(dataUploads, publicUploads);
+            console.log(`[Storage] Symlinked ${publicUploads} -> ${dataUploads}`);
+          } catch (e) {
+            // Ignore if symlink not supported
+          }
+        }
+
         return persistentDbPath;
       }
     } catch (err) {
