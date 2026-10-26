@@ -1118,7 +1118,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                                 {/* Line 1: Time badge + Airport/Delivery badge */}
                                 <div className="flex items-center justify-between gap-1 leading-tight">
                                   <span
-                                    className="px-1 py-0.5 rounded text-[10px] font-mono font-black bg-black/60 text-amber-300 border border-amber-400/40 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none"
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black bg-black/60 text-amber-300 border border-amber-400/40 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none"
                                     title={`Время выдачи: ${startTime}${isTimeDifferent ? ` / Возврат: ${returnTime}` : ''}`}
                                   >
                                     <span>⏰</span>
@@ -1126,37 +1126,27 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                                   </span>
 
                                   {isAirport ? (
-                                    <span className="px-1 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-sky-400 text-slate-950 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none">
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-sky-400 text-slate-950 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none">
                                       <span>✈️</span>
                                       <span>Аэропорт</span>
                                     </span>
                                   ) : isDelivery ? (
-                                    <span className="px-1 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none">
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none">
                                       <span>🚚</span>
                                       <span>Доставка</span>
                                     </span>
                                   ) : isOneWay ? (
-                                    <span className="px-1 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-fuchsia-400 text-slate-950 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none">
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-fuchsia-400 text-slate-950 flex items-center space-x-0.5 shrink-0 shadow-sm leading-none">
                                       <span>⇄</span>
                                       <span>{booking.toCityCode}</span>
                                     </span>
-                                  ) : (
-                                    <span className="text-[9px] font-bold opacity-75 shrink-0 leading-none">
-                                      {booking.rentalDays}д
-                                    </span>
-                                  )}
+                                  ) : null}
                                 </div>
 
                                 {/* Line 2: Customer Name */}
-                                <div className="font-extrabold text-[11px] text-white truncate flex items-center space-x-1 drop-shadow leading-snug my-0.5">
-                                  <span className="opacity-75 text-[10px]">👤</span>
+                                <div className="font-extrabold text-xs sm:text-[13px] text-white truncate flex items-center space-x-1 drop-shadow leading-snug my-auto">
+                                  <span className="opacity-80 text-[11px]">👤</span>
                                   <span className="truncate">{booking.customer.fullName}</span>
-                                </div>
-
-                                {/* Line 3: Booking number + Days */}
-                                <div className="flex items-center justify-between text-[9px] opacity-90 leading-none">
-                                  <span className="font-mono truncate max-w-[65%]">{booking.bookingNumber}</span>
-                                  <span className="font-bold shrink-0">{booking.rentalDays} дн.</span>
                                 </div>
                               </div>
                             );
