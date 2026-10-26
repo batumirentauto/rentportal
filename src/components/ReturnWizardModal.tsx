@@ -151,6 +151,17 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
     );
   };
 
+  // Copy to clipboard helper
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const handleCopy = (text: string, key: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => {
+      setCopiedKey((prev) => (prev === key ? null : prev));
+    }, 2000);
+  };
+
   // Сумма выбранных штрафов (в GEL и USD)
   const selectedFinesTotalGEL = useMemo(() => {
     return trafficFines
@@ -423,31 +434,99 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
           <form onSubmit={handleSubmitReturn} className="space-y-4 text-xs overflow-y-auto pr-1">
             
             {/* 1. Блок авто и клиента */}
-            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2.5 bg-slate-900 rounded-xl text-amber-400 border border-slate-800">
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center space-x-3">
+                <div className="p-2.5 bg-slate-900 rounded-xl text-amber-400 border border-slate-800 shrink-0">
                   <Car className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="font-black text-white text-sm">
-                    {car.brand} {car.model}
+                  <div className="font-black text-white text-sm flex items-center space-x-2 flex-wrap">
+                    <span>{car.brand} {car.model}</span>
+                    <span className="text-[10px] bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-800 font-normal">
+                      {car.city?.nameRu || "Грузия"}
+                    </span>
                   </div>
-                  <div className="flex items-center space-x-2 mt-0.5">
-                    <span className="font-mono text-xs text-amber-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-700 font-bold">
-                      {car.plateNumber}
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      Город: {car.city?.nameRu || "Грузия"}
-                    </span>
+
+                  {/* Номер машины и номер техпаспорта с кнопками копирования */}
+                  <div className="flex items-center space-x-2.5 mt-1.5 flex-wrap gap-y-1">
+                    {/* Номер машины (госномер) */}
+                    <div className="flex items-center space-x-1.5 bg-slate-900/90 px-2 py-0.5 rounded-lg border border-slate-800">
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold">Госномер:</span>
+                      <span className="font-mono text-xs text-amber-400 font-bold">
+                        {car.plateNumber}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(car.plateNumber, `plate-header-${car.id}`)}
+                        className={`p-1 rounded transition ${
+                          copiedKey === `plate-header-${car.id}`
+                            ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/40"
+                            : "hover:bg-slate-800 text-slate-400 hover:text-white"
+                        }`}
+                        title="Скопировать госномер авто"
+                      >
+                        {copiedKey === `plate-header-${car.id}` ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Номер техпаспорта */}
+                    <div className="flex items-center space-x-1.5 bg-slate-900/90 px-2 py-0.5 rounded-lg border border-slate-800">
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold">Техпаспорт:</span>
+                      <span className="font-mono text-xs text-cyan-300 font-bold">
+                        {car.techPassportNumber || "Не указан"}
+                      </span>
+                      {car.techPassportNumber && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(car.techPassportNumber, `tp-header-${car.id}`)}
+                          className={`p-1 rounded transition ${
+                            copiedKey === `tp-header-${car.id}`
+                              ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/40"
+                              : "hover:bg-slate-800 text-slate-400 hover:text-white"
+                          }`}
+                          title="Скопировать номер техпаспорта"
+                        >
+                          {copiedKey === `tp-header-${car.id}` ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="text-right">
+              <div className="text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-900">
                 <div className="font-bold text-white text-sm">{booking.customer?.fullName}</div>
-                <div className="text-slate-400 text-[11px] font-mono">{booking.customer?.phone}</div>
+                <div className="text-slate-400 text-[11px] font-mono flex items-center sm:justify-end space-x-1">
+                  <span>{booking.customer?.phone}</span>
+                  {booking.customer?.phone && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(booking.customer.phone, `phone-header-${booking.id}`)}
+                      className={`p-0.5 rounded transition ${
+                        copiedKey === `phone-header-${booking.id}`
+                          ? "text-emerald-400"
+                          : "text-slate-500 hover:text-slate-300"
+                      }`}
+                      title="Скопировать телефон клиента"
+                    >
+                      {copiedKey === `phone-header-${booking.id}` ? (
+                        <Check className="w-3 h-3 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </button>
+                  )}
+                </div>
                 <div className="text-slate-500 text-[10px]">
-                  Паспорт: {booking.customer?.passportNumber}
+                  Паспорт: {booking.customer?.passportNumber || "Не указан"}
                 </div>
               </div>
             </div>
@@ -662,11 +741,35 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 ? "bg-slate-950 border-slate-800"
                 : "bg-red-950/60 border-2 border-red-500 shadow-xl shadow-red-950/50"
             }`}>
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-200 flex items-center space-x-1.5 text-xs">
-                  <FileText className={`w-4 h-4 ${techPassportReturned ? "text-amber-400" : "text-red-400"}`} />
-                  <span>Проверка наличия оригинала техпаспорта:</span>
-                </span>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-slate-200 flex items-center space-x-1.5 text-xs">
+                    <FileText className={`w-4 h-4 ${techPassportReturned ? "text-amber-400" : "text-red-400"}`} />
+                    <span>Проверка наличия оригинала техпаспорта:</span>
+                  </span>
+                  {car.techPassportNumber && (
+                    <div className="flex items-center space-x-1 bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono">
+                      <span className="text-slate-400">№</span>
+                      <strong className="text-cyan-300">{car.techPassportNumber}</strong>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(car.techPassportNumber, `tp-bar-${car.id}`)}
+                        className={`p-0.5 rounded transition ${
+                          copiedKey === `tp-bar-${car.id}`
+                            ? "text-emerald-400"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                        title="Скопировать номер техпаспорта"
+                      >
+                        {copiedKey === `tp-bar-${car.id}` ? (
+                          <Check className="w-3 h-3 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex space-x-1">
                   <button
@@ -1024,13 +1127,13 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
             {/* 5. Проверка штрафов (protocols.ge) */}
             <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="font-bold text-slate-200 flex items-center space-x-1.5">
                   <FileText className="w-4 h-4 text-amber-400" />
                   <span>Штрафы с камер МВД (protocols.ge):</span>
                 </span>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                   <a
                     href="https://protocols.ge"
                     target="_blank"
@@ -1041,9 +1144,52 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     <span>protocols.ge</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
-                  <span className="text-[11px] font-mono text-slate-400">
-                    Госномер: <strong className="text-white">{car.plateNumber}</strong>
-                  </span>
+
+                  {/* Госномер с кнопкой копирования */}
+                  <div className="flex items-center space-x-1 bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono">
+                    <span className="text-slate-400">Госномер:</span>
+                    <strong className="text-amber-400">{car.plateNumber}</strong>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(car.plateNumber, `plate-fines-${car.id}`)}
+                      className={`p-0.5 rounded transition ${
+                        copiedKey === `plate-fines-${car.id}`
+                          ? "text-emerald-400"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                      title="Скопировать госномер машины"
+                    >
+                      {copiedKey === `plate-fines-${car.id}` ? (
+                        <Check className="w-3 h-3 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Техпаспорт с кнопкой копирования */}
+                  <div className="flex items-center space-x-1 bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono">
+                    <span className="text-slate-400">Техпаспорт:</span>
+                    <strong className="text-cyan-300">{car.techPassportNumber || "—"}</strong>
+                    {car.techPassportNumber && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(car.techPassportNumber, `tp-fines-${car.id}`)}
+                        className={`p-0.5 rounded transition ${
+                          copiedKey === `tp-fines-${car.id}`
+                            ? "text-emerald-400"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                        title="Скопировать номер техпаспорта"
+                      >
+                        {copiedKey === `tp-fines-${car.id}` ? (
+                          <Check className="w-3 h-3 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
