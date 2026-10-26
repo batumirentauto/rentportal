@@ -1104,6 +1104,8 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                               barStyle = "bg-gradient-to-r from-amber-600 to-orange-700 border-amber-400 text-white shadow-amber-900/40";
                             }
 
+                            const firstName = (booking.customer?.fullName || "").trim().split(/\s+/)[0] || "Клиент";
+
                             return (
                               <div
                                 key={booking.id}
@@ -1143,10 +1145,10 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                                   ) : null}
                                 </div>
 
-                                {/* Line 2: Customer Name */}
+                                {/* Line 2: Customer First Name */}
                                 <div className="font-extrabold text-xs sm:text-[13px] text-white truncate flex items-center space-x-1 drop-shadow leading-snug my-auto">
                                   <span className="opacity-80 text-[11px]">👤</span>
-                                  <span className="truncate">{booking.customer.fullName}</span>
+                                  <span className="truncate">{firstName}</span>
                                 </div>
                               </div>
                             );
