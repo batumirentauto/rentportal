@@ -299,17 +299,30 @@ export const FleetCityDistributorModal: React.FC<FleetCityDistributorModalProps>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400">
-          <div>
-            Показано <strong className="text-white">{filteredCars.length}</strong> из{" "}
-            <strong className="text-white">{cars.length}</strong> авто
+        <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+          <div className="flex items-center space-x-2">
+            <span>Показано <strong className="text-white">{filteredCars.length}</strong> из <strong className="text-white">{cars.length}</strong> авто</span>
+            <span className="hidden sm:inline text-slate-600">•</span>
+            <span className="hidden sm:inline text-emerald-400 font-medium">✓ Все города авто сохраняются в базе данных</span>
           </div>
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 font-black rounded-xl shadow transition"
-          >
-            Готово
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => {
+                window.location.href = "/api/admin/database?download=1";
+              }}
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 rounded-xl font-bold transition flex items-center space-x-1.5 active:scale-95"
+              title="Скачать резервную копию базы данных SQLite со всеми распределениями городов"
+            >
+              <Save className="w-3.5 h-3.5 text-blue-400" />
+              <span>Скачать бэкап базы</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 font-black rounded-xl shadow transition active:scale-95"
+            >
+              Готово
+            </button>
+          </div>
         </div>
       </div>
     </div>
