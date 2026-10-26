@@ -79,6 +79,8 @@ export const FleetMaintenanceHub: React.FC = () => {
   const [docsCar, setDocsCar] = useState<any | null>(null);
   const [docsInspectionExpiry, setDocsInspectionExpiry] = useState<string>("");
   const [docsInspectionNumber, setDocsInspectionNumber] = useState<string>("");
+  const [docsInspectionPhotoUrl, setDocsInspectionPhotoUrl] = useState<string | null>(null);
+  const [isUploadingDocsPhoto, setIsUploadingDocsPhoto] = useState<boolean>(false);
   const [docsInsuranceCompany, setDocsInsuranceCompany] = useState<string>("Aldagi");
   const [docsInsurancePolicy, setDocsInsurancePolicy] = useState<string>("");
   const [docsInsuranceExpiry, setDocsInsuranceExpiry] = useState<string>("");
@@ -311,6 +313,7 @@ export const FleetMaintenanceHub: React.FC = () => {
     setDocsCar(car);
     setDocsInspectionExpiry(car.inspection.expiryDate ? car.inspection.expiryDate.split("T")[0] : "");
     setDocsInspectionNumber(car.inspection.number || "");
+    setDocsInspectionPhotoUrl(car.inspection.photoUrl || null);
     setDocsInsuranceCompany(car.insurance.company || "Aldagi");
     setDocsInsurancePolicy(car.insurance.policyNumber || "");
     setDocsInsuranceExpiry(car.insurance.expiryDate ? car.insurance.expiryDate.split("T")[0] : "");
@@ -340,6 +343,7 @@ export const FleetMaintenanceHub: React.FC = () => {
           carId: docsCar.id,
           inspectionExpiryDate: docsInspectionExpiry || undefined,
           inspectionNumber: docsInspectionNumber,
+          inspectionPhotoUrl: docsInspectionPhotoUrl || null,
           insuranceCompany: docsInsuranceCompany,
           insurancePolicyNumber: docsInsurancePolicy,
           insuranceExpiryDate: docsInsuranceExpiry || undefined,
@@ -993,7 +997,19 @@ export const FleetMaintenanceHub: React.FC = () => {
                         <div className="font-mono text-xs text-white font-bold">
                           {insp.number || "—"}
                         </div>
-                        <span className="text-[10px] text-slate-500">Гостехосмотр Грузии</span>
+                        {insp.photoUrl ? (
+                          <a
+                            href={insp.photoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-1 text-[10px] text-cyan-400 hover:underline font-bold mt-0.5"
+                            title="Открыть скан карты техосмотра"
+                          >
+                            <span>📷 Скан ТО</span>
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 block">Гостехосмотр Грузии</span>
+                        )}
                       </td>
 
                       {/* PTI Expiry */}
@@ -1641,6 +1657,79 @@ export const FleetMaintenanceHub: React.FC = () => {
                     onChange={(e) => setDocsInspectionExpiry(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono"
                   />
+                </div>
+
+                <div className="pt-1 border-t border-purple-500/20">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 text-[10px] block">Фото / Скан карты ТО:</label>
+                    {docsInspectionPhotoUrl && (
+                      <span className="text-[10px] text-emerald-400 font-bold">✓ Прикреплено</span>
+                    )}
+                  </div>
+                  {docsInspectionPhotoUrl ? (
+                    <div className="flex items-center justify-between p-1.5 bg-slate-900 rounded border border-slate-700">
+                      <a
+                        href={docsInspectionPhotoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-cyan-300 hover:underline truncate max-w-[200px]"
+                      >
+                        🔍 Просмотреть скан ТО
+                      </a>
+                      <div className="flex items-center space-x-2">
+                        <label className="text-[10px] text-purple-300 hover:text-white cursor-pointer font-bold">
+                          <span>Заменить</span>
+                          <input
+                            type="file"
+                            accept="image/*,.pdf"
+                            disabled={isUploadingDocsPhoto}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setIsUploadingDocsPhoto(true);
+                              const fd = new FormData();
+                              fd.append("file", file);
+                              fd.append("folder", "inspections");
+                              const res = await fetch("/api/upload", { method: "POST", body: fd });
+                              const json = await res.json();
+                              if (json.success) setDocsInspectionPhotoUrl(json.url);
+                              setIsUploadingDocsPhoto(false);
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setDocsInspectionPhotoUrl(null)}
+                          className="text-[10px] text-red-400 hover:underline"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center space-x-1.5 p-2 bg-purple-900/30 hover:bg-purple-900/50 border border-dashed border-purple-500/50 rounded-lg cursor-pointer text-purple-200 transition">
+                      <span className="text-xs font-bold">{isUploadingDocsPhoto ? "Загрузка..." : "📸 Загрузить фото техосмотра"}</span>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        disabled={isUploadingDocsPhoto}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setIsUploadingDocsPhoto(true);
+                          const fd = new FormData();
+                          fd.append("file", file);
+                          fd.append("folder", "inspections");
+                          const res = await fetch("/api/upload", { method: "POST", body: fd });
+                          const json = await res.json();
+                          if (json.success) setDocsInspectionPhotoUrl(json.url);
+                          setIsUploadingDocsPhoto(false);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
                 </div>
               </div>
 

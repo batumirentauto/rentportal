@@ -138,6 +138,7 @@ export async function GET(request: Request) {
           number: car.inspectionNumber,
           status: inspectionStatus,
           daysRemaining: inspectionDaysRemaining,
+          photoUrl: car.inspectionPhotoUrl,
         },
         insurance: {
           company: car.insuranceCompany || "Aldagi",
@@ -372,6 +373,7 @@ export async function POST(request: Request) {
         hasGpsTracker,
         gpsMonthlyFee,
         isGpsFeeChargedToOwner,
+        inspectionPhotoUrl,
       } = body;
 
       if (!carId) {
@@ -384,6 +386,7 @@ export async function POST(request: Request) {
         updateData.inspectionStatus = "VALID";
       }
       if (inspectionNumber) updateData.inspectionNumber = inspectionNumber;
+      if (inspectionPhotoUrl !== undefined) updateData.inspectionPhotoUrl = inspectionPhotoUrl || null;
       if (insuranceCompany) updateData.insuranceCompany = insuranceCompany;
       if (insurancePolicyNumber) updateData.insurancePolicyNumber = insurancePolicyNumber;
       if (insuranceExpiryDate) {

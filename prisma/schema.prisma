@@ -80,6 +80,7 @@ model Car {
   inspectionExpiryDate  DateTime?       // Дата окончания техосмотра (на 1 год)
   inspectionNumber      String?         // Номер диагностической карты
   inspectionStatus      String          @default("VALID") // "VALID", "EXPIRING_SOON", "EXPIRED"
+  inspectionPhotoUrl    String?         // Фото диагностической карты / квитанции техосмотра
   
   // Страхование (КАСКО, ОСАГО, CDW)
   insuranceCompany      String?         @default("Aldagi") // Aldagi, TBC Insurance, GPI Holding, Ardi, Irao
@@ -88,6 +89,7 @@ model Car {
   insuranceExpiryDate   DateTime?       // Дата окончания полиса
   insuranceDeductible   Float?          @default(300) // Франшиза по КАСКО (соответствует депозиту)
   insuranceStatus       String          @default("ACTIVE") // "ACTIVE", "EXPIRING_SOON", "EXPIRED"
+  insurancePolicyPhotoUrl String?       // Фото полиса КАСКО
   
   // Автоматическая блокировка (Постановка на СТОП после возврата из аренды)
   isStopBlocked         Boolean         @default(false) // Автомобиль на СТОПе (блокировка выдачи)

@@ -112,6 +112,24 @@ export async function PATCH(
       }
     }
 
+    // 9. Государственный техосмотр (PTI) и фото
+    if (body.inspectionPhotoUrl !== undefined) updateData.inspectionPhotoUrl = body.inspectionPhotoUrl || null;
+    if (body.inspectionNumber !== undefined) updateData.inspectionNumber = body.inspectionNumber || null;
+    if (body.inspectionDate !== undefined) updateData.inspectionDate = body.inspectionDate ? new Date(body.inspectionDate) : null;
+    if (body.inspectionExpiryDate !== undefined) {
+      updateData.inspectionExpiryDate = body.inspectionExpiryDate ? new Date(body.inspectionExpiryDate) : null;
+      if (updateData.inspectionExpiryDate && updateData.inspectionExpiryDate > new Date()) {
+        updateData.inspectionStatus = "VALID";
+      }
+    }
+    if (body.inspectionStatus !== undefined) updateData.inspectionStatus = body.inspectionStatus;
+
+    // 10. Страхование и техпаспорт
+    if (body.insurancePolicyPhotoUrl !== undefined) updateData.insurancePolicyPhotoUrl = body.insurancePolicyPhotoUrl || null;
+    if (body.techPassportFrontUrl !== undefined) updateData.techPassportFrontUrl = body.techPassportFrontUrl || null;
+    if (body.techPassportBackUrl !== undefined) updateData.techPassportBackUrl = body.techPassportBackUrl || null;
+    if (body.techPassportNumber !== undefined) updateData.techPassportNumber = body.techPassportNumber || null;
+
     const updatedCar = await prisma.car.update({
       where: { id },
       data: updateData,
