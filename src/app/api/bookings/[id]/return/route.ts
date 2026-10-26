@@ -228,8 +228,7 @@ export async function POST(
     });
 
     // 6. 🚨 КРИТИЧЕСКАЯ БИЗНЕС-ЛОГИКА: АВТОМАТИЧЕСКАЯ ПОСТАНОВКА НА СТОП
-    // Проверяем: закончился ли техосмотр, страховка, утерян ли техпаспорт или просрочена замена масла?
-    const isInspectionExpired = car.inspectionExpiryDate ? new Date(car.inspectionExpiryDate) <= now : false;
+    // Проверяем: закончилась ли страховка, утерян ли оригинал техпаспорта или просрочена замена масла?
     const isInsuranceExpired = car.insuranceExpiryDate ? new Date(car.insuranceExpiryDate) <= now : false;
     const isTechPassportLost = !techPassportReturned;
 
@@ -242,10 +241,6 @@ export async function POST(
     }
     if (isTechPassportLost) {
       stopReasons.push("Утерян оригинал техпаспорта автомобиля. Требуется получение дубликата в Сервисном Агентстве МВД Грузии");
-    }
-    if (isInspectionExpired) {
-      const expDateFormatted = new Date(car.inspectionExpiryDate!).toLocaleDateString("ru-RU");
-      stopReasons.push(`Истек государственный техосмотр (PTI) от ${expDateFormatted}`);
     }
     if (isInsuranceExpired) {
       const expDateFormatted = new Date(car.insuranceExpiryDate!).toLocaleDateString("ru-RU");

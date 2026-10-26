@@ -77,9 +77,10 @@ export const FleetMaintenanceHub: React.FC = () => {
 
   const [isDocsModalOpen, setIsDocsModalOpen] = useState<boolean>(false);
   const [docsCar, setDocsCar] = useState<any | null>(null);
-  const [docsInspectionExpiry, setDocsInspectionExpiry] = useState<string>("");
-  const [docsInspectionNumber, setDocsInspectionNumber] = useState<string>("");
-  const [docsInspectionPhotoUrl, setDocsInspectionPhotoUrl] = useState<string | null>(null);
+  const [docsTechPassportNumber, setDocsTechPassportNumber] = useState<string>("");
+  const [docsTechPassportFrontUrl, setDocsTechPassportFrontUrl] = useState<string | null>(null);
+  const [docsTechPassportBackUrl, setDocsTechPassportBackUrl] = useState<string | null>(null);
+  const [docsInsurancePolicyPhotoUrl, setDocsInsurancePolicyPhotoUrl] = useState<string | null>(null);
   const [isUploadingDocsPhoto, setIsUploadingDocsPhoto] = useState<boolean>(false);
   const [docsInsuranceCompany, setDocsInsuranceCompany] = useState<string>("Aldagi");
   const [docsInsurancePolicy, setDocsInsurancePolicy] = useState<string>("");
@@ -311,13 +312,14 @@ export const FleetMaintenanceHub: React.FC = () => {
   // Open Docs Modal
   const handleOpenDocsModal = (car: any) => {
     setDocsCar(car);
-    setDocsInspectionExpiry(car.inspection.expiryDate ? car.inspection.expiryDate.split("T")[0] : "");
-    setDocsInspectionNumber(car.inspection.number || "");
-    setDocsInspectionPhotoUrl(car.inspection.photoUrl || null);
-    setDocsInsuranceCompany(car.insurance.company || "Aldagi");
-    setDocsInsurancePolicy(car.insurance.policyNumber || "");
-    setDocsInsuranceExpiry(car.insurance.expiryDate ? car.insurance.expiryDate.split("T")[0] : "");
-    setDocsInsuranceDeductible(car.insurance.deductible || 300);
+    setDocsTechPassportNumber(car.techPassport?.number || car.techPassportNumber || "");
+    setDocsTechPassportFrontUrl(car.techPassport?.frontUrl || car.techPassportFrontUrl || null);
+    setDocsTechPassportBackUrl(car.techPassport?.backUrl || car.techPassportBackUrl || null);
+    setDocsInsurancePolicyPhotoUrl(car.insurance?.photoUrl || car.insurancePolicyPhotoUrl || null);
+    setDocsInsuranceCompany(car.insurance?.company || "Aldagi");
+    setDocsInsurancePolicy(car.insurance?.policyNumber || "");
+    setDocsInsuranceExpiry(car.insurance?.expiryDate ? car.insurance.expiryDate.split("T")[0] : "");
+    setDocsInsuranceDeductible(car.insurance?.deductible || 300);
     setDocsHasBatumiParking(Boolean(car.batumiParking?.hasParking));
     setDocsBatumiParkingNumber(car.batumiParking?.permitNumber || "");
     setDocsBatumiParkingExpiresAt(car.batumiParking?.expiresAt ? car.batumiParking.expiresAt.split("T")[0] : "");
@@ -341,9 +343,10 @@ export const FleetMaintenanceHub: React.FC = () => {
         body: JSON.stringify({
           action: "UPDATE_DOCS",
           carId: docsCar.id,
-          inspectionExpiryDate: docsInspectionExpiry || undefined,
-          inspectionNumber: docsInspectionNumber,
-          inspectionPhotoUrl: docsInspectionPhotoUrl || null,
+          techPassportNumber: docsTechPassportNumber,
+          techPassportFrontUrl: docsTechPassportFrontUrl || null,
+          techPassportBackUrl: docsTechPassportBackUrl || null,
+          insurancePolicyPhotoUrl: docsInsurancePolicyPhotoUrl || null,
           insuranceCompany: docsInsuranceCompany,
           insurancePolicyNumber: docsInsurancePolicy,
           insuranceExpiryDate: docsInsuranceExpiry || undefined,
@@ -410,7 +413,7 @@ export const FleetMaintenanceHub: React.FC = () => {
             </h1>
             <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
               Контроль пробегов и ресурса масла, регистрация симптомов неисправностей для автосервиса,
-              учет диагностических карт техосмотра (PTI), полисов КАСКО/ОСАГО и еженедельный чек-лист технического состояния.
+              учет техпаспортов авто (фото с обеих сторон), полисов КАСКО и еженедельный чек-лист технического состояния.
             </p>
           </div>
 
@@ -471,21 +474,27 @@ export const FleetMaintenanceHub: React.FC = () => {
               </div>
             </div>
 
-            {/* Inspection Alert */}
+            {/* Tech Passport Alert */}
             <div
               onClick={() => setActiveSubTab("documents")}
               className={`p-3.5 rounded-2xl border cursor-pointer transition ${
-                data.summary.totalInspectionExpiring > 0
+                data.summary.totalWithoutTechPassport > 0
                   ? "bg-purple-950/30 border-purple-500/50 hover:border-purple-400"
                   : "bg-slate-950/70 border-slate-800"
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-slate-400 font-medium">Техосмотры (PTI):</span>
-                <ShieldCheck className={`w-4 h-4 ${data.summary.totalInspectionExpiring > 0 ? "text-purple-400" : "text-slate-500"}`} />
+                <span className="text-[11px] text-slate-400 font-medium">Техпаспорта ТС:</span>
+                <FileText className={`w-4 h-4 ${data.summary.totalWithoutTechPassport > 0 ? "text-purple-400" : "text-slate-500"}`} />
               </div>
               <div className="text-xl font-black text-white font-mono mt-0.5">
-                {data.summary.totalInspectionExpiring} <span className="text-xs text-purple-400 font-normal">к продлению</span>
+                {data.summary.totalWithoutTechPassport > 0 ? (
+                  <>
+                    {data.summary.totalWithoutTechPassport} <span className="text-xs text-purple-400 font-normal">без фото/номера</span>
+                  </>
+                ) : (
+                  <span className="text-emerald-400 text-sm font-bold">✓ Все загружены</span>
+                )}
               </div>
             </div>
 
@@ -564,7 +573,7 @@ export const FleetMaintenanceHub: React.FC = () => {
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>📑 Техосмотры (PTI) & Страховки</span>
+            <span>📑 Техпаспорта & Страховки</span>
           </button>
         </div>
 
@@ -948,7 +957,7 @@ export const FleetMaintenanceHub: React.FC = () => {
         </div>
       )}
 
-      {/* SUBTAB 4: INSPECTION (PTI) & INSURANCE */}
+      {/* SUBTAB 4: TECH PASSPORTS & INSURANCE */}
       {activeSubTab === "documents" && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
@@ -956,8 +965,7 @@ export const FleetMaintenanceHub: React.FC = () => {
               <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 text-[11px] uppercase tracking-wider font-semibold">
                 <tr>
                   <th className="py-3.5 px-4">Автомобиль</th>
-                  <th className="py-3.5 px-3">Диагностическая карта ТО (PTI)</th>
-                  <th className="py-3.5 px-3">Срок действия ТО</th>
+                  <th className="py-3.5 px-3">Техпаспорт (Номер & Фото)</th>
                   <th className="py-3.5 px-3">Страховая компания & Полис</th>
                   <th className="py-3.5 px-3">Срок действия КАСКО</th>
                   <th className="py-3.5 px-3">Франшиза</th>
@@ -969,11 +977,8 @@ export const FleetMaintenanceHub: React.FC = () => {
 
               <tbody className="divide-y divide-slate-800/60">
                 {data?.cars?.map((car: any) => {
-                  const insp = car.inspection;
+                  const tp = car.techPassport;
                   const ins = car.insurance;
-
-                  const isInspExpired = insp.status === "EXPIRED";
-                  const isInspSoon = insp.status === "EXPIRING_SOON";
 
                   const isInsExpired = ins.status === "EXPIRED";
                   const isInsSoon = ins.status === "EXPIRING_SOON";
@@ -992,45 +997,40 @@ export const FleetMaintenanceHub: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* PTI Card */}
+                      {/* Tech Passport */}
                       <td className="py-3.5 px-3">
                         <div className="font-mono text-xs text-white font-bold">
-                          {insp.number || "—"}
+                          {tp?.number || "Номер не указан"}
                         </div>
-                        {insp.photoUrl ? (
-                          <a
-                            href={insp.photoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center space-x-1 text-[10px] text-cyan-400 hover:underline font-bold mt-0.5"
-                            title="Открыть скан карты техосмотра"
-                          >
-                            <span>📷 Скан ТО</span>
-                          </a>
-                        ) : (
-                          <span className="text-[10px] text-slate-500 block">Гостехосмотр Грузии</span>
-                        )}
-                      </td>
-
-                      {/* PTI Expiry */}
-                      <td className="py-3.5 px-3">
-                        <div className="font-mono text-xs">
-                          {insp.expiryDate ? new Date(insp.expiryDate).toLocaleDateString("ru-RU") : "Не указан"}
+                        <div className="flex items-center space-x-1.5 mt-1">
+                          {tp?.frontUrl ? (
+                            <a
+                              href={tp.frontUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center space-x-1 text-[10px] text-purple-300 hover:text-purple-200 bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-500/30 hover:underline font-bold"
+                              title="Открыть лицевую сторону техпаспорта"
+                            >
+                              <span>📷 Лицевая</span>
+                            </a>
+                          ) : null}
+                          {tp?.backUrl ? (
+                            <a
+                              href={tp.backUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center space-x-1 text-[10px] text-cyan-300 hover:text-cyan-200 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-500/30 hover:underline font-bold"
+                              title="Открыть оборотную сторону техпаспорта"
+                            >
+                              <span>📷 Оборотная</span>
+                            </a>
+                          ) : null}
+                          {!tp?.frontUrl && !tp?.backUrl && (
+                            <span className="text-[10px] text-amber-400 font-medium">
+                              ⚠️ Фото не загружены
+                            </span>
+                          )}
                         </div>
-                        {isInspExpired ? (
-                          <span className="text-[10px] text-red-400 font-bold flex items-center space-x-1">
-                            <AlertTriangle className="w-3 h-3 text-red-400" />
-                            <span>ПРОСРОЧЕН!</span>
-                          </span>
-                        ) : isInspSoon ? (
-                          <span className="text-[10px] text-amber-400 font-bold">
-                            Осталось {insp.daysRemaining} дн.
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-emerald-400">
-                            Действует ({insp.daysRemaining} дн.)
-                          </span>
-                        )}
                       </td>
 
                       {/* Insurance Company & Policy */}
@@ -1638,98 +1638,175 @@ export const FleetMaintenanceHub: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmitDocs} className="space-y-3 text-xs">
-              <div className="bg-purple-950/20 p-3 rounded-xl border border-purple-500/30 space-y-2">
-                <span className="text-purple-300 font-bold block">Диагностическая карта ТО (PTI):</span>
+              <div className="bg-purple-950/20 p-3.5 rounded-2xl border border-purple-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-purple-300 font-bold block text-sm">📄 Техпаспорт автомобиля (Свидетельство о регистрации):</span>
+                </div>
+
                 <div>
-                  <label className="text-slate-400 text-[10px] block mb-1">Номер карты ТО:</label>
+                  <label className="text-slate-400 text-[10px] block mb-1">Номер техпаспорта ТС:</label>
                   <input
                     type="text"
-                    value={docsInspectionNumber}
-                    onChange={(e) => setDocsInspectionNumber(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 text-[10px] block mb-1">Дата окончания ТО:</label>
-                  <input
-                    type="date"
-                    value={docsInspectionExpiry}
-                    onChange={(e) => setDocsInspectionExpiry(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono"
+                    value={docsTechPassportNumber}
+                    onChange={(e) => setDocsTechPassportNumber(e.target.value)}
+                    placeholder="Например: AA1234567"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono"
                   />
                 </div>
 
-                <div className="pt-1 border-t border-purple-500/20">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-slate-400 text-[10px] block">Фото / Скан карты ТО:</label>
-                    {docsInspectionPhotoUrl && (
-                      <span className="text-[10px] text-emerald-400 font-bold">✓ Прикреплено</span>
+                {/* Two sides uploads */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {/* Front Side */}
+                  <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300 font-semibold text-[11px]">Лицевая сторона</span>
+                      {docsTechPassportFrontUrl && (
+                        <span className="text-[10px] text-emerald-400 font-bold">✓ Загружено</span>
+                      )}
+                    </div>
+                    {docsTechPassportFrontUrl ? (
+                      <div className="flex items-center justify-between p-1.5 bg-slate-900 rounded border border-slate-700">
+                        <a
+                          href={docsTechPassportFrontUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-purple-300 hover:underline truncate max-w-[130px] font-bold"
+                        >
+                          🔍 Открыть фото
+                        </a>
+                        <div className="flex items-center space-x-2">
+                          <label className="text-[10px] text-purple-300 hover:text-white cursor-pointer font-bold">
+                            <span>Заменить</span>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              disabled={isUploadingDocsPhoto}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setIsUploadingDocsPhoto(true);
+                                const fd = new FormData();
+                                fd.append("file", file);
+                                fd.append("folder", "tech_passports");
+                                const res = await fetch("/api/upload", { method: "POST", body: fd });
+                                const json = await res.json();
+                                if (json.success) setDocsTechPassportFrontUrl(json.url);
+                                setIsUploadingDocsPhoto(false);
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setDocsTechPassportFrontUrl(null)}
+                            className="text-[10px] text-red-400 hover:underline font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="flex items-center justify-center space-x-1.5 p-2 bg-purple-900/30 hover:bg-purple-900/50 border border-dashed border-purple-500/50 rounded-lg cursor-pointer text-purple-200 transition">
+                        <span className="text-[11px] font-bold">
+                          {isUploadingDocsPhoto ? "Загрузка..." : "📸 Загрузить (Лицевая)"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          disabled={isUploadingDocsPhoto}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setIsUploadingDocsPhoto(true);
+                            const fd = new FormData();
+                            fd.append("file", file);
+                            fd.append("folder", "tech_passports");
+                            const res = await fetch("/api/upload", { method: "POST", body: fd });
+                            const json = await res.json();
+                            if (json.success) setDocsTechPassportFrontUrl(json.url);
+                            setIsUploadingDocsPhoto(false);
+                          }}
+                          className="hidden"
+                        />
+                      </label>
                     )}
                   </div>
-                  {docsInspectionPhotoUrl ? (
-                    <div className="flex items-center justify-between p-1.5 bg-slate-900 rounded border border-slate-700">
-                      <a
-                        href={docsInspectionPhotoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-cyan-300 hover:underline truncate max-w-[200px]"
-                      >
-                        🔍 Просмотреть скан ТО
-                      </a>
-                      <div className="flex items-center space-x-2">
-                        <label className="text-[10px] text-purple-300 hover:text-white cursor-pointer font-bold">
-                          <span>Заменить</span>
-                          <input
-                            type="file"
-                            accept="image/*,.pdf"
-                            disabled={isUploadingDocsPhoto}
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              setIsUploadingDocsPhoto(true);
-                              const fd = new FormData();
-                              fd.append("file", file);
-                              fd.append("folder", "inspections");
-                              const res = await fetch("/api/upload", { method: "POST", body: fd });
-                              const json = await res.json();
-                              if (json.success) setDocsInspectionPhotoUrl(json.url);
-                              setIsUploadingDocsPhoto(false);
-                            }}
-                            className="hidden"
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setDocsInspectionPhotoUrl(null)}
-                          className="text-[10px] text-red-400 hover:underline"
-                        >
-                          ✕
-                        </button>
-                      </div>
+
+                  {/* Back Side */}
+                  <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300 font-semibold text-[11px]">Оборотная сторона</span>
+                      {docsTechPassportBackUrl && (
+                        <span className="text-[10px] text-emerald-400 font-bold">✓ Загружено</span>
+                      )}
                     </div>
-                  ) : (
-                    <label className="flex items-center justify-center space-x-1.5 p-2 bg-purple-900/30 hover:bg-purple-900/50 border border-dashed border-purple-500/50 rounded-lg cursor-pointer text-purple-200 transition">
-                      <span className="text-xs font-bold">{isUploadingDocsPhoto ? "Загрузка..." : "📸 Загрузить фото техосмотра"}</span>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        disabled={isUploadingDocsPhoto}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          setIsUploadingDocsPhoto(true);
-                          const fd = new FormData();
-                          fd.append("file", file);
-                          fd.append("folder", "inspections");
-                          const res = await fetch("/api/upload", { method: "POST", body: fd });
-                          const json = await res.json();
-                          if (json.success) setDocsInspectionPhotoUrl(json.url);
-                          setIsUploadingDocsPhoto(false);
-                        }}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
+                    {docsTechPassportBackUrl ? (
+                      <div className="flex items-center justify-between p-1.5 bg-slate-900 rounded border border-slate-700">
+                        <a
+                          href={docsTechPassportBackUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-cyan-300 hover:underline truncate max-w-[130px] font-bold"
+                        >
+                          🔍 Открыть фото
+                        </a>
+                        <div className="flex items-center space-x-2">
+                          <label className="text-[10px] text-cyan-300 hover:text-white cursor-pointer font-bold">
+                            <span>Заменить</span>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              disabled={isUploadingDocsPhoto}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setIsUploadingDocsPhoto(true);
+                                const fd = new FormData();
+                                fd.append("file", file);
+                                fd.append("folder", "tech_passports");
+                                const res = await fetch("/api/upload", { method: "POST", body: fd });
+                                const json = await res.json();
+                                if (json.success) setDocsTechPassportBackUrl(json.url);
+                                setIsUploadingDocsPhoto(false);
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setDocsTechPassportBackUrl(null)}
+                            className="text-[10px] text-red-400 hover:underline font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="flex items-center justify-center space-x-1.5 p-2 bg-cyan-950/30 hover:bg-cyan-950/50 border border-dashed border-cyan-500/50 rounded-lg cursor-pointer text-cyan-200 transition">
+                        <span className="text-[11px] font-bold">
+                          {isUploadingDocsPhoto ? "Загрузка..." : "📸 Загрузить (Оборот)"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          disabled={isUploadingDocsPhoto}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setIsUploadingDocsPhoto(true);
+                            const fd = new FormData();
+                            fd.append("file", file);
+                            fd.append("folder", "tech_passports");
+                            const res = await fetch("/api/upload", { method: "POST", body: fd });
+                            const json = await res.json();
+                            if (json.success) setDocsTechPassportBackUrl(json.url);
+                            setIsUploadingDocsPhoto(false);
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -44,7 +44,7 @@ export async function GET(request: Request) {
     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
 
     let totalOilDue = 0;
-    let totalInspectionExpiring = 0;
+    let totalWithoutTechPassport = 0;
     let totalInsuranceExpiring = 0;
     let totalOpenIssues = 0;
     let totalCriticalIssues = 0;
@@ -65,19 +65,11 @@ export async function GET(request: Request) {
         totalOilDue++;
       }
 
-      // PTI Inspection
-      let inspectionDaysRemaining: number | null = null;
-      let inspectionStatus: "VALID" | "EXPIRING_SOON" | "EXPIRED" = "VALID";
-      if (car.inspectionExpiryDate) {
-        const diffMs = new Date(car.inspectionExpiryDate).getTime() - now.getTime();
-        inspectionDaysRemaining = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
-        if (inspectionDaysRemaining <= 0) {
-          inspectionStatus = "EXPIRED";
-          totalInspectionExpiring++;
-        } else if (inspectionDaysRemaining <= 30) {
-          inspectionStatus = "EXPIRING_SOON";
-          totalInspectionExpiring++;
-        }
+      // Tech Passport status
+      const hasTechPassportPhotos = Boolean(car.techPassportFrontUrl && car.techPassportBackUrl);
+      const isTechPassportMissing = !car.techPassportFrontUrl || !car.techPassportNumber;
+      if (isTechPassportMissing) {
+        totalWithoutTechPassport++;
       }
 
       // Insurance
@@ -132,13 +124,12 @@ export async function GET(request: Request) {
           oilStatus,
           oilType: car.oilType || "5W-30 Full Synthetic",
         },
-        inspection: {
-          inspectionDate: car.inspectionDate,
-          expiryDate: car.inspectionExpiryDate,
-          number: car.inspectionNumber,
-          status: inspectionStatus,
-          daysRemaining: inspectionDaysRemaining,
-          photoUrl: car.inspectionPhotoUrl,
+        techPassport: {
+          number: car.techPassportNumber || "",
+          frontUrl: car.techPassportFrontUrl || null,
+          backUrl: car.techPassportBackUrl || null,
+          hasPhotos: hasTechPassportPhotos,
+          isMissing: isTechPassportMissing,
         },
         insurance: {
           company: car.insuranceCompany || "Aldagi",
@@ -148,6 +139,7 @@ export async function GET(request: Request) {
           deductible: car.insuranceDeductible || 300,
           status: insuranceStatus,
           daysRemaining: insuranceDaysRemaining,
+          photoUrl: car.insurancePolicyPhotoUrl || null,
         },
         batumiParking: {
           hasParking: car.hasBatumiParking,
@@ -179,8 +171,8 @@ export async function GET(request: Request) {
     let filteredCars = enrichedCars;
     if (filter === "OIL_ALERT") {
       filteredCars = enrichedCars.filter((c) => c.oil.oilStatus !== "OK");
-    } else if (filter === "INSPECTION_ALERT") {
-      filteredCars = enrichedCars.filter((c) => c.inspection.status !== "VALID");
+    } else if (filter === "TECH_PASSPORT_ALERT" || filter === "INSPECTION_ALERT") {
+      filteredCars = enrichedCars.filter((c) => c.techPassport.isMissing);
     } else if (filter === "INSURANCE_ALERT") {
       filteredCars = enrichedCars.filter((c) => c.insurance.status !== "ACTIVE");
     } else if (filter === "OPEN_ISSUES") {
@@ -192,7 +184,7 @@ export async function GET(request: Request) {
       totalCars: enrichedCars.length,
       summary: {
         totalOilDue,
-        totalInspectionExpiring,
+        totalWithoutTechPassport,
         totalInsuranceExpiring,
         totalOpenIssues,
         totalCriticalIssues,
@@ -355,16 +347,18 @@ export async function POST(request: Request) {
       });
     }
 
-    // 4. Update PTI inspection, Insurance, Batumi Parking, and GPS details
+    // 4. Update Tech Passport, Insurance, Batumi Parking, and GPS details
     if (action === "UPDATE_DOCS") {
       const {
         carId,
-        inspectionExpiryDate,
-        inspectionNumber,
+        techPassportNumber,
+        techPassportFrontUrl,
+        techPassportBackUrl,
         insuranceCompany,
         insurancePolicyNumber,
         insuranceExpiryDate,
         insuranceDeductible,
+        insurancePolicyPhotoUrl,
         hasBatumiParking,
         batumiParkingPermitNumber,
         batumiParkingExpiresAt,
@@ -373,7 +367,6 @@ export async function POST(request: Request) {
         hasGpsTracker,
         gpsMonthlyFee,
         isGpsFeeChargedToOwner,
-        inspectionPhotoUrl,
       } = body;
 
       if (!carId) {
@@ -381,12 +374,10 @@ export async function POST(request: Request) {
       }
 
       const updateData: any = {};
-      if (inspectionExpiryDate) {
-        updateData.inspectionExpiryDate = new Date(inspectionExpiryDate);
-        updateData.inspectionStatus = "VALID";
-      }
-      if (inspectionNumber) updateData.inspectionNumber = inspectionNumber;
-      if (inspectionPhotoUrl !== undefined) updateData.inspectionPhotoUrl = inspectionPhotoUrl || null;
+      if (techPassportNumber !== undefined) updateData.techPassportNumber = techPassportNumber;
+      if (techPassportFrontUrl !== undefined) updateData.techPassportFrontUrl = techPassportFrontUrl || null;
+      if (techPassportBackUrl !== undefined) updateData.techPassportBackUrl = techPassportBackUrl || null;
+      if (insurancePolicyPhotoUrl !== undefined) updateData.insurancePolicyPhotoUrl = insurancePolicyPhotoUrl || null;
       if (insuranceCompany) updateData.insuranceCompany = insuranceCompany;
       if (insurancePolicyNumber) updateData.insurancePolicyNumber = insurancePolicyNumber;
       if (insuranceExpiryDate) {

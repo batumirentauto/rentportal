@@ -199,15 +199,12 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
   const finalBalanceAmount = Math.abs(rawBalance);
 
-  // Проверка окончания техосмотра, страховки, утери техпаспорта или просрочки ТО по маслу (Авто-СТОП)
+  // Проверка окончания страховки, утери техпаспорта или просрочки ТО по маслу (Авто-СТОП)
   const now = new Date();
-  const isInspectionExpired = car.inspectionExpiryDate
-    ? new Date(car.inspectionExpiryDate) <= now
-    : false;
   const isInsuranceExpired = car.insuranceExpiryDate
     ? new Date(car.insuranceExpiryDate) <= now
     : false;
-  const willStopBlock = isInspectionExpired || isInsuranceExpired || !techPassportReturned || isOilOverdue;
+  const willStopBlock = isInsuranceExpired || !techPassportReturned || isOilOverdue;
 
   const handleSubmitReturn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1034,9 +1031,6 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                       )}
                       {!techPassportReturned && (
                         <span>• 📑 <strong>Не сдан техпаспорт:</strong> эксплуатация авто запрещена до восстановления дубликата в МВД. </span>
-                      )}
-                      {isInspectionExpired && (
-                        <span>• Истек срок техосмотра (PTI): {new Date(car.inspectionExpiryDate).toLocaleDateString("ru-RU")}. </span>
                       )}
                       {isInsuranceExpired && (
                         <span>• Истек полис КАСКО: {new Date(car.insuranceExpiryDate).toLocaleDateString("ru-RU")}. </span>

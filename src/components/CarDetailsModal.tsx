@@ -69,12 +69,11 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
   const [hasGpsTracker, setHasGpsTracker] = useState<boolean>(true);
   const [isGpsFeeChargedToOwner, setIsGpsFeeChargedToOwner] = useState<boolean>(true);
 
-  // Technical Inspection (PTI) & Documents
-  const [inspectionNumber, setInspectionNumber] = useState<string>("");
-  const [inspectionExpiryDate, setInspectionExpiryDate] = useState<string>("");
-  const [inspectionPhotoUrl, setInspectionPhotoUrl] = useState<string | null>(null);
-  const [insurancePolicyPhotoUrl, setInsurancePolicyPhotoUrl] = useState<string | null>(null);
+  // Tech Passport & Documents
+  const [techPassportNumber, setTechPassportNumber] = useState<string>("");
   const [techPassportFrontUrl, setTechPassportFrontUrl] = useState<string | null>(null);
+  const [techPassportBackUrl, setTechPassportBackUrl] = useState<string | null>(null);
+  const [insurancePolicyPhotoUrl, setInsurancePolicyPhotoUrl] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
 
   // Form states - New Availability Block
@@ -117,11 +116,10 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
         setHasGpsTracker(data.car.hasGpsTracker !== false);
         setIsGpsFeeChargedToOwner(data.car.isGpsFeeChargedToOwner !== false);
 
-        setInspectionNumber(data.car.inspectionNumber || "");
-        setInspectionExpiryDate(data.car.inspectionExpiryDate ? data.car.inspectionExpiryDate.split("T")[0] : "");
-        setInspectionPhotoUrl(data.car.inspectionPhotoUrl || null);
-        setInsurancePolicyPhotoUrl(data.car.insurancePolicyPhotoUrl || null);
+        setTechPassportNumber(data.car.techPassportNumber || "");
         setTechPassportFrontUrl(data.car.techPassportFrontUrl || null);
+        setTechPassportBackUrl(data.car.techPassportBackUrl || null);
+        setInsurancePolicyPhotoUrl(data.car.insurancePolicyPhotoUrl || null);
 
         setBlockStartDate(todayStr);
         setBlockEndDate("");
@@ -175,8 +173,8 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
     }
   };
 
-  // Загрузка фото документов (техосмотр, страховка, техпаспорт)
-  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>, field: "inspection" | "insurance" | "techPassport") => {
+  // Загрузка фото документов (техпаспорт лицевая/оборотная сторона, страховка)
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>, field: "techPassportFront" | "techPassportBack" | "insurance") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -186,7 +184,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("folder", field === "inspection" ? "inspections" : field === "insurance" ? "insurances" : "tech_passports");
+    formData.append("folder", field === "insurance" ? "insurances" : "tech_passports");
 
     try {
       const res = await fetch("/api/upload", {
@@ -195,15 +193,23 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
       });
       const data = await res.json();
       if (data.success && data.url) {
-        if (field === "inspection") {
-          setInspectionPhotoUrl(data.url);
+        if (field === "techPassportFront") {
+          setTechPassportFrontUrl(data.url);
           // Auto-save to car immediately
           await fetch(`/api/fleet/cars/${carId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ inspectionPhotoUrl: data.url }),
+            body: JSON.stringify({ techPassportFrontUrl: data.url }),
           });
-          setSuccessMsg("Фото диагностической карты техосмотра успешно загружено и привязано к авто!");
+          setSuccessMsg("Фото лицевой стороны техпаспорта успешно загружено!");
+        } else if (field === "techPassportBack") {
+          setTechPassportBackUrl(data.url);
+          await fetch(`/api/fleet/cars/${carId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ techPassportBackUrl: data.url }),
+          });
+          setSuccessMsg("Фото оборотной стороны техпаспорта успешно загружено!");
         } else if (field === "insurance") {
           setInsurancePolicyPhotoUrl(data.url);
           await fetch(`/api/fleet/cars/${carId}`, {
@@ -212,14 +218,6 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
             body: JSON.stringify({ insurancePolicyPhotoUrl: data.url }),
           });
           setSuccessMsg("Фото полиса страхования успешно загружено!");
-        } else {
-          setTechPassportFrontUrl(data.url);
-          await fetch(`/api/fleet/cars/${carId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ techPassportFrontUrl: data.url }),
-          });
-          setSuccessMsg("Фото техпаспорта успешно загружено!");
         }
         if (onUpdated) onUpdated();
       } else {
@@ -259,9 +257,10 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           batumiParkingExpiresAt: batumiParkingExpiresAt || null,
           hasGpsTracker,
           isGpsFeeChargedToOwner,
-          inspectionNumber,
-          inspectionExpiryDate: inspectionExpiryDate || null,
-          inspectionPhotoUrl,
+          techPassportNumber,
+          techPassportFrontUrl,
+          techPassportBackUrl,
+          insurancePolicyPhotoUrl,
         }),
       });
       const data = await res.json();
@@ -732,204 +731,235 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Technical Inspection (PTI) & Document Photo Upload */}
-                  <div className="bg-gradient-to-br from-purple-950/30 via-slate-900 to-indigo-950/30 p-4 rounded-2xl border-2 border-purple-500/40 space-y-3.5 shadow-xl">
-                    <div className="flex items-center justify-between pb-2 border-b border-purple-500/20">
+                  {/* Tech Passport (Vehicle Registration Certificate) & Photo Upload */}
+                  <div className="bg-gradient-to-br from-amber-950/20 via-slate-900 to-indigo-950/20 p-4 rounded-2xl border-2 border-amber-500/40 space-y-3.5 shadow-xl">
+                    <div className="flex items-center justify-between pb-2 border-b border-amber-500/20">
                       <div className="flex items-center space-x-2">
-                        <span className="text-xl">📋</span>
+                        <span className="text-xl">📄</span>
                         <div>
-                          <span className="text-sm font-extrabold text-purple-200 block">
-                            Государственный техосмотр Грузии (PTI)
+                          <span className="text-sm font-extrabold text-amber-200 block">
+                            Техпаспорт автомобиля (Свидетельство о регистрации ТС)
                           </span>
                           <span className="text-[11px] text-slate-400">
-                            Диагностическая карта и электронная фотокопия документа
+                            Номер техпаспорта Грузии и фотокопии документа
                           </span>
                         </div>
                       </div>
-                      {car?.inspectionStatus === "EXPIRED" ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-red-600 text-white animate-pulse">
-                          ПРОСРОЧЕН
-                        </span>
-                      ) : car?.inspectionStatus === "EXPIRING_SOON" ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500 text-slate-950">
-                          СКОРО ИСТЕКАЕТ
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40">
-                          ДЕЙСТВУЕТ
-                        </span>
-                      )}
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-500/40">
+                        {techPassportFrontUrl || techPassportBackUrl ? "✓ Фото загружено" : "Требует фото"}
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-slate-300 text-[10px] font-semibold block mb-1">
-                          Номер диагностической карты ТО:
-                        </label>
-                        <input
-                          type="text"
-                          value={inspectionNumber}
-                          onChange={(e) => setInspectionNumber(e.target.value)}
-                          placeholder="например PTI-2026-98124"
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-purple-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-slate-300 text-[10px] font-semibold block mb-1">
-                          Срок действия техосмотра (до):
-                        </label>
-                        <input
-                          type="date"
-                          value={inspectionExpiryDate}
-                          onChange={(e) => setInspectionExpiryDate(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-purple-500"
-                        />
-                      </div>
+                    <div>
+                      <label className="text-slate-300 text-[10px] font-semibold block mb-1">
+                        Номер техпаспорта (свидетельства):
+                      </label>
+                      <input
+                        type="text"
+                        value={techPassportNumber}
+                        onChange={(e) => setTechPassportNumber(e.target.value)}
+                        placeholder="например: AA1298412 или BVA2040481"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-amber-500"
+                      />
                     </div>
 
-                    {/* PTI PHOTO UPLOAD BOX */}
-                    <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-300 text-[11px] font-bold flex items-center space-x-1.5">
-                          <Camera className="w-3.5 h-3.5 text-purple-400" />
-                          <span>Фото / Скан диагностической карты техосмотра:</span>
-                        </span>
-                        {inspectionPhotoUrl && (
-                          <span className="text-[10px] text-emerald-400 font-bold flex items-center space-x-1">
-                            <Check className="w-3 h-3 text-emerald-400" />
-                            <span>Документ загружен</span>
+                    {/* TWO PHOTO CARDS: FRONT & BACK */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {/* 1. FRONT SIDE */}
+                      <div className="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-300 text-[11px] font-bold flex items-center space-x-1">
+                            <Camera className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Лицевая сторона техпаспорта:</span>
                           </span>
+                          {techPassportFrontUrl && (
+                            <span className="text-[9px] text-emerald-400 font-bold">✓ Загружено</span>
+                          )}
+                        </div>
+
+                        {techPassportFrontUrl ? (
+                          <div className="space-y-2 p-2 bg-slate-900 rounded-lg border border-slate-700">
+                            <a
+                              href={techPassportFrontUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="relative group overflow-hidden rounded-lg border border-slate-700 block w-full h-28 bg-slate-950"
+                              title="Нажмите для просмотра в полный размер"
+                            >
+                              <img
+                                src={techPassportFrontUrl}
+                                alt="Техпаспорт (лицевая сторона)"
+                                className="w-full h-full object-cover group-hover:scale-105 transition"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-xs font-bold text-white">
+                                🔍 Открыть фото
+                              </div>
+                            </a>
+                            <div className="flex items-center justify-between pt-1">
+                              <a
+                                href={techPassportFrontUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-cyan-300 hover:underline font-bold"
+                              >
+                                🔍 Просмотреть
+                              </a>
+                              <div className="flex items-center space-x-2">
+                                <label className="text-[10px] text-amber-300 hover:text-white cursor-pointer font-bold">
+                                  <span>Заменить</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    disabled={isUploadingPhoto}
+                                    onChange={(e) => handleUploadFile(e, "techPassportFront")}
+                                    className="hidden"
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setTechPassportFrontUrl(null)}
+                                  className="text-[10px] text-red-400 hover:underline"
+                                >
+                                  Удалить
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-amber-950/10 border border-dashed border-amber-500/40 rounded-xl flex flex-col items-center justify-center text-center space-y-2 py-4">
+                            <FileText className="w-6 h-6 text-amber-400/80" />
+                            <span className="text-[11px] text-slate-300 font-medium">
+                              Лицевая сторона не прикреплена
+                            </span>
+                            <label className="cursor-pointer px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow transition active:scale-95 flex items-center space-x-1.5">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>{isUploadingPhoto ? "Загрузка..." : "Загрузить"}</span>
+                              <input
+                                type="file"
+                                accept="image/*,.pdf"
+                                disabled={isUploadingPhoto}
+                                onChange={(e) => handleUploadFile(e, "techPassportFront")}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
                         )}
                       </div>
 
-                      {inspectionPhotoUrl ? (
-                        <div className="flex flex-col sm:flex-row items-center gap-3 p-2 bg-slate-900 rounded-lg border border-purple-500/30">
-                          <a
-                            href={inspectionPhotoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="relative group shrink-0 overflow-hidden rounded-lg border border-purple-400/50 block w-24 h-16 bg-slate-950"
-                            title="Нажмите, чтобы открыть фото в полный размер"
-                          >
-                            <img
-                              src={inspectionPhotoUrl}
-                              alt="Техосмотр"
-                              className="w-full h-full object-cover group-hover:scale-105 transition"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[10px] font-bold text-white">
-                              Открыть
-                            </div>
-                          </a>
+                      {/* 2. BACK SIDE */}
+                      <div className="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-300 text-[11px] font-bold flex items-center space-x-1">
+                            <Camera className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Оборотная сторона техпаспорта:</span>
+                          </span>
+                          {techPassportBackUrl && (
+                            <span className="text-[9px] text-emerald-400 font-bold">✓ Загружено</span>
+                          )}
+                        </div>
 
-                          <div className="flex-1 space-y-1 min-w-0 text-center sm:text-left">
-                            <p className="text-[11px] text-white font-semibold truncate">
-                              {inspectionPhotoUrl.split("/").pop()}
-                            </p>
-                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-0.5">
+                        {techPassportBackUrl ? (
+                          <div className="space-y-2 p-2 bg-slate-900 rounded-lg border border-slate-700">
+                            <a
+                              href={techPassportBackUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="relative group overflow-hidden rounded-lg border border-slate-700 block w-full h-28 bg-slate-950"
+                              title="Нажмите для просмотра в полный размер"
+                            >
+                              <img
+                                src={techPassportBackUrl}
+                                alt="Техпаспорт (оборотная сторона)"
+                                className="w-full h-full object-cover group-hover:scale-105 transition"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-xs font-bold text-white">
+                                🔍 Открыть фото
+                              </div>
+                            </a>
+                            <div className="flex items-center justify-between pt-1">
                               <a
-                                href={inspectionPhotoUrl}
+                                href={techPassportBackUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[10px] text-cyan-300 hover:underline flex items-center space-x-1 font-bold"
+                                className="text-[10px] text-cyan-300 hover:underline font-bold"
                               >
-                                <span>🔍 Просмотреть документ</span>
+                                🔍 Просмотреть
                               </a>
-                              <span className="text-slate-600">•</span>
-                              <label className="text-[10px] text-purple-300 hover:text-white cursor-pointer font-bold flex items-center space-x-1">
-                                <span>🔄 Заменить фото</span>
-                                <input
-                                  type="file"
-                                  accept="image/*,.pdf"
-                                  disabled={isUploadingPhoto}
-                                  onChange={(e) => handleUploadFile(e, "inspection")}
-                                  className="hidden"
-                                />
-                              </label>
-                              <span className="text-slate-600">•</span>
-                              <button
-                                type="button"
-                                onClick={() => setInspectionPhotoUrl(null)}
-                                className="text-[10px] text-red-400 hover:underline"
-                              >
-                                Удалить
-                              </button>
+                              <div className="flex items-center space-x-2">
+                                <label className="text-[10px] text-amber-300 hover:text-white cursor-pointer font-bold">
+                                  <span>Заменить</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    disabled={isUploadingPhoto}
+                                    onChange={(e) => handleUploadFile(e, "techPassportBack")}
+                                    className="hidden"
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setTechPassportBackUrl(null)}
+                                  className="text-[10px] text-red-400 hover:underline"
+                                >
+                                  Удалить
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-purple-950/20 border border-dashed border-purple-500/40 rounded-xl">
-                          <div className="flex items-center space-x-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center border border-purple-500/30 shrink-0">
-                              <FileText className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <span className="text-[11px] font-bold text-white block">
-                                Фото техосмотра еще не прикреплено
-                              </span>
-                              <span className="text-[10px] text-slate-400">
-                                Загрузите фото диагностической карты или квитанцию с QR-кодом
-                              </span>
-                            </div>
+                        ) : (
+                          <div className="p-3 bg-amber-950/10 border border-dashed border-amber-500/40 rounded-xl flex flex-col items-center justify-center text-center space-y-2 py-4">
+                            <FileText className="w-6 h-6 text-amber-400/80" />
+                            <span className="text-[11px] text-slate-300 font-medium">
+                              Оборотная сторона не прикреплена
+                            </span>
+                            <label className="cursor-pointer px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow transition active:scale-95 flex items-center space-x-1.5">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>{isUploadingPhoto ? "Загрузка..." : "Загрузить"}</span>
+                              <input
+                                type="file"
+                                accept="image/*,.pdf"
+                                disabled={isUploadingPhoto}
+                                onChange={(e) => handleUploadFile(e, "techPassportBack")}
+                                className="hidden"
+                              />
+                            </label>
                           </div>
+                        )}
+                      </div>
+                    </div>
 
-                          <label className="cursor-pointer px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 text-white font-black rounded-xl text-xs shadow-md shadow-purple-950 transition active:scale-95 flex items-center space-x-1.5 shrink-0">
-                            <Upload className="w-3.5 h-3.5" />
-                            <span>{isUploadingPhoto ? "Загрузка..." : "Загрузить"}</span>
+                    {/* INSURANCE POLICY ROW */}
+                    <div className="pt-2 border-t border-amber-500/20">
+                      <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                        <div className="min-w-0 pr-2">
+                          <span className="text-slate-300 font-semibold block truncate">Полис страхования (КАСКО):</span>
+                          <span className="text-[10px] text-slate-500 truncate block">
+                            {insurancePolicyPhotoUrl ? "✓ Фото полиса прикреплено" : "Нет фото полиса"}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {insurancePolicyPhotoUrl && (
+                            <a
+                              href={insurancePolicyPhotoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-cyan-300 hover:underline font-bold mr-1"
+                            >
+                              Просмотреть
+                            </a>
+                          )}
+                          <label className="cursor-pointer px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg text-[10px] border border-slate-700 transition shrink-0 flex items-center space-x-1">
+                            <Upload className="w-3 h-3 text-blue-400" />
+                            <span>{insurancePolicyPhotoUrl ? "Заменить" : "Загрузить"}</span>
                             <input
                               type="file"
                               accept="image/*,.pdf"
                               disabled={isUploadingPhoto}
-                              onChange={(e) => handleUploadFile(e, "inspection")}
+                              onChange={(e) => handleUploadFile(e, "insurance")}
                               className="hidden"
                             />
                           </label>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Additional Documents (Insurance & Tech Passport) */}
-                    <div className="pt-2 border-t border-purple-500/20 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-                      {/* Insurance Policy Photo */}
-                      <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-                        <div className="min-w-0 pr-2">
-                          <span className="text-slate-300 font-semibold block truncate">Полис КАСКО:</span>
-                          <span className="text-[10px] text-slate-500 truncate block">
-                            {insurancePolicyPhotoUrl ? "Фото прикреплено" : "Нет фото полиса"}
-                          </span>
-                        </div>
-                        <label className="cursor-pointer px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg text-[10px] border border-slate-700 transition shrink-0 flex items-center space-x-1">
-                          <Upload className="w-3 h-3 text-blue-400" />
-                          <span>{insurancePolicyPhotoUrl ? "Заменить" : "Загрузить"}</span>
-                          <input
-                            type="file"
-                            accept="image/*,.pdf"
-                            disabled={isUploadingPhoto}
-                            onChange={(e) => handleUploadFile(e, "insurance")}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-
-                      {/* Tech Passport Photo */}
-                      <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-                        <div className="min-w-0 pr-2">
-                          <span className="text-slate-300 font-semibold block truncate">Техпаспорт авто:</span>
-                          <span className="text-[10px] text-slate-500 truncate block">
-                            {techPassportFrontUrl ? "Фото прикреплено" : "Нет фото техпаспорта"}
-                          </span>
-                        </div>
-                        <label className="cursor-pointer px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg text-[10px] border border-slate-700 transition shrink-0 flex items-center space-x-1">
-                          <Upload className="w-3 h-3 text-amber-400" />
-                          <span>{techPassportFrontUrl ? "Заменить" : "Загрузить"}</span>
-                          <input
-                            type="file"
-                            accept="image/*,.pdf"
-                            disabled={isUploadingPhoto}
-                            onChange={(e) => handleUploadFile(e, "techPassport")}
-                            className="hidden"
-                          />
-                        </label>
                       </div>
                     </div>
                   </div>

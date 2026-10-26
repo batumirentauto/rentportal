@@ -27,16 +27,12 @@ export const StopUnblockModal: React.FC<StopUnblockModalProps> = ({
   nextYear.setFullYear(nextYear.getFullYear() + 1);
   const defaultNextYearDate = nextYear.toISOString().split("T")[0];
 
-  const [newInspectionDate, setNewInspectionDate] = useState<string>(defaultNextYearDate);
-  const [newInspectionNumber, setNewInspectionNumber] = useState<string>(
-    car?.inspectionNumber ? `${car.inspectionNumber}-REN` : `PTI-GEO-${new Date().getFullYear()}091`
-  );
   const [newInsuranceDate, setNewInsuranceDate] = useState<string>(defaultNextYearDate);
   const [newInsurancePolicy, setNewInsurancePolicy] = useState<string>(
     car?.insurancePolicyNumber ? `${car.insurancePolicyNumber}-NEW` : `POL-ALD-${Math.floor(10000 + Math.random() * 90000)}`
   );
   const [unblockNotes, setUnblockNotes] = useState<string>(
-    "Техосмотр пройден успешно, диагностическая карта получена. Страховой полис продлен."
+    "Автомобиль проверен и готов к выдаче. Документы в порядке."
   );
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -52,8 +48,6 @@ export const StopUnblockModal: React.FC<StopUnblockModalProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           carId: car.id,
-          newInspectionExpiryDate: newInspectionDate,
-          newInspectionNumber,
           newInsuranceExpiryDate: newInsuranceDate,
           newInsurancePolicyNumber: newInsurancePolicy,
           unblockNotes,
@@ -111,39 +105,12 @@ export const StopUnblockModal: React.FC<StopUnblockModalProps> = ({
 
         <form onSubmit={handleUnblock} className="space-y-3.5 text-xs">
           <div className="text-slate-300 font-bold">
-            Внесите данные продленных документов для снятия со СТОПа:
-          </div>
-
-          {/* New PTI */}
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-            <span className="text-purple-300 font-bold block">1. Гостехосмотр Грузии (PTI):</span>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-slate-400 text-[10px] block mb-1">Новый срок действия:</label>
-                <input
-                  type="date"
-                  value={newInspectionDate}
-                  onChange={(e) => setNewInspectionDate(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-slate-400 text-[10px] block mb-1">Номер карты ТО:</label>
-                <input
-                  type="text"
-                  value={newInspectionNumber}
-                  onChange={(e) => setNewInspectionNumber(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono"
-                  required
-                />
-              </div>
-            </div>
+            Внесите актуальные данные для снятия со СТОПа:
           </div>
 
           {/* New Insurance */}
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-            <span className="text-blue-300 font-bold block">2. Страховой полис (КАСКО):</span>
+            <span className="text-blue-300 font-bold block">Страховой полис (КАСКО):</span>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-slate-400 text-[10px] block mb-1">Срок действия полиса:</label>
