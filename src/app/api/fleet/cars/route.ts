@@ -35,8 +35,9 @@ export async function GET(request: Request) {
         },
       },
       orderBy: [
-        { city: { nameRu: "asc" } },
         { brand: "asc" },
+        { model: "asc" },
+        { plateNumber: "asc" },
       ],
     });
 

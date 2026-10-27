@@ -286,10 +286,14 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
       }
     });
 
-    // Sort brands descending by number of cars
+    // Sort brands alphabetically (A-Z)
     const sortedBrands = Object.values(brandMap)
       .map((item) => [item.label, item.count] as [string, number])
-      .sort((a, b) => b[1] - a[1]);
+      .sort((a, b) => {
+        if (a[0] === "Другие") return 1;
+        if (b[0] === "Другие") return -1;
+        return a[0].localeCompare(b[0], "ru", { sensitivity: "base" });
+      });
     return { total, sortedBrands };
   }, [cars]);
 
@@ -402,6 +406,18 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
       }
 
       return true;
+    }).sort((a, b) => {
+      const brandA = (a.brand || "").trim();
+      const brandB = (b.brand || "").trim();
+      const brandCmp = brandA.localeCompare(brandB, "ru", { sensitivity: "base" });
+      if (brandCmp !== 0) return brandCmp;
+
+      const modelA = (a.model || "").trim();
+      const modelB = (b.model || "").trim();
+      const modelCmp = modelA.localeCompare(modelB, "ru", { sensitivity: "base" });
+      if (modelCmp !== 0) return modelCmp;
+
+      return (a.plateNumber || "").localeCompare(b.plateNumber || "");
     });
   }, [
     cars,
