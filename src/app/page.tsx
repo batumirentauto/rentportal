@@ -327,23 +327,26 @@ export default function Home() {
         onOpenHandover={(b) => setHandoverBooking(b)}
       />
 
-      {/* Floating Quick Team Chat Button (Desktop only; on mobile the chat is permanently pinned in sticky top header) */}
-      {activeTab !== "chats" && (
-        <button
-          onClick={() => setActiveTab("chats")}
-          className="hidden md:flex fixed bottom-6 right-52 z-40 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white p-3.5 rounded-2xl shadow-2xl items-center space-x-2 transition-all active:scale-95 group border border-indigo-400/30 hover:scale-105"
-          title="Открыть корпоративный чат сотрудников"
-        >
-          <div className="relative">
-            <MessageSquare className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse ring-2 ring-indigo-900" />
-          </div>
-          <span className="font-bold text-xs pr-1">Чат команды</span>
-        </button>
-      )}
+      {/* Floating Action Cluster: Bottom Right (Chat + AI Assistant side-by-side, never overlapping) */}
+      <div className="fixed bottom-4 sm:bottom-6 right-3 sm:right-6 z-40 flex items-center space-x-2.5 pointer-events-none">
+        {activeTab !== "chats" && (
+          <button
+            onClick={() => setActiveTab("chats")}
+            className="pointer-events-auto hidden md:flex bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:to-purple-500 text-white px-3.5 py-2 sm:py-2.5 rounded-full shadow-xl shadow-indigo-950/60 items-center space-x-2 transition-all active:scale-95 group border border-indigo-400/30 hover:scale-105 text-xs font-bold"
+            title="Открыть корпоративный чат сотрудников"
+          >
+            <div className="relative">
+              <MessageSquare className="w-4 h-4 text-indigo-200" />
+              <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse ring-1 ring-indigo-950" />
+            </div>
+            <span>Чат команды</span>
+          </button>
+        )}
 
-      {/* Floating Interactive AI Assistant (Copilot) */}
-      <AiAssistantModal />
+        <div className="pointer-events-auto">
+          <AiAssistantModal standaloneTrigger={false} />
+        </div>
+      </div>
 
       {/* Global Quick Record Expense Modal */}
       <RecordExpenseModal

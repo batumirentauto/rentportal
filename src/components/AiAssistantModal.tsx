@@ -46,7 +46,13 @@ const QUICK_PROMPTS = [
   { icon: ShieldAlert, label: "Штрафы MVD", prompt: "Есть ли неоплаченные штрафы патрульной полиции по автомобилям парка?" },
 ];
 
-export const AiAssistantModal: React.FC = () => {
+interface AiAssistantModalProps {
+  standaloneTrigger?: boolean;
+}
+
+export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
+  standaloneTrigger = true,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -170,7 +176,11 @@ export const AiAssistantModal: React.FC = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 sm:bottom-6 right-3 sm:right-6 z-40 group flex items-center space-x-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white rounded-full shadow-xl shadow-purple-900/50 hover:shadow-purple-700/60 transition-all duration-300 transform hover:scale-105 active:scale-95 border border-purple-400/30 text-xs sm:text-sm"
+          className={`${
+            standaloneTrigger
+              ? "fixed bottom-4 sm:bottom-6 right-3 sm:right-6 z-40"
+              : "relative"
+          } group flex items-center space-x-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white rounded-full shadow-xl shadow-purple-900/50 hover:shadow-purple-700/60 transition-all duration-300 transform hover:scale-105 active:scale-95 border border-purple-400/30 text-xs sm:text-sm`}
           title="Открыть ИИ-Ассистент (⌘K)"
         >
           <div className="relative">

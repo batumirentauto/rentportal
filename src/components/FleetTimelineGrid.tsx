@@ -202,6 +202,13 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
     }
   };
 
+  const scrollToLegend = () => {
+    const el = document.getElementById("timeline-legend-panel");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   const handleOpenNewBooking = (carId?: string, dateStr?: string, days?: number) => {
     setBookingInitialCarId(carId || "");
     setBookingInitialDate(dateStr || "");
@@ -720,6 +727,17 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
               <span>💾 Бэкап</span>
             </button>
 
+            {/* Legend / Расшифровка Jump CTA */}
+            <button
+              type="button"
+              onClick={scrollToLegend}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-bold shadow transition"
+              title="Перейти к расшифровке цветов городов и статусов броней"
+            >
+              <Info className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Расшифровка</span>
+            </button>
+
             {/* New Car CTA */}
             <button
               onClick={() => setIsNewCarModalOpen(true)}
@@ -789,10 +807,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       {/* TIMELINE GANTT GRID CONTAINER */}
       <div
         id="timeline-main-container"
-        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden sticky z-20"
-        style={{
-          top: `${headerHeight + 2}px`,
-        }}
+        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden"
       >
         <div
           className="overflow-auto rounded-2xl"
@@ -1280,14 +1295,74 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 })
               )}
             </div>
+
+            {/* Extended Legend: Cities and Trip Types (inside timeline scroll container) */}
+            <div className="sticky left-0 max-w-[calc(100vw-2.5rem)] p-4 bg-slate-950/95 border-t border-slate-800 space-y-3 text-xs">
+              {/* Row 1: City Colors */}
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 border-b border-slate-800 pb-2.5">
+                <span className="font-extrabold text-white uppercase text-[11px] tracking-wider">Цвета городов дислокации:</span>
+
+                <div className="flex items-center space-x-1.5 bg-amber-950/60 border border-amber-500/50 px-2.5 py-1 rounded-lg">
+                  <span className="w-3 h-3 rounded-full bg-amber-500 shadow" />
+                  <span className="font-bold text-amber-300">🏛️ Тбилиси (TBS) — Янтарно-оранжевый</span>
+                </div>
+
+                <div className="flex items-center space-x-1.5 bg-cyan-950/60 border border-cyan-400/50 px-2.5 py-1 rounded-lg">
+                  <span className="w-3 h-3 rounded-full bg-cyan-400 shadow" />
+                  <span className="font-bold text-cyan-300">🌊 Батуми (BUS) — Морской бирюзовый</span>
+                </div>
+
+                <div className="flex items-center space-x-1.5 bg-emerald-950/60 border border-emerald-500/50 px-2.5 py-1 rounded-lg">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 shadow" />
+                  <span className="font-bold text-emerald-300">🌿 Кутаиси (KUT) — Изумрудно-зеленый</span>
+                </div>
+              </div>
+
+              {/* Row 2: Trip Statuses */}
+              <div className="flex flex-wrap items-center justify-between text-slate-300 gap-3">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                  <span className="font-extrabold text-white uppercase text-[11px] tracking-wider">Статусы поездок:</span>
+                  
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-3 h-3 rounded-full bg-gradient-to-r from-fuchsia-600 to-purple-600 border border-fuchsia-300" />
+                    <span className="font-bold text-fuchsia-300">В пути между городами (One-Way)</span>
+                  </div>
+
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-3 h-3 rounded-full bg-purple-700 border border-purple-400" />
+                    <span className="text-purple-300">Бронь со сдачей в другом городе</span>
+                  </div>
+
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                    <span>Выдан клиенту (локально)</span>
+                  </div>
+
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-3 h-3 rounded-full bg-blue-500" />
+                    <span>Локальная бронь</span>
+                  </div>
+
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-3 h-3 rounded-full bg-slate-800 border-2 border-emerald-500" />
+                    <span className="text-emerald-300 font-bold">🏁 Завершена (архив)</span>
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-amber-400/90 flex items-center space-x-1">
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>При One-Way брони цвет карточки авто после даты сдачи изменится на цвет нового города</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Extended Legend: Cities and Trip Types */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3 text-xs">
+      {/* Extended Legend: Cities and Trip Types (Dedicated Bottom Panel) */}
+      <div id="timeline-legend-panel" className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3.5 text-xs mb-28 shadow-xl">
         {/* Row 1: City Colors */}
-        <div className="flex flex-wrap items-center gap-4 border-b border-slate-800 pb-2.5">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 border-b border-slate-800 pb-3">
           <span className="font-extrabold text-white uppercase text-[11px] tracking-wider">Цвета городов дислокации:</span>
 
           <div className="flex items-center space-x-1.5 bg-amber-950/60 border border-amber-500/50 px-2.5 py-1 rounded-lg">
@@ -1308,7 +1383,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
         {/* Row 2: Trip Statuses */}
         <div className="flex flex-wrap items-center justify-between text-slate-300 gap-3">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <span className="font-extrabold text-white uppercase text-[11px] tracking-wider">Статусы поездок:</span>
             
             <div className="flex items-center space-x-1.5">
@@ -2304,18 +2379,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
         />
       )}
 
-      {/* Floating button on mobile when scrolled down to easily return to page filters */}
-      {isPageScrolled && (
-        <button
-          type="button"
-          onClick={scrollToFilters}
-          className="fixed bottom-20 sm:bottom-24 right-3 sm:right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-3.5 py-2 rounded-full shadow-2xl border-2 border-slate-900 flex items-center space-x-1.5 transition active:scale-95 animate-in fade-in slide-in-from-bottom-2"
-          title="Прокрутить экран наверх к фильтрам и поиску"
-        >
-          <ArrowUp className="w-4 h-4" />
-          <span>К фильтрам</span>
-        </button>
-      )}
+
 
       {/* Floating Action Button (FAB) - Always fixed on screen */}
       <button
