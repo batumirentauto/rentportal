@@ -32,6 +32,11 @@ import {
   Tag,
   Key,
   ShieldAlert,
+  Camera,
+  Upload,
+  Eye,
+  Loader2,
+  X,
 } from "lucide-react";
 import { CarDetailsModal } from "./CarDetailsModal";
 import { NewCarModal } from "./NewCarModal";
@@ -63,6 +68,165 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
 
   // Copied VIN tooltip feedback
   const [copiedVinId, setCopiedVinId] = useState<string | null>(null);
+
+  // Photo upload / change modal state
+  const [photoModalCar, setPhotoModalCar] = useState<any | null>(null);
+  const [isUploadingCarPhoto, setIsUploadingCarPhoto] = useState<boolean>(false);
+  const [carPhotoUrlInput, setCarPhotoUrlInput] = useState<string>("");
+
+  // Inspection upload & AI recognition state
+  const [recognizingInspectionCarId, setRecognizingInspectionCarId] = useState<string | null>(null);
+  const [inspectionScanModalUrl, setInspectionScanModalUrl] = useState<string | null>(null);
+  const [ocrSuccessNotice, setOcrSuccessNotice] = useState<string | null>(null);
+
+  const handleUploadAndRecognizeInspection = async (carId: string, file: File) => {
+    try {
+      setRecognizingInspectionCarId(carId);
+      setOcrSuccessNotice(null);
+
+      // 1. Upload inspection file to /api/upload
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "inspections");
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok || !uploadData.success || !uploadData.url) {
+        throw new Error(uploadData.error || "Ошибка загрузки файла техосмотра");
+      }
+
+      // 2. Run AI OCR recognition
+      const ocrRes = await fetch("/api/ai/recognize-inspection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          carId,
+          photoUrl: uploadData.url,
+          autoSave: true,
+        }),
+      });
+      const ocrData = await ocrRes.json();
+      if (!ocrRes.ok || !ocrData.success) {
+        throw new Error(ocrData.error || "Ошибка распознавания техосмотра нейросетью");
+      }
+
+      // 3. Update local state
+      const expiry = ocrData.extractedData?.inspectionExpiryDate;
+      const formattedExp = expiry ? new Date(expiry).toLocaleDateString("ru-RU") : "";
+      setOcrSuccessNotice(`✓ Техосмотр успешно распознан и сохранен${formattedExp ? `: действует до ${formattedExp}` : ""}!`);
+      setTimeout(() => setOcrSuccessNotice(null), 5000);
+
+      setCars((prev) =>
+        prev.map((c) =>
+          c.id === carId
+            ? {
+                ...c,
+                inspectionPhotoUrl: uploadData.url,
+                inspectionExpiryDate: ocrData.extractedData?.inspectionExpiryDate || c.inspectionExpiryDate,
+                inspectionDate: ocrData.extractedData?.inspectionDate || c.inspectionDate,
+                inspectionNumber: ocrData.extractedData?.inspectionNumber || c.inspectionNumber,
+                inspectionStatus: ocrData.extractedData?.inspectionExpiryDate && new Date(ocrData.extractedData.inspectionExpiryDate) > new Date() ? "VALID" : c.inspectionStatus,
+              }
+            : c
+        )
+      );
+    } catch (err: any) {
+      alert("Ошибка при обработке техосмотра: " + (err.message || "Неизвестная ошибка"));
+    } finally {
+      setRecognizingInspectionCarId(null);
+    }
+  };
+
+  const handleUploadCarPhoto = async (carId: string, file: File) => {
+    try {
+      setIsUploadingCarPhoto(true);
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "cars_catalog");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.url) {
+        throw new Error(data.error || "Ошибка загрузки фото");
+      }
+
+      await fetch(`/api/fleet/cars/${carId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: data.url, cardBannerUrl: data.url }),
+      });
+
+      setCars((prev) =>
+        prev.map((c) =>
+          c.id === carId ? { ...c, imageUrl: data.url, cardBannerUrl: data.url } : c
+        )
+      );
+      if (photoModalCar && photoModalCar.id === carId) {
+        setPhotoModalCar((prev: any) => (prev ? { ...prev, imageUrl: data.url } : null));
+      }
+      setOcrSuccessNotice("✓ Фотография / карточка автомобиля успешно обновлена!");
+      setTimeout(() => setOcrSuccessNotice(null), 4000);
+    } catch (err: any) {
+      alert("Не удалось загрузить фото автомобиля: " + (err.message || "Ошибка"));
+    } finally {
+      setIsUploadingCarPhoto(false);
+    }
+  };
+
+  const handleSaveCarPhotoUrl = async (carId: string, url: string) => {
+    try {
+      setIsUploadingCarPhoto(true);
+      await fetch(`/api/fleet/cars/${carId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: url.trim() || null, cardBannerUrl: url.trim() || null }),
+      });
+
+      setCars((prev) =>
+        prev.map((c) =>
+          c.id === carId ? { ...c, imageUrl: url.trim() || null, cardBannerUrl: url.trim() || null } : c
+        )
+      );
+      setPhotoModalCar(null);
+      setCarPhotoUrlInput("");
+      setOcrSuccessNotice("✓ Ссылка на фото автомобиля сохранена!");
+      setTimeout(() => setOcrSuccessNotice(null), 4000);
+    } catch (err: any) {
+      alert("Ошибка сохранения ссылки на фото: " + (err.message || "Ошибка"));
+    } finally {
+      setIsUploadingCarPhoto(false);
+    }
+  };
+
+  const handleResetCarPhoto = async (carId: string) => {
+    if (!confirm("Сбросить загруженную фотографию к стандартному шаблону?")) return;
+    try {
+      setIsUploadingCarPhoto(true);
+      await fetch(`/api/fleet/cars/${carId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: null, cardBannerUrl: null }),
+      });
+
+      setCars((prev) =>
+        prev.map((c) =>
+          c.id === carId ? { ...c, imageUrl: null, cardBannerUrl: null } : c
+        )
+      );
+      setPhotoModalCar(null);
+      setCarPhotoUrlInput("");
+    } catch (err: any) {
+      alert("Ошибка сброса фото: " + err.message);
+    } finally {
+      setIsUploadingCarPhoto(false);
+    }
+  };
 
   const fetchCars = async () => {
     try {
@@ -262,6 +426,18 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
       
       {/* Top Banner & KPI Cards */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+        
+        {ocrSuccessNotice && (
+          <div className="p-3 bg-emerald-950/90 border border-emerald-500/60 rounded-2xl flex items-center justify-between text-xs text-emerald-200 animate-in fade-in">
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="font-bold">{ocrSuccessNotice}</span>
+            </div>
+            <button onClick={() => setOcrSuccessNotice(null)} className="text-emerald-400 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         
         {/* Header row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
@@ -553,6 +729,12 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
             const isRented = car.status === "RENTED" && !car.isArchived;
             const photoUrl = car.imageUrl || car.cardBannerUrl || getFallbackCarImage(car.model);
             const isVinCopied = copiedVinId === car.id;
+            const hasValidInspection = Boolean(car.inspectionExpiryDate && new Date(car.inspectionExpiryDate) >= new Date());
+            const isInspectionExpired = Boolean(car.inspectionExpiryDate && new Date(car.inspectionExpiryDate) < new Date());
+            const inspectionExpiryFormatted = car.inspectionExpiryDate
+              ? new Date(car.inspectionExpiryDate).toLocaleDateString("ru-RU")
+              : null;
+            const hasCustomPhoto = Boolean(car.imageUrl || car.cardBannerUrl);
 
             return (
               <div
@@ -572,7 +754,7 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-black/60" />
 
                   {/* Top Badges */}
-                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-1.5">
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-1.5 z-10">
                     {/* City Badge */}
                     <span
                       className={`text-[10px] font-black px-2.5 py-1 rounded-xl border flex items-center space-x-1 shadow-md backdrop-blur-md ${cityTheme.badgeBg}`}
@@ -602,8 +784,32 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
                     )}
                   </div>
 
+                  {/* Photo Custom / Fallback Tag & Quick Change Photo Button */}
+                  <div className="absolute top-11 left-3 right-3 flex items-center justify-between z-10 pointer-events-none">
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg border backdrop-blur-sm pointer-events-auto ${
+                      hasCustomPhoto
+                        ? "bg-emerald-950/90 text-emerald-300 border-emerald-500/50"
+                        : "bg-slate-950/85 text-slate-400 border-slate-800"
+                    }`}>
+                      {hasCustomPhoto ? "✓ Наша карточка" : "Шаблон фото"}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhotoModalCar(car);
+                        setCarPhotoUrlInput(car.imageUrl || car.cardBannerUrl || "");
+                      }}
+                      className="p-1.5 bg-slate-950/90 hover:bg-amber-600 text-slate-200 hover:text-white rounded-xl border border-slate-700/80 shadow-md backdrop-blur-md transition flex items-center space-x-1 text-[10px] font-bold pointer-events-auto group/photo"
+                      title="Сменить фотографию / загрузить товарную карточку авто"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-amber-400 group-hover/photo:text-white" />
+                      <span className="text-[10px]">Сменить фото</span>
+                    </button>
+                  </div>
+
                   {/* Bottom Class & Plate Bar on Image */}
-                  <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
+                  <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between z-10">
                     <span className={`text-[10px] px-2 py-0.5 rounded-lg border font-bold ${classInfo.bg}`}>
                       {classInfo.label}
                     </span>
@@ -682,29 +888,88 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
                         <span>Топливо / КПП:</span>
                       </div>
                       <div className="font-bold text-slate-200 truncate">
-                        {car.fuelType === "ELECTRIC" ? "⚡ Электро" : `${car.currentFuelPerc || 100}% (бак ${car.tankVolumeLiters || 60} л)`} • {car.transmission === "MANUAL" ? "Мех." : "АКПП"}
+                        {car.fuelType === "ELECTRIC" ? "⚡ Электро" : `${car.currentFuelPerc || 100}% (${car.tankVolumeLiters || 60} л)`} • {car.transmission === "MANUAL" ? "Мех." : "АКПП"}
                       </div>
                     </div>
 
-                    <div className="space-y-1 pt-1.5 border-t border-slate-800/80">
+                    <div className="space-y-1 pt-1.5 border-t border-slate-800/80 col-span-2">
                       <div className="text-slate-500 flex items-center space-x-1">
                         <FileText className="w-3 h-3 text-purple-400" />
-                        <span>Техпаспорт:</span>
+                        <span>Техпаспорт автомобиля:</span>
                       </div>
                       <div className="font-mono font-bold text-slate-300 truncate">
-                        {car.techPassportNumber || "—"}
+                        {car.techPassportNumber || "Номер не указан"}
                       </div>
                     </div>
 
-                    <div className="space-y-1 pt-1.5 border-t border-slate-800/80">
-                      <div className="text-slate-500 flex items-center space-x-1">
-                        <Calendar className="w-3 h-3 text-emerald-400" />
-                        <span>Техосмотр:</span>
+                    {/* PTI Техосмотр */}
+                    <div className="space-y-1.5 pt-1.5 border-t border-slate-800/80 col-span-2 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1.5">
+                          <ShieldCheck className={`w-3.5 h-3.5 ${
+                            hasValidInspection ? "text-emerald-400" : isInspectionExpired ? "text-red-400" : "text-amber-400"
+                          }`} />
+                          <span className="font-bold text-white text-[11px]">Техосмотр (PTI):</span>
+                        </div>
+
+                        {hasValidInspection ? (
+                          <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/90 border border-emerald-500/40 px-2 py-0.5 rounded">
+                            ✓ до {inspectionExpiryFormatted}
+                          </span>
+                        ) : isInspectionExpired ? (
+                          <span className="text-[10px] font-mono font-bold text-red-400 bg-red-950/90 border border-red-500/40 px-2 py-0.5 rounded animate-pulse">
+                            ⚠️ Просрочен ({inspectionExpiryFormatted})
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-black text-rose-300 bg-rose-950/90 border border-rose-500/50 px-2 py-0.5 rounded">
+                            ❌ Не загружен
+                          </span>
+                        )}
                       </div>
-                      <div className="font-bold text-slate-300 truncate">
-                        {car.inspectionExpiryDate
-                          ? new Date(car.inspectionExpiryDate).toLocaleDateString("ru-RU")
-                          : "Не указан"}
+
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-850">
+                        {car.inspectionPhotoUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => setInspectionScanModalUrl(car.inspectionPhotoUrl)}
+                            className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center space-x-1 hover:underline"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Посмотреть скан</span>
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 italic">Скан не прикреплен</span>
+                        )}
+
+                        <label className={`cursor-pointer px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center space-x-1 transition shadow-sm ${
+                          recognizingInspectionCarId === car.id
+                            ? "bg-amber-600 text-white cursor-wait"
+                            : hasValidInspection
+                            ? "bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-750"
+                            : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 shadow-amber-950/50"
+                        }`}>
+                          {recognizingInspectionCarId === car.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>ИИ считывает...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3 h-3 text-amber-950" />
+                              <span>{hasValidInspection ? "Обновить" : "Загрузить и распознать"}</span>
+                              <input
+                                type="file"
+                                accept="image/*,.pdf"
+                                className="hidden"
+                                disabled={recognizingInspectionCarId === car.id}
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) handleUploadAndRecognizeInspection(car.id, f);
+                                }}
+                              />
+                            </>
+                          )}
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -762,6 +1027,7 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
                   <th className="py-3 px-3">VIN-код</th>
                   <th className="py-3 px-3">Пробег</th>
                   <th className="py-3 px-3">Техпаспорт</th>
+                  <th className="py-3 px-3">Техосмотр (PTI)</th>
                   <th className="py-3 px-3">Тариф</th>
                   <th className="py-3 px-4 text-right">Действия</th>
                 </tr>
@@ -829,6 +1095,68 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
                         {car.techPassportNumber || "—"}
                       </td>
 
+                      <td className="py-3 px-3">
+                        {car.inspectionExpiryDate && new Date(car.inspectionExpiryDate) >= new Date() ? (
+                          <div className="flex items-center space-x-1">
+                            <span className="font-mono text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
+                              до {new Date(car.inspectionExpiryDate).toLocaleDateString("ru-RU")}
+                            </span>
+                            {car.inspectionPhotoUrl && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setInspectionScanModalUrl(car.inspectionPhotoUrl);
+                                }}
+                                className="p-1 hover:text-cyan-300 text-slate-400"
+                                title="Посмотреть скан"
+                              >
+                                <Eye className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        ) : car.inspectionExpiryDate && new Date(car.inspectionExpiryDate) < new Date() ? (
+                          <div className="flex items-center space-x-1">
+                            <span className="font-mono text-[10px] text-red-400 font-bold bg-red-950 px-2 py-0.5 rounded border border-red-500/40">
+                              Истек
+                            </span>
+                            <label
+                              onClick={(e) => e.stopPropagation()}
+                              className="cursor-pointer px-1.5 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[9px] font-bold"
+                            >
+                              <span>Обновить</span>
+                              <input
+                                type="file"
+                                accept="image/*,.pdf"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) handleUploadAndRecognizeInspection(car.id, f);
+                                }}
+                              />
+                            </label>
+                          </div>
+                        ) : (
+                          <label
+                            onClick={(e) => e.stopPropagation()}
+                            className="cursor-pointer px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 rounded text-[10px] font-black inline-flex items-center space-x-1 shadow transition active:scale-95"
+                          >
+                            <Sparkles className="w-2.5 h-2.5" />
+                            <span>{recognizingInspectionCarId === car.id ? "Считывание..." : "Загрузить"}</span>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="hidden"
+                              disabled={recognizingInspectionCarId === car.id}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadAndRecognizeInspection(car.id, f);
+                              }}
+                            />
+                          </label>
+                        )}
+                      </td>
+
                       <td className="py-3 px-3 font-mono font-black text-emerald-400">
                         {car.clientStandardDailyRate || 50} ₾
                       </td>
@@ -888,6 +1216,172 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
             fetchCars();
           }}
         />
+      )}
+
+      {/* Modal: Смена фото автомобиля / Загрузка товарной карточки */}
+      {photoModalCar && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-5 space-y-4 shadow-2xl animate-in fade-in">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base">
+                    Фото / Товарная карточка авто
+                  </h3>
+                  <span className="text-xs font-mono text-amber-400 font-bold">
+                    {photoModalCar.brand} {photoModalCar.model} ({photoModalCar.plateNumber})
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setPhotoModalCar(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-xl"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current photo preview */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-300 block">
+                Текущее изображение автомобиля:
+              </span>
+              <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
+                <img
+                  src={photoModalCar.imageUrl || photoModalCar.cardBannerUrl || getFallbackCarImage(photoModalCar.model)}
+                  alt="Предпросмотр"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-sm text-[10px] text-white font-bold border border-white/10">
+                  {photoModalCar.imageUrl || photoModalCar.cardBannerUrl ? "✓ Загруженная карточка автопарка" : "Шаблонное авто"}
+                </div>
+              </div>
+            </div>
+
+            {/* Upload from device */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-xs font-bold text-slate-300 block">
+                Загрузить наше фото или товарную карточку (файл):
+              </span>
+              <label className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-amber-500/40 hover:border-amber-400 bg-slate-950 hover:bg-slate-950/80 cursor-pointer transition group">
+                <Upload className="w-6 h-6 text-amber-400 group-hover:scale-110 transition mb-1" />
+                <span className="text-xs font-bold text-white">
+                  {isUploadingCarPhoto ? "Загрузка файла..." : "📁 Выберите файл с фото / карточкой"}
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5">
+                  PNG, JPG, WEBP (рекомендуется формат 16:9 или рекламная товарная плашка)
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={isUploadingCarPhoto}
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUploadCarPhoto(photoModalCar.id, f);
+                  }}
+                />
+              </label>
+            </div>
+
+            {/* Or Paste Direct URL */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-xs font-bold text-slate-300 block">
+                Или укажите прямую ссылку на изображение (URL):
+              </span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={carPhotoUrlInput}
+                  onChange={(e) => setCarPhotoUrlInput(e.target.value)}
+                  placeholder="https://... или /uploads/..."
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"
+                />
+                <button
+                  type="button"
+                  disabled={!carPhotoUrlInput.trim() || isUploadingCarPhoto}
+                  onClick={() => handleSaveCarPhotoUrl(photoModalCar.id, carPhotoUrlInput)}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition disabled:opacity-50"
+                >
+                  Применить
+                </button>
+              </div>
+            </div>
+
+            {/* Footer actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+              {(photoModalCar.imageUrl || photoModalCar.cardBannerUrl) ? (
+                <button
+                  type="button"
+                  disabled={isUploadingCarPhoto}
+                  onClick={() => handleResetCarPhoto(photoModalCar.id)}
+                  className="text-xs text-rose-400 hover:text-rose-300 flex items-center space-x-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Сбросить к шаблону</span>
+                </button>
+              ) : <div />}
+
+              <button
+                type="button"
+                onClick={() => setPhotoModalCar(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Просмотр скана техосмотра */}
+      {inspectionScanModalUrl && (
+        <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-5 space-y-3 shadow-2xl animate-in fade-in">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <span className="font-bold text-white text-sm flex items-center space-x-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Скан диагностической карты техосмотра (PTI)</span>
+              </span>
+              <button
+                onClick={() => setInspectionScanModalUrl(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto rounded-2xl bg-black flex items-center justify-center border border-slate-800">
+              <img
+                src={inspectionScanModalUrl}
+                alt="Скан техосмотра"
+                className="max-h-[68vh] w-auto object-contain"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <a
+                href={inspectionScanModalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-cyan-400 hover:underline flex items-center space-x-1"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Открыть оригинал в новой вкладке</span>
+              </a>
+
+              <button
+                onClick={() => setInspectionScanModalUrl(null)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

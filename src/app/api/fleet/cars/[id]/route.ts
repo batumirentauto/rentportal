@@ -137,6 +137,10 @@ export async function PATCH(
     if (body.techPassportBackUrl !== undefined) updateData.techPassportBackUrl = body.techPassportBackUrl || null;
     if (body.techPassportNumber !== undefined) updateData.techPassportNumber = body.techPassportNumber || null;
 
+    // 10.5. Фотографии автомобиля и товарные карточки
+    if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl || null;
+    if (body.cardBannerUrl !== undefined) updateData.cardBannerUrl = body.cardBannerUrl || null;
+
     // 11. Паспортные реквизиты ТС (VIN, год, госномер)
     if (body.vin !== undefined && body.vin) updateData.vin = body.vin.toUpperCase().trim();
     if (body.year !== undefined && !isNaN(Number(body.year))) updateData.year = Number(body.year);

@@ -95,9 +95,18 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
   const [isRecognizingTp, setIsRecognizingTp] = useState<boolean>(false);
   const [tpOcrNotice, setTpOcrNotice] = useState<string | null>(null);
 
-  // Technical Inspection (PTI Dates)
+  // Car Photo / Commercial Card
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [cardBannerUrl, setCardBannerUrl] = useState<string | null>(null);
+  const [isUploadingCarPhoto, setIsUploadingCarPhoto] = useState<boolean>(false);
+
+  // Technical Inspection (PTI Dates & Certificate)
   const [inspectionDate, setInspectionDate] = useState<string>("");
   const [inspectionExpiryDate, setInspectionExpiryDate] = useState<string>("");
+  const [inspectionNumber, setInspectionNumber] = useState<string>("");
+  const [inspectionPhotoUrl, setInspectionPhotoUrl] = useState<string | null>(null);
+  const [isRecognizingInspection, setIsRecognizingInspection] = useState<boolean>(false);
+  const [inspectionOcrNotice, setInspectionOcrNotice] = useState<string | null>(null);
 
   // Form states - New Availability Block
   const [blockStartDate, setBlockStartDate] = useState<string>("");
@@ -150,6 +159,10 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
         setYear(data.car.year || 2020);
         setPlateNumber(data.car.plateNumber || "");
 
+        setImageUrl(data.car.imageUrl || null);
+        setCardBannerUrl(data.car.cardBannerUrl || null);
+        setInspectionPhotoUrl(data.car.inspectionPhotoUrl || null);
+        setInspectionNumber(data.car.inspectionNumber || "");
         setInspectionDate(data.car.inspectionDate ? data.car.inspectionDate.split("T")[0] : "");
         setInspectionExpiryDate(data.car.inspectionExpiryDate ? data.car.inspectionExpiryDate.split("T")[0] : "");
 
@@ -303,6 +316,120 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
     }
   };
 
+  // Загрузка собственного фото / товарной карточки автопарка
+  const handleUploadCarPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingCarPhoto(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "car_photos");
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        setImageUrl(data.url);
+        await fetch(`/api/fleet/cars/${carId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl: data.url }),
+        });
+        setSuccessMsg("Фотография / товарная карточка автомобиля успешно обновлена!");
+        if (onUpdated) onUpdated();
+      } else {
+        setErrorMsg(data.error || "Не удалось загрузить фотографию");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg("Ошибка при загрузке фото");
+    } finally {
+      setIsUploadingCarPhoto(false);
+    }
+  };
+
+  // Сброс фото к стандартному шаблону
+  const handleResetCarPhoto = async () => {
+    setImageUrl(null);
+    setCardBannerUrl(null);
+    try {
+      await fetch(`/api/fleet/cars/${carId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: null, cardBannerUrl: null }),
+      });
+      setSuccessMsg("Фото сброшено к стандартному шаблону");
+      if (onUpdated) onUpdated();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Загрузка бланка техосмотра (PTI) и распознавание через нейросеть Gemini
+  const handleUploadAndRecognizeInspection = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsRecognizingInspection(true);
+    setInspectionOcrNotice(null);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "inspections");
+
+      const upRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const upData = await upRes.json();
+      if (!upData.success || !upData.url) {
+        throw new Error(upData.error || "Не удалось загрузить файл техосмотра");
+      }
+
+      setInspectionPhotoUrl(upData.url);
+
+      const ocrRes = await fetch("/api/ai/recognize-inspection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          carId,
+          photoUrl: upData.url,
+          autoSave: true,
+        }),
+      });
+      const ocrData = await ocrRes.json();
+      if (!ocrData.success || !ocrData.extractedData) {
+        throw new Error(ocrData.error || "Не удалось распознать бланк техосмотра");
+      }
+
+      const d = ocrData.extractedData;
+      if (d.inspectionDate) setInspectionDate(d.inspectionDate);
+      if (d.inspectionExpiryDate) setInspectionExpiryDate(d.inspectionExpiryDate);
+      if (d.inspectionNumber) setInspectionNumber(d.inspectionNumber);
+
+      setInspectionOcrNotice(
+        `✓ Считано нейросетью: Действует до ${d.inspectionExpiryDate || "—"}${d.inspectionNumber ? `, бланк № ${d.inspectionNumber}` : ""}`
+      );
+      setSuccessMsg("Техосмотр успешно загружен, распознан ИИ и сохранен в карточке авто!");
+      if (onUpdated) onUpdated();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || "Ошибка распознавания техосмотра");
+    } finally {
+      setIsRecognizingInspection(false);
+    }
+  };
+
   // Сохранение общих параметров
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -338,6 +465,10 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           year: year || null,
           plateNumber: plateNumber || null,
           insurancePolicyPhotoUrl,
+          imageUrl: imageUrl || null,
+          cardBannerUrl: cardBannerUrl || null,
+          inspectionPhotoUrl: inspectionPhotoUrl || null,
+          inspectionNumber: inspectionNumber || null,
           inspectionDate: inspectionDate || null,
           inspectionExpiryDate: inspectionExpiryDate || null,
         }),
@@ -795,6 +926,101 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Car Photo / Commercial Card */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-md">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <div className="flex items-center space-x-2">
+                        <Camera className="w-4 h-4 text-amber-400" />
+                        <div>
+                          <span className="text-xs font-bold text-slate-200 block">
+                            Фотография автомобиля / Товарная карточка автопарка
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Отображается в шахматке, каталоге автопарка и карточках бронирования
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        imageUrl || cardBannerUrl
+                          ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40"
+                          : "bg-slate-900 text-slate-400 border border-slate-800"
+                      }`}>
+                        {imageUrl || cardBannerUrl ? "✓ Наша товарная карточка" : "Шаблон фото"}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 items-center">
+                      <div className="relative w-44 h-28 rounded-xl overflow-hidden bg-slate-900 border border-slate-800 shrink-0 group">
+                        <img
+                          src={imageUrl || cardBannerUrl || "/car-placeholder.png"}
+                          alt={`${car?.brand || ""} ${car?.model || ""}`}
+                          className="w-full h-full object-cover"
+                          onError={(e: any) => {
+                            e.currentTarget.src = "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=400&q=80";
+                          }}
+                        />
+                        {(imageUrl || cardBannerUrl) && (
+                          <div className="absolute top-1.5 left-1.5 bg-emerald-500 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded shadow">
+                            ФОТО АВТОПАРКА
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setPreviewModal({ url: imageUrl || cardBannerUrl || "", title: `${car?.brand} ${car?.model}` })}
+                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[11px] font-bold text-white cursor-zoom-in"
+                        >
+                          🔍 Просмотреть
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 flex-1 w-full">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label className="cursor-pointer px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow transition active:scale-95 flex items-center space-x-1.5">
+                            {isUploadingCarPhoto ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>Загрузка...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3.5 h-3.5" />
+                                <span>Загрузить фото с устройства</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={isUploadingCarPhoto}
+                              onChange={handleUploadCarPhoto}
+                              className="hidden"
+                            />
+                          </label>
+
+                          {(imageUrl || cardBannerUrl) && (
+                            <button
+                              type="button"
+                              onClick={handleResetCarPhoto}
+                              className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-rose-300 border border-slate-800 rounded-xl text-xs font-semibold transition"
+                            >
+                              Сбросить фото
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="pt-1">
+                          <label className="text-[10px] text-slate-400 block mb-1">Или прямая ссылка на изображение:</label>
+                          <input
+                            type="url"
+                            value={imageUrl || ""}
+                            onChange={(e) => setImageUrl(e.target.value)}
+                            placeholder="https://.../car-photo.jpg"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-amber-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Pricing Matrix */}
                   <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
                     <span className="font-bold text-white block">Тарифная сетка для клиентов (₾ GEL / день):</span>
@@ -924,32 +1150,76 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Техосмотр (PTI) - указание даты прохождения и срока окончания */}
-                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-md">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  {/* Техосмотр (PTI) - указание даты прохождения, срока окончания и распознавание бланка через ИИ */}
+                  <div className="bg-gradient-to-br from-indigo-950/20 via-slate-950 to-slate-900 p-4 rounded-2xl border-2 border-indigo-500/40 space-y-3 shadow-md">
+                    <div className="flex items-center justify-between pb-2 border-b border-indigo-500/20">
                       <div className="flex items-center space-x-2">
                         <span className="text-base">🛡️</span>
                         <div>
-                          <span className="text-xs font-bold text-slate-200 block">
-                            Техосмотр (PTI)
+                          <span className="text-xs font-extrabold text-indigo-200 block">
+                            Государственный техосмотр (PTI)
                           </span>
                           <span className="text-[10px] text-slate-400">
-                            Дата прохождения и срок окончания
+                            Сертификат периодического технического инспектирования Грузии
                           </span>
                         </div>
                       </div>
-                      {inspectionExpiryDate && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                          new Date(inspectionExpiryDate) < new Date()
-                            ? "bg-red-950 text-red-300 border border-red-500/40"
-                            : "bg-emerald-950 text-emerald-300 border border-emerald-500/40"
-                        }`}>
-                          {new Date(inspectionExpiryDate) < new Date() ? "⚠️ Просрочен" : "✓ Действует"}
-                        </span>
-                      )}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        inspectionExpiryDate && new Date(inspectionExpiryDate) < new Date()
+                          ? "bg-red-950 text-red-300 border border-red-500/40"
+                          : inspectionPhotoUrl || inspectionDate
+                          ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40"
+                          : "bg-amber-950 text-amber-300 border border-amber-500/40"
+                      }`}>
+                        {inspectionExpiryDate && new Date(inspectionExpiryDate) < new Date()
+                          ? "⚠️ Просрочен"
+                          : inspectionPhotoUrl || inspectionDate
+                          ? "✓ Техосмотр загружен"
+                          : "❌ Не загружен"}
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* AI OCR Trigger Bar for PTI */}
+                    <div className="p-3 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-amber-500/10 border border-indigo-500/30 rounded-xl flex items-center justify-between flex-wrap gap-2">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-black text-indigo-300 flex items-center space-x-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Загрузить и распознать техосмотр через ИИ</span>
+                        </span>
+                        <p className="text-[10px] text-slate-400">
+                          Прикрепите фото или скан бланка PTI — нейросеть автоматически считает дату инспекции, срок действия (+1 год) и номер акта.
+                        </p>
+                      </div>
+
+                      <label className="cursor-pointer px-3.5 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white font-black rounded-xl text-xs shadow-md transition active:scale-95 flex items-center space-x-1.5 shrink-0">
+                        {isRecognizingInspection ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>ИИ распознает...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>✨ Загрузить и распознать</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          disabled={isRecognizingInspection}
+                          onChange={handleUploadAndRecognizeInspection}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+
+                    {inspectionOcrNotice && (
+                      <div className="p-2.5 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-emerald-200 text-[11px] font-bold">
+                        {inspectionOcrNotice}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="text-slate-300 text-[10px] font-semibold block mb-1">
                           Дата прохождения техосмотра:
@@ -966,7 +1236,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                               setInspectionExpiryDate(d.toISOString().split("T")[0]);
                             }
                           }}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-amber-500"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-indigo-500"
                         />
                       </div>
 
@@ -978,10 +1248,48 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                           type="date"
                           value={inspectionExpiryDate}
                           onChange={(e) => setInspectionExpiryDate(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-amber-500"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-indigo-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-300 text-[10px] font-semibold block mb-1">
+                          Номер бланка / акта PTI:
+                        </label>
+                        <input
+                          type="text"
+                          value={inspectionNumber}
+                          onChange={(e) => setInspectionNumber(e.target.value)}
+                          placeholder="PTI-2025-..."
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-indigo-500"
                         />
                       </div>
                     </div>
+
+                    {inspectionPhotoUrl && (
+                      <div className="pt-2 border-t border-indigo-500/20 flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <FileCheck className="w-4 h-4 text-emerald-400" />
+                          <span className="text-[11px] text-slate-300 font-bold">Скан бланка техосмотра прикреплен</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewModal({ url: inspectionPhotoUrl, title: "Скан техосмотра (PTI)" })}
+                            className="text-[11px] text-cyan-300 hover:underline font-bold"
+                          >
+                            🔍 Посмотреть скан
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setInspectionPhotoUrl(null)}
+                            className="text-[11px] text-rose-400 hover:underline"
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Tech Passport (Vehicle Registration Certificate) & Photo Upload */}
