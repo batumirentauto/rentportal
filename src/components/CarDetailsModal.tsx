@@ -34,7 +34,7 @@ interface CarDetailsModalProps {
   carId: string;
   isOpen: boolean;
   onClose: () => void;
-  onUpdated?: () => void;
+  onUpdated?: (updatedCar?: any) => void;
   initialTab?: "general" | "availability";
 }
 
@@ -207,7 +207,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
       if (data.success) {
         setCar(data.car);
         setSuccessMsg(data.message || "Город дислокации успешно изменен!");
-        if (onUpdated) onUpdated();
+        if (onUpdated) onUpdated(data.car);
       } else {
         setErrorMsg(data.error || "Не удалось сменить город");
       }
@@ -265,7 +265,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           });
           setSuccessMsg("Фото полиса страхования успешно загружено!");
         }
-        if (onUpdated) onUpdated();
+        if (onUpdated) onUpdated(data.car);
       } else {
         setErrorMsg(data.error || "Не удалось загрузить фото");
       }
@@ -344,7 +344,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           body: JSON.stringify({ imageUrl: data.url }),
         });
         setSuccessMsg("Фотография / товарная карточка автомобиля успешно обновлена!");
-        if (onUpdated) onUpdated();
+        if (onUpdated) onUpdated(data.car);
       } else {
         setErrorMsg(data.error || "Не удалось загрузить фотографию");
       }
@@ -489,7 +489,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
         setCar(data.car);
         if (cleanImageUrl) setImageUrl(cleanImageUrl);
         setSuccessMsg("✓ Параметры автомобиля успешно сохранены!");
-        if (onUpdated) onUpdated();
+        if (onUpdated) onUpdated(data.car);
       } else {
         setErrorMsg(data.error || "Не удалось сохранить изменения");
       }
@@ -531,7 +531,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
         setBlockEndDate("");
         setIsIndefiniteBlock(false);
         await fetchCarDetails();
-        if (onUpdated) onUpdated();
+        if (onUpdated) onUpdated(data.car);
       } else {
         setErrorMsg(data.error || "Не удалось заблокировать автомобиль");
       }
@@ -559,7 +559,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
       if (data.success) {
         setSuccessMsg(data.message);
         await fetchCarDetails();
-        if (onUpdated) onUpdated();
+        if (onUpdated) onUpdated(data.car);
       } else {
         setErrorMsg(data.error || "Не удалось снять блокировку");
       }
@@ -615,7 +615,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
         setIsArchiveConfirmOpen(false);
         setCar(data.car);
         setSuccessMsg(data.message || "Автомобиль успешно выведен из автопарка и удален из шахматки!");
-        if (onUpdated) onUpdated();
+        if (onUpdated) onUpdated(data.car);
       } else {
         setErrorMsg(data.error || "Не удалось вывести автомобиль из парка");
       }
@@ -640,7 +640,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
       if (data.success) {
         setCar(data.car);
         setSuccessMsg("Автомобиль успешно восстановлен в автопарк и возвращен в шахматку!");
-        if (onUpdated) onUpdated();
+        if (onUpdated) onUpdated(data.car);
       } else {
         setErrorMsg(data.error || "Не удалось восстановить автомобиль");
       }

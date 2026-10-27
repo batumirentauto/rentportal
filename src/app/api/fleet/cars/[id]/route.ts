@@ -146,7 +146,13 @@ export async function PATCH(
     if (body.vin !== undefined && body.vin) updateData.vin = body.vin.toUpperCase().trim();
     if (body.year !== undefined && !isNaN(Number(body.year))) updateData.year = Number(body.year);
     if (body.plateNumber !== undefined && body.plateNumber) updateData.plateNumber = body.plateNumber.toUpperCase().trim();
-    if (body.brand !== undefined && body.brand) updateData.brand = body.brand.trim();
+    if (body.brand !== undefined && body.brand) {
+      let b = String(body.brand).trim();
+      if (b.length > 3 && b === b.toUpperCase()) {
+        b = b.charAt(0).toUpperCase() + b.slice(1).toLowerCase();
+      }
+      updateData.brand = b;
+    }
     if (body.model !== undefined && body.model) updateData.model = body.model.trim();
     if (body.color !== undefined && body.color) updateData.color = body.color.trim();
 

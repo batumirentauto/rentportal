@@ -258,20 +258,38 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
     }, 2000);
   };
 
-  // Aggregated Brand Counts
+  // Aggregated Brand Counts (case-insensitive & trimmed)
   const brandStats = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const brandMap: Record<string, { label: string; count: number }> = {};
     let total = 0;
     cars.forEach((c) => {
       if (!c.isArchived) {
         total++;
-        const b = c.brand || "Другие";
-        counts[b] = (counts[b] || 0) + 1;
+        const rawBrand = (c.brand || "").trim();
+        const displayBrand = rawBrand || "Другие";
+        const key = displayBrand.toLowerCase();
+
+        if (!brandMap[key]) {
+          // Normalize all-caps brands (e.g. SUBARU -> Subaru, TOYOTA -> Toyota, except short acronyms like BMW)
+          const formattedLabel =
+            displayBrand.length > 3 && displayBrand === displayBrand.toUpperCase()
+              ? displayBrand.charAt(0).toUpperCase() + displayBrand.slice(1).toLowerCase()
+              : displayBrand;
+          brandMap[key] = { label: formattedLabel, count: 0 };
+        } else {
+          // Prefer Title Case over ALL-CAPS if both exist
+          if (displayBrand !== displayBrand.toUpperCase() && brandMap[key].label === brandMap[key].label.toUpperCase()) {
+            brandMap[key].label = displayBrand;
+          }
+        }
+        brandMap[key].count++;
       }
     });
 
     // Sort brands descending by number of cars
-    const sortedBrands = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const sortedBrands = Object.values(brandMap)
+      .map((item) => [item.label, item.count] as [string, number])
+      .sort((a, b) => b[1] - a[1]);
     return { total, sortedBrands };
   }, [cars]);
 
@@ -329,9 +347,13 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
         if (car.isArchived && selectedStatus !== "ALL_WITH_ARCHIVE") return false;
       }
 
-      // Brand filter
-      if (selectedBrand !== "ALL" && car.brand !== selectedBrand) {
-        return false;
+      // Brand filter (case-insensitive & trimmed)
+      if (selectedBrand !== "ALL") {
+        const sel = selectedBrand.trim().toLowerCase();
+        const b = (car.brand || "").trim().toLowerCase();
+        if (b !== sel) {
+          return false;
+        }
       }
 
       // City filter
@@ -345,7 +367,7 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
       } else if (selectedStatus === "RENTED") {
         if (car.status !== "RENTED") return false;
       } else if (selectedStatus === "BLOCKED") {
-        if (!car.isStopBlocked && car.status !== "MAINTENANCE") return false;
+        if (!car.isStopBlocked && car.status !== "MAINTENANCE" && car.status !== "BLOCKED") return false;
       }
 
       // Class filter
@@ -564,7 +586,7 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
           </button>
 
           {brandStats.sortedBrands.map(([brand, count]) => {
-            const isSelected = selectedBrand === brand;
+            const isSelected = selectedBrand !== "ALL" && selectedBrand.trim().toLowerCase() === brand.trim().toLowerCase();
             return (
               <button
                 key={brand}
@@ -1188,8 +1210,12 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
           isOpen={!!selectedCarForDetails}
           initialTab={carModalTab}
           onClose={() => setSelectedCarForDetails(null)}
-          onUpdated={() => {
+          onUpdated={(updatedCar) => {
             fetchCars();
+            if (updatedCar) {
+              setOcrSuccessNotice(`✓ Изменения для ${updatedCar.brand || ""} ${updatedCar.model || ""} (${updatedCar.plateNumber || ""}) сохранены!`);
+              setTimeout(() => setOcrSuccessNotice(null), 4000);
+            }
           }}
         />
       )}

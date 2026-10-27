@@ -247,14 +247,45 @@ export async function POST(request: Request) {
     // Auto-save to Car in database if carId is given and autoSave is requested
     let updatedCar: any = null;
     if (autoSave && carId) {
+      const existingCar = await prisma.car.findUnique({ where: { id: carId } });
       const updateData: any = {};
       if (extractedData.vin) updateData.vin = extractedData.vin;
       if (extractedData.year && !isNaN(extractedData.year)) updateData.year = extractedData.year;
       if (extractedData.plateNumber) updateData.plateNumber = extractedData.plateNumber;
       if (extractedData.techPassportNumber) updateData.techPassportNumber = extractedData.techPassportNumber;
-      if (extractedData.brand) updateData.brand = extractedData.brand;
-      if (extractedData.model) updateData.model = extractedData.model;
-      if (extractedData.color) updateData.color = extractedData.color;
+
+      // Brand: preserve existing car brand name and casing!
+      if (extractedData.brand) {
+        const rawBrand = String(extractedData.brand).trim();
+        if (!existingCar?.brand) {
+          let b = rawBrand;
+          if (b.length > 3 && b === b.toUpperCase()) {
+            b = b.charAt(0).toUpperCase() + b.slice(1).toLowerCase();
+          }
+          updateData.brand = b;
+        } else if (existingCar.brand.trim().toLowerCase() !== rawBrand.toLowerCase()) {
+          let b = rawBrand;
+          if (b.length > 3 && b === b.toUpperCase()) {
+            b = b.charAt(0).toUpperCase() + b.slice(1).toLowerCase();
+          }
+          updateData.brand = b;
+        }
+        // If brand matches existing car case-insensitively, keep existingCar.brand unchanged
+      }
+
+      // Model: preserve existing car model name and casing!
+      if (extractedData.model) {
+        const rawModel = String(extractedData.model).trim();
+        if (!existingCar?.model) {
+          updateData.model = rawModel;
+        } else if (existingCar.model.trim().toLowerCase() !== rawModel.toLowerCase()) {
+          updateData.model = rawModel;
+        }
+      }
+
+      if (extractedData.color && !existingCar?.color) {
+        updateData.color = extractedData.color;
+      }
 
       if (techPassportFrontUrl) updateData.techPassportFrontUrl = techPassportFrontUrl;
       if (techPassportBackUrl) updateData.techPassportBackUrl = techPassportBackUrl;
