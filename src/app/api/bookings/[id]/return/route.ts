@@ -37,6 +37,8 @@ export async function POST(
       extraHoursCount = 0,
       extraHoursFee = 0,
       isExtraHoursPaid = false,
+      unpaidExtensionsAmount = 0,
+      unpaidExtensionsDays = 0,
       deductionsTotal = 0,
       finalBalanceType = "ZERO_SETTLED", // "REFUND_TO_CLIENT" | "PAYMENT_BY_CLIENT" | "ZERO_SETTLED"
       finalBalanceAmount = 0,
@@ -284,11 +286,23 @@ export async function POST(
             method: settlementMethod,
             status: "PAID",
             managerName,
-            notes: `Доплата клиентом на месте при сдаче авто: ${amountPaidNow} ₾ (недостающее топливо: ${fuelChargeAmount} ₾, штрафы: ${finesTotalAmountGEL} ₾, повреждения: ${damageChargeAmount} ₾, продление: ${extraHoursFee} ₾${extraWashFee > 0 ? `, мойка/уборка: ${extraWashFee} ₾` : ""})`,
+            notes: `Доплата клиентом на месте при сдаче авто: ${amountPaidNow} ₾ (недостающее топливо: ${fuelChargeAmount} ₾, штрафы: ${finesTotalAmountGEL} ₾, повреждения: ${damageChargeAmount} ₾${Number(unpaidExtensionsAmount) > 0 ? `, задолженность за продление: ${unpaidExtensionsAmount} ₾ (${unpaidExtensionsDays} дн.)` : ""}, доп. часы: ${extraHoursFee} ₾${extraWashFee > 0 ? `, мойка/уборка: ${extraWashFee} ₾` : ""})`,
           },
         });
       }
     }
+
+    // 4.5. Закрываем статус неоплаченных продлений (BookingExtension)
+    await prisma.bookingExtension.updateMany({
+      where: {
+        bookingId: id,
+        paymentStatus: "PENDING",
+      },
+      data: {
+        paymentStatus: "PAID",
+        paymentMethod: settlementMethod,
+      },
+    });
 
     // 5. Запись в журнал пробега
     await prisma.mileageLog.create({

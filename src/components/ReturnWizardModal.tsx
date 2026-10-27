@@ -265,6 +265,47 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const extraHoursFee = customExtraHoursFee !== null ? customExtraHoursFee : hoursCalc.totalFee;
   const extraHoursToDeduct = !isExtraHoursPaid ? extraHoursFee : 0;
 
+  // 6.7. Неоплаченные продления аренды (Booking Extensions with PENDING or ON_RETURN status)
+  const [extensions, setExtensions] = useState<any[]>(booking.extensions || []);
+
+  useEffect(() => {
+    const fetchLatestBooking = async () => {
+      try {
+        const res = await fetch(`/api/bookings/${booking.id}`);
+        const data = await res.json();
+        if (data.success && data.booking?.extensions) {
+          setExtensions(data.booking.extensions);
+        }
+      } catch (e) {
+        console.error("Error fetching booking extensions:", e);
+      }
+    };
+    if (booking?.id) {
+      fetchLatestBooking();
+    }
+  }, [booking?.id]);
+
+  const unpaidExtensions = useMemo(() => {
+    return (extensions || []).filter(
+      (ext: any) => ext.paymentStatus === "PENDING" || (ext.paymentTiming === "ON_RETURN" && ext.paymentStatus !== "PAID")
+    );
+  }, [extensions]);
+
+  const unpaidExtensionsTotalAmount = useMemo(() => {
+    return unpaidExtensions.reduce((sum: number, ext: any) => sum + (Number(ext.amount) || 0), 0);
+  }, [unpaidExtensions]);
+
+  const unpaidExtensionsTotalDays = useMemo(() => {
+    return unpaidExtensions.reduce((sum: number, ext: any) => sum + (Number(ext.extraDays) || 0), 0);
+  }, [unpaidExtensions]);
+
+  const unpaidExtensionsTotalHours = useMemo(() => {
+    return unpaidExtensions.reduce((sum: number, ext: any) => sum + (Number(ext.extraHours) || 0), 0);
+  }, [unpaidExtensions]);
+
+  const [includeUnpaidExtensions, setIncludeUnpaidExtensions] = useState<boolean>(true);
+  const unpaidExtensionsToDeduct = (includeUnpaidExtensions && unpaidExtensionsTotalAmount > 0) ? unpaidExtensionsTotalAmount : 0;
+
   // 7. Взаиморасчет
   const [managerName, setManagerName] = useState<string>("Менеджер смены (Грузия)");
   const [settlementMethod, setSettlementMethod] = useState<string>("CASH");
@@ -284,7 +325,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   // Общие начисления/удержания:
   const finesToDeduct = finesPaidByClientToCompany ? selectedFinesTotalGEL : 0;
   const lostPassportFee = !techPassportReturned ? lostTechPassportCharge : 0;
-  const deductionsTotal = fuelChargeAmount + (hasNewDamages ? damageChargeAmount : 0) + finesToDeduct + extraWashFee + lostPassportFee + extraHoursToDeduct;
+  const deductionsTotal = fuelChargeAmount + (hasNewDamages ? damageChargeAmount : 0) + finesToDeduct + extraWashFee + lostPassportFee + extraHoursToDeduct + unpaidExtensionsToDeduct;
 
   // Итоговый баланс:
   // Если есть залог: Баланс = (Залог + Сдача) - Удержания
@@ -342,6 +383,8 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
           extraHoursCount: extraHours,
           extraHoursFee,
           isExtraHoursPaid,
+          unpaidExtensionsAmount: unpaidExtensionsToDeduct,
+          unpaidExtensionsDays: unpaidExtensionsTotalDays,
           deductionsTotal,
           finalBalanceType,
           finalBalanceAmount,
@@ -508,6 +551,16 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 </div>
               )}
 
+              {unpaidExtensionsToDeduct > 0 && (
+                <div className="flex justify-between py-1 px-2.5 bg-rose-950/70 border border-red-500/50 rounded-lg text-rose-300 font-bold">
+                  <span className="flex items-center space-x-1.5">
+                    <span>🚨</span>
+                    <span>Задолженность за продление ({unpaidExtensionsTotalDays > 0 ? `${unpaidExtensionsTotalDays} сут.` : ""}{unpaidExtensionsTotalHours > 0 ? ` +${unpaidExtensionsTotalHours} ч.` : ""}):</span>
+                  </span>
+                  <span className="font-mono font-black text-rose-200">+{unpaidExtensionsToDeduct} ₾ (GEL)</span>
+                </div>
+              )}
+
               {hasNewDamages && damageChargeAmount > 0 && (
                 <div className="flex justify-between py-0.5 text-red-300">
                   <span>Ущерб за повреждения кузова/салона:</span>
@@ -631,6 +684,83 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* 🚨 КРАСНЫЙ БЛОК: НЕОПЛАЧЕННОЕ ПРОДЛЕНИЕ АРЕНДЫ (ЗАДОЛЖЕННОСТЬ ЗА ПРОДЛЕНИЕ) */}
+            {unpaidExtensions.length > 0 && (
+              <div className="bg-gradient-to-r from-red-950 via-rose-950 to-slate-950 border-2 border-red-500 rounded-2xl p-4 space-y-3 shadow-2xl shadow-red-950/70 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start space-x-3">
+                    <div className="p-2.5 bg-red-600/30 border border-red-400 rounded-xl text-red-300 shrink-0 mt-0.5 animate-pulse">
+                      <AlertTriangle className="w-5 h-5 text-red-300" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2 flex-wrap">
+                        <span className="text-sm font-black text-white">
+                          🚨 ВИСИТ ЗАДОЛЖЕННОСТЬ ЗА ПРОДЛЕНИЕ АРЕНДЫ!
+                        </span>
+                        <span className="bg-red-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          Не оплачено в моменте
+                        </span>
+                      </div>
+                      <p className="text-xs text-red-200 mt-1 font-medium">
+                        Клиент продлевал автомобиль, оплата не была внесена сразу (согласовано к удержанию при возврате).
+                      </p>
+                      <div className="mt-2 inline-flex items-center space-x-2 bg-red-900/60 border border-red-400/60 rounded-xl px-3 py-1.5">
+                        <span className="text-xs text-red-200 font-bold">Сумма задолженности:</span>
+                        <span className="font-mono text-base font-black text-white">
+                          {unpaidExtensionsTotalAmount} ₾
+                        </span>
+                        <span className="text-red-300 text-xs font-semibold">
+                          ({unpaidExtensionsTotalDays > 0 ? `за ${unpaidExtensionsTotalDays} сут.` : ""}{unpaidExtensionsTotalHours > 0 ? ` +${unpaidExtensionsTotalHours} ч.` : ""})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-xl font-black font-mono text-red-400 block">
+                      +{unpaidExtensionsTotalAmount} ₾
+                    </span>
+                    <label className="flex items-center space-x-1.5 text-[10px] text-red-300 font-bold cursor-pointer mt-1 justify-end">
+                      <input
+                        type="checkbox"
+                        checked={includeUnpaidExtensions}
+                        onChange={(e) => setIncludeUnpaidExtensions(e.target.checked)}
+                        className="rounded bg-slate-900 border-red-500 text-red-600 focus:ring-0"
+                      />
+                      <span>Учесть в расчете</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Детализация неоплаченных продлений */}
+                <div className="space-y-1.5 pt-2 border-t border-red-500/30">
+                  <span className="text-[10px] uppercase font-bold text-red-300 block tracking-wider">
+                    Детализация неоплаченных продлений:
+                  </span>
+                  {unpaidExtensions.map((ext: any, idx: number) => (
+                    <div
+                      key={ext.id || idx}
+                      className="bg-black/50 rounded-xl p-2.5 flex items-center justify-between text-xs border border-red-500/20 flex-wrap gap-2"
+                    >
+                      <div className="space-y-0.5">
+                        <span className="font-black text-white">
+                          Продление #{idx + 1}: {ext.extraDays > 0 ? `+${ext.extraDays} дн.` : ""}{ext.extraHours > 0 ? ` +${ext.extraHours} ч.` : ""}
+                          <span className="text-slate-400 font-normal ml-1">
+                            (до {new Date(ext.newEndDate).toLocaleDateString("ru-RU")} {new Date(ext.newEndDate).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })})
+                          </span>
+                        </span>
+                        {ext.notes && <p className="text-[11px] text-slate-300 italic">«{ext.notes}»</p>}
+                        {ext.managerName && <p className="text-[10px] text-slate-400">Оформил менеджер: {ext.managerName}</p>}
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono font-black text-amber-300 text-sm">+{ext.amount} ₾</span>
+                        <span className="text-[10px] text-rose-300 font-bold block">Оплата при возврате</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 2. Блок сверки с видео выдачи автомобиля */}
             <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
@@ -1888,6 +2018,18 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     </span>
                   </div>
                 )}
+
+                {unpaidExtensionsToDeduct > 0 && (
+                  <div className="flex justify-between py-1.5 px-2.5 bg-rose-950/80 border border-red-500/60 rounded-xl text-rose-200 font-bold animate-pulse">
+                    <span className="flex items-center space-x-1.5">
+                      <span className="text-base">🚨</span>
+                      <span>Задолженность за продление ({unpaidExtensionsTotalDays > 0 ? `${unpaidExtensionsTotalDays} сут.` : ""}{unpaidExtensionsTotalHours > 0 ? ` +${unpaidExtensionsTotalHours} ч.` : ""}):</span>
+                    </span>
+                    <span className="font-mono font-black text-rose-300 text-sm">
+                      -{unpaidExtensionsToDeduct} ₾
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Главная плашка ИТОГО */}
@@ -1951,6 +2093,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                           if (debtAmount === "") setDebtAmount(finalBalanceAmount);
                           if (!debtDescription) {
                             const parts = [];
+                            if (unpaidExtensionsToDeduct > 0) parts.push(`Продление аренды (${unpaidExtensionsToDeduct} ₾ за ${unpaidExtensionsTotalDays} сут.)`);
                             if (finesToDeduct > 0) parts.push(`Штрафы ПДД (${finesToDeduct} ₾)`);
                             if (hasNewDamages && damageChargeAmount > 0) parts.push(`Повреждения (${damageChargeAmount} ₾)`);
                             if (fuelChargeAmount > 0) parts.push(`Топливо (${fuelChargeAmount} ₾)`);
@@ -1994,6 +2137,19 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                             onChange={(e) => setDebtAmount(Number(e.target.value) || 0)}
                             className="w-full bg-slate-950 border border-amber-500/70 rounded-lg px-2.5 py-1.5 text-white font-mono font-bold focus:outline-none"
                           />
+                          {unpaidExtensionsToDeduct > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDebtAmount(unpaidExtensionsToDeduct);
+                                setDebtCategory("RENTAL");
+                                setDebtDescription(`Задолженность за продление аренды на ${unpaidExtensionsTotalDays} сут. (${unpaidExtensionsToDeduct} ₾)`);
+                              }}
+                              className="mt-1.5 px-2 py-1 bg-red-950/80 hover:bg-red-900 border border-red-500/50 text-red-200 text-[10px] font-bold rounded-lg transition flex items-center space-x-1"
+                            >
+                              <span>🚨 Долг за продление ({unpaidExtensionsToDeduct} ₾ за {unpaidExtensionsTotalDays} сут.)</span>
+                            </button>
+                          )}
                         </div>
 
                         <div>
