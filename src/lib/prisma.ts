@@ -216,6 +216,39 @@ function ensureSchema(dbFilePath: string) {
       if (!colNames.has("insurancePolicyPhotoUrl")) {
         db.exec("ALTER TABLE Car ADD COLUMN insurancePolicyPhotoUrl TEXT");
       }
+      if (!colNames.has("tankVolumeLiters")) {
+        db.exec("ALTER TABLE Car ADD COLUMN tankVolumeLiters INTEGER DEFAULT 60");
+        // Заполняем точные заводские объемы баков для текущего автопарка
+        try {
+          const cars = db.prepare("SELECT id, model, fuelType FROM Car").all();
+          const updateStmt = db.prepare("UPDATE Car SET tankVolumeLiters = ? WHERE id = ?");
+          for (const car of cars) {
+            let vol = 60;
+            const m = (car.model || "").toLowerCase();
+            if (car.fuelType === "ELECTRIC" || m.includes("model 3")) vol = 0;
+            else if (m.includes("prius")) vol = 45;
+            else if (m.includes("accent")) vol = 43;
+            else if (m.includes("500")) vol = 35;
+            else if (m.includes("renegade")) vol = 48;
+            else if (m.includes("compass") || m.includes("patriot") || m.includes("3") || m.includes("jetta") || m.includes("corolla") || m.includes("es 300") || m.includes("trailblazer")) vol = 50;
+            else if (m.includes("escape") || m.includes("325d")) vol = 57;
+            else if (m.includes("fusion") || m.includes("rav4") || m.includes("venza") || m.includes("tt")) vol = 55;
+            else if (m.includes("accord") || m.includes("cx-5")) vol = 56;
+            else if (m.includes("tiguan") || m.includes("giulia")) vol = 58;
+            else if (m.includes("outlander") || m.includes("avalon")) vol = 60;
+            else if (m.includes("crosstrek") || m.includes("forester") || m.includes("outback")) vol = 63;
+            else if (m.includes("x3")) vol = 65;
+            else if (m.includes("passat") || m.includes("c 350")) vol = 66;
+            else if (m.includes("palisade")) vol = 71;
+            else if (m.includes("rx 350")) vol = 72;
+            else if (m.includes("sienna") || m.includes("touareg") || m.includes("grand caravan")) vol = 76;
+            else if (m.includes("ghibli")) vol = 80;
+            else if (m.includes("velar")) vol = 82;
+            else if (m.includes("x5") || m.includes("q7") || m.includes("range rover sport")) vol = 85;
+            updateStmt.run(vol, car.id);
+          }
+        } catch {}
+      }
     } catch {}
 
     // 3. Check Booking table columns

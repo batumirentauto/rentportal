@@ -682,7 +682,7 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
                         <span>Топливо / КПП:</span>
                       </div>
                       <div className="font-bold text-slate-200 truncate">
-                        {car.currentFuelPerc || 100}% • {car.transmission === "MANUAL" ? "Мех." : "АКПП"}
+                        {car.fuelType === "ELECTRIC" ? "⚡ Электро" : `${car.currentFuelPerc || 100}% (бак ${car.tankVolumeLiters || 60} л)`} • {car.transmission === "MANUAL" ? "Мех." : "АКПП"}
                       </div>
                     </div>
 

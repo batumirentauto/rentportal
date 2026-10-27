@@ -45,6 +45,7 @@ model Car {
   transmission    String           @default("AUTOMATIC") // "AUTOMATIC", "MANUAL"
   fuelType        String           @default("PETROL") // "PETROL", "HYBRID", "DIESEL", "ELECTRIC"
   engineVolume    String?          // "2.5L"
+  tankVolumeLiters Int             @default(60)     // Объем топливного бака в литрах (например: 60)
   currentMileage  Int              @default(50000)
   currentFuelPerc Int              @default(100) // 0-100%
   imageUrl        String?          // Основное фото автомобиля

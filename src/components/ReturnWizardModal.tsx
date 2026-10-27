@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { calculateExtraHoursFee } from "@/lib/extra-hours";
+import { getCarTankVolume, FUEL_PRICE_95_GEL, calculateFuelShortage } from "@/lib/fuelSpecs";
 import {
   X,
   CheckCircle2,
@@ -67,26 +68,25 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const [needsWash, setNeedsWash] = useState<boolean>(false);
   const [cleanlinessState, setCleanlinessState] = useState<string>("CLEAN"); // "CLEAN" | "DIRTY_BODY" | "DIRTY_INTERIOR"
 
-  // 2. Уровень топлива
+  // 2. Уровень топлива и расчет недостачи по фактическому объему бака
+  const tankCapacity = getCarTankVolume(car);
+  const isElectric = car?.fuelType === "ELECTRIC" || tankCapacity === 0;
   const fuelAtHandover = handoverReport?.fuelLevelPercent ?? 100;
   const [returnFuelLevel, setReturnFuelLevel] = useState<number>(fuelAtHandover);
   const fuelShortagePercent = Math.max(0, fuelAtHandover - returnFuelLevel);
-  // Расчет стоимости топлива: 60 литров бак, 1% ~ 0.6 л. Цена 95-го бензина: 4.30 GEL (₾) за литр
-  const FUEL_PRICE_PER_LITER = 4.30;
-  const defaultFuelCharge = fuelShortagePercent > 0
-    ? Math.round(fuelShortagePercent * 0.6 * FUEL_PRICE_PER_LITER)
-    : 0;
-  const [fuelChargeAmount, setFuelChargeAmount] = useState<number>(defaultFuelCharge);
+
+  // Расчет недостачи на основе реального объема бака автомобиля
+  const initialFuelCalc = calculateFuelShortage(fuelShortagePercent, tankCapacity, FUEL_PRICE_95_GEL);
+  const [fuelChargeAmount, setFuelChargeAmount] = useState<number>(initialFuelCalc.chargeAmount);
 
   // При изменении уровня топлива обновляем расчетное начисление
   useEffect(() => {
     const shortage = Math.max(0, fuelAtHandover - returnFuelLevel);
-    if (shortage > 0) {
-      setFuelChargeAmount(Math.round(shortage * 0.6 * FUEL_PRICE_PER_LITER));
-    } else {
-      setFuelChargeAmount(0);
-    }
-  }, [returnFuelLevel, fuelAtHandover]);
+    const calc = calculateFuelShortage(shortage, tankCapacity, FUEL_PRICE_95_GEL);
+    setFuelChargeAmount(calc.chargeAmount);
+  }, [returnFuelLevel, fuelAtHandover, tankCapacity]);
+
+  const shortageLiters = isElectric ? 0 : Math.round((fuelShortagePercent / 100) * tankCapacity * 10) / 10;
 
   // 3. Осмотр повреждений и сверка с видео выдачи
   const [videoVerified, setVideoVerified] = useState<boolean>(true);
@@ -1132,6 +1132,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <span className="flex items-center space-x-1.5">
                     <Droplet className="w-4 h-4 text-cyan-400" />
                     <span>Уровень топлива при сдаче:</span>
+                    {!isElectric && (
+                      <span className="text-[10px] text-cyan-300 font-mono bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/50">
+                        бак {tankCapacity} л
+                      </span>
+                    )}
                   </span>
                   <span className="text-[10px] text-slate-400">выдан с {fuelAtHandover}%</span>
                 </label>
@@ -1177,14 +1182,20 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   ))}
                 </div>
 
-                {fuelShortagePercent > 0 ? (
+                {isElectric ? (
+                  <span className="text-[10px] text-cyan-400 block">
+                    ⚡ Электромобиль (топливный бак отсутствует)
+                  </span>
+                ) : fuelShortagePercent > 0 ? (
                   <div className="flex items-center justify-between text-[11px] text-amber-300 pt-0.5">
-                    <span>Нехватка: -{fuelShortagePercent}% (~{Math.round(fuelShortagePercent * 0.6)} л по 4.30 ₾/л)</span>
+                    <span>
+                      Нехватка: -{fuelShortagePercent}% (~{shortageLiters} л из {tankCapacity} л по {FUEL_PRICE_95_GEL.toFixed(2)} ₾/л)
+                    </span>
                     <span className="font-mono font-bold">+{fuelChargeAmount} ₾ (GEL)</span>
                   </div>
                 ) : (
                   <span className="text-[10px] text-emerald-400 block">
-                    ✓ Уровень топлива в норме (соответствует выдаче)
+                    ✓ Уровень топлива в норме (соответствует выдаче • бак {tankCapacity} л)
                   </span>
                 )}
               </div>

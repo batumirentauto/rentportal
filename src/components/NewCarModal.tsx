@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { X, Plus, Car as CarIcon, MapPin, Check, AlertTriangle, Sparkles, Upload, Loader2, FileText, Camera } from "lucide-react";
+import { getCarTankVolume } from "@/lib/fuelSpecs";
 
 interface NewCarModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export const NewCarModal: React.FC<NewCarModalProps> = ({
   const [color, setColor] = useState("Белый");
   const [transmission, setTransmission] = useState("AUTOMATIC");
   const [fuelType, setFuelType] = useState("PETROL");
+  const [tankVolumeLiters, setTankVolumeLiters] = useState<number>(60);
   const [cityId, setCityId] = useState("");
   const [ownerId, setOwnerId] = useState("");
   const [carClass, setCarClass] = useState("COMFORT");
@@ -99,7 +101,10 @@ export const NewCarModal: React.FC<NewCarModalProps> = ({
       if (d.plateNumber) setPlateNumber(d.plateNumber);
       if (d.techPassportNumber) setTechPassportNumber(d.techPassportNumber);
       if (d.brand) setBrand(d.brand);
-      if (d.model) setModel(d.model);
+      if (d.model) {
+        setModel(d.model);
+        setTankVolumeLiters(getCarTankVolume({ brand: d.brand || brand, model: d.model, fuelType }));
+      }
       if (d.color) setColor(d.color);
 
       setTpOcrNotice(`✓ Распознано ИИ: ${d.brand || ""} ${d.model || ""} (${d.plateNumber || ""}), VIN: ${d.vin || "—"}, Год: ${d.year || "—"}`);
@@ -158,6 +163,7 @@ export const NewCarModal: React.FC<NewCarModalProps> = ({
           color,
           transmission,
           fuelType,
+          tankVolumeLiters,
           cityId,
           ownerId: ownerId || null,
           carClass,
@@ -437,6 +443,53 @@ export const NewCarModal: React.FC<NewCarModalProps> = ({
                 <option value="AUTOMATIC">Автомат</option>
                 <option value="MANUAL">Механика</option>
               </select>
+            </div>
+          </div>
+
+          {/* Fuel Type, Tank Volume & Current Mileage */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div>
+              <label className="text-slate-400 text-[10px] block mb-1">Тип топлива:</label>
+              <select
+                value={fuelType}
+                onChange={(e) => {
+                  const ft = e.target.value;
+                  setFuelType(ft);
+                  if (ft === "ELECTRIC") setTankVolumeLiters(0);
+                  else if (tankVolumeLiters === 0) setTankVolumeLiters(60);
+                }}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
+              >
+                <option value="PETROL">Бензин (95)</option>
+                <option value="HYBRID">Гибрид (Бензин/Электро)</option>
+                <option value="DIESEL">Дизель</option>
+                <option value="ELECTRIC">Электро (EV)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-slate-400 text-[10px] block mb-1 flex items-center justify-between">
+                <span>Объем бака (литров):</span>
+                <span className="text-emerald-400 font-mono text-[9px]">для возвратов</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="150"
+                disabled={fuelType === "ELECTRIC"}
+                value={tankVolumeLiters}
+                onChange={(e) => setTankVolumeLiters(Number(e.target.value))}
+                placeholder="60"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-emerald-300 font-mono font-bold"
+              />
+            </div>
+            <div>
+              <label className="text-slate-400 text-[10px] block mb-1">Текущий пробег (км):</label>
+              <input
+                type="number"
+                value={currentMileage}
+                onChange={(e) => setCurrentMileage(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono"
+              />
             </div>
           </div>
 

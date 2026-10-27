@@ -80,6 +80,8 @@ export async function PATCH(
     // 3. Пробег и топливо
     if (body.currentMileage !== undefined) updateData.currentMileage = Number(body.currentMileage);
     if (body.currentFuelPerc !== undefined) updateData.currentFuelPerc = Number(body.currentFuelPerc);
+    if (body.tankVolumeLiters !== undefined) updateData.tankVolumeLiters = Number(body.tankVolumeLiters);
+    if (body.fuelType !== undefined) updateData.fuelType = body.fuelType;
 
     // 4. Тарифная сетка и заметки
     if (body.clientMinDailyRate !== undefined) updateData.clientMinDailyRate = Number(body.clientMinDailyRate);

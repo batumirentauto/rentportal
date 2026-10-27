@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCarTankVolume } from "@/lib/fuelSpecs";
 
 export async function GET(request: Request) {
   try {
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
       defaultOwnerDailyRate,
       currentMileage,
       currentFuelPerc,
+      tankVolumeLiters,
       pricingNotes,
       hasBatumiParking,
       batumiParkingPermitNumber,
@@ -114,6 +116,9 @@ export async function POST(request: Request) {
         defaultOwnerDailyRate: Number(defaultOwnerDailyRate) || 25,
         currentMileage: Number(currentMileage) || 50000,
         currentFuelPerc: Number(currentFuelPerc) || 100,
+        tankVolumeLiters: tankVolumeLiters !== undefined && tankVolumeLiters !== null && tankVolumeLiters !== ""
+          ? Number(tankVolumeLiters)
+          : getCarTankVolume({ brand, model, fuelType }),
         pricingNotes: pricingNotes || null,
         hasBatumiParking: Boolean(hasBatumiParking),
         batumiParkingPermitNumber: batumiParkingPermitNumber || null,

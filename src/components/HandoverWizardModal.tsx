@@ -376,6 +376,11 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                     <label className="flex items-center space-x-2 text-xs font-semibold text-slate-300">
                       <Fuel className="w-4 h-4 text-emerald-400" />
                       <span>Уровень топлива:</span>
+                      {car?.fuelType !== "ELECTRIC" && (
+                        <span className="text-[10px] text-emerald-300 font-mono bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-800/50">
+                          бак {car?.tankVolumeLiters || 60} л
+                        </span>
+                      )}
                     </label>
                     <span className="text-xs font-mono font-bold text-emerald-400">
                       {fuelPercent === 100

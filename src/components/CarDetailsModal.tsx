@@ -63,6 +63,8 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
   const [status, setStatus] = useState<string>("AVAILABLE");
   const [currentMileage, setCurrentMileage] = useState<number>(50000);
   const [currentFuelPerc, setCurrentFuelPerc] = useState<number>(100);
+  const [tankVolumeLiters, setTankVolumeLiters] = useState<number>(60);
+  const [fuelType, setFuelType] = useState<string>("PETROL");
   const [clientMinRate, setClientMinRate] = useState<number>(35);
   const [clientStandardRate, setClientStandardRate] = useState<number>(50);
   const [clientMaxRate, setClientMaxRate] = useState<number>(75);
@@ -124,6 +126,8 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
         setStatus(data.car.status || "AVAILABLE");
         setCurrentMileage(data.car.currentMileage || 50000);
         setCurrentFuelPerc(data.car.currentFuelPerc ?? 100);
+        setTankVolumeLiters(data.car.tankVolumeLiters ?? 60);
+        setFuelType(data.car.fuelType || "PETROL");
         setClientMinRate(data.car.clientMinDailyRate || 35);
         setClientStandardRate(data.car.clientStandardDailyRate || 50);
         setClientMaxRate(data.car.clientMaxDailyRate || 75);
@@ -314,6 +318,8 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           status,
           currentMileage,
           currentFuelPerc,
+          tankVolumeLiters,
+          fuelType,
           clientMinDailyRate: clientMinRate,
           clientStandardDailyRate: clientStandardRate,
           clientMaxDailyRate: clientMaxRate,
@@ -728,8 +734,8 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                   </div>
 
                   {/* Operational Status & Telemetry */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1 col-span-2 sm:col-span-1">
                       <label className="text-slate-400 text-[10px] block">Статус автомобиля:</label>
                       <select
                         value={status}
@@ -754,6 +760,22 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                         value={currentMileage}
                         onChange={(e) => setCurrentMileage(Number(e.target.value))}
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs"
+                      />
+                    </div>
+
+                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+                      <label className="text-slate-400 text-[10px] flex items-center space-x-1">
+                        <Fuel className="w-3 h-3 text-emerald-400" />
+                        <span>Объем бака (литров):</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="150"
+                        value={tankVolumeLiters}
+                        onChange={(e) => setTankVolumeLiters(Number(e.target.value))}
+                        placeholder="60"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-emerald-300 font-mono text-xs font-bold"
                       />
                     </div>
 
