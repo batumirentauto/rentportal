@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { calculateExtraHoursFee } from "@/lib/extra-hours";
-import { getCarTankVolume, FUEL_PRICE_95_GEL, calculateFuelShortage } from "@/lib/fuelSpecs";
+import { getCarTankVolume, FUEL_PRICE_95_GEL, getFuelRate, calculateFuelShortage } from "@/lib/fuelSpecs";
 import {
   X,
   CheckCircle2,
@@ -71,20 +71,23 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   // 2. Уровень топлива и расчет недостачи по фактическому объему бака
   const tankCapacity = getCarTankVolume(car);
   const isElectric = car?.fuelType === "ELECTRIC" || tankCapacity === 0;
+  const isDiesel = car?.fuelType === "DIESEL";
+  const fuelRate = getFuelRate(car);
+  const fuelTypeLabel = isDiesel ? "Дизель" : "95-й бензин";
   const fuelAtHandover = handoverReport?.fuelLevelPercent ?? 100;
   const [returnFuelLevel, setReturnFuelLevel] = useState<number>(fuelAtHandover);
   const fuelShortagePercent = Math.max(0, fuelAtHandover - returnFuelLevel);
 
   // Расчет недостачи на основе реального объема бака автомобиля
-  const initialFuelCalc = calculateFuelShortage(fuelShortagePercent, tankCapacity, FUEL_PRICE_95_GEL);
+  const initialFuelCalc = calculateFuelShortage(fuelShortagePercent, tankCapacity, fuelRate);
   const [fuelChargeAmount, setFuelChargeAmount] = useState<number>(initialFuelCalc.chargeAmount);
 
   // При изменении уровня топлива обновляем расчетное начисление
   useEffect(() => {
     const shortage = Math.max(0, fuelAtHandover - returnFuelLevel);
-    const calc = calculateFuelShortage(shortage, tankCapacity, FUEL_PRICE_95_GEL);
+    const calc = calculateFuelShortage(shortage, tankCapacity, fuelRate);
     setFuelChargeAmount(calc.chargeAmount);
-  }, [returnFuelLevel, fuelAtHandover, tankCapacity]);
+  }, [returnFuelLevel, fuelAtHandover, tankCapacity, fuelRate]);
 
   const shortageLiters = isElectric ? 0 : Math.round((fuelShortagePercent / 100) * tankCapacity * 10) / 10;
 
@@ -1191,13 +1194,13 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 ) : fuelShortagePercent > 0 ? (
                   <div className="flex items-center justify-between text-[11px] text-amber-300 pt-0.5">
                     <span>
-                      Нехватка: -{fuelShortagePercent}% (~{shortageLiters} л из {tankCapacity} л по {FUEL_PRICE_95_GEL.toFixed(2)} ₾/л)
+                      Нехватка: -{fuelShortagePercent}% (~{shortageLiters} л из {tankCapacity} л по {fuelRate.toFixed(2)} ₾/л • {fuelTypeLabel})
                     </span>
                     <span className="font-mono font-bold">+{fuelChargeAmount} ₾ (GEL)</span>
                   </div>
                 ) : (
                   <span className="text-[10px] text-emerald-400 block">
-                    ✓ Уровень топлива в норме (соответствует выдаче • бак {tankCapacity} л)
+                    ✓ Уровень топлива в норме (соответствует выдаче • бак {tankCapacity} л • {fuelTypeLabel})
                   </span>
                 )}
               </div>

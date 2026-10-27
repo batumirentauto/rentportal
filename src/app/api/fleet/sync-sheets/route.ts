@@ -79,7 +79,7 @@ function parseCarTitle(title: string) {
   } else if (t.includes("velar")) {
     brand = "Land Rover"; model = "Range Rover Velar"; carClass = "PREMIUM"; defaultPrice = 120;
   } else if (t.includes("range rover")) {
-    brand = "Land Rover"; model = "Range Rover Sport"; carClass = "PREMIUM"; defaultPrice = 110;
+    brand = "Land Rover"; model = "Range Rover"; carClass = "PREMIUM"; defaultPrice = 130;
   } else if (t.includes("cx5") || t.includes("cx-5")) {
     brand = "Mazda"; model = "CX-5"; carClass = "CROSSOVER"; defaultPrice = 55;
   } else if (t.includes("авалон") || t.includes("avalon")) {

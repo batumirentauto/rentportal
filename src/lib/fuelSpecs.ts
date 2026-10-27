@@ -1,6 +1,12 @@
 // База данных технических характеристик топливных баков и тарифов топлива
 
 export const FUEL_PRICE_95_GEL = 4.30; // Актуальная цена 95-го бензина в Грузии (₾ за литр)
+export const FUEL_PRICE_DIESEL_GEL = 4.70; // Актуальная цена дизельного топлива Евро-5 в Грузии (₾ за литр)
+
+export function getFuelRate(car?: { fuelType?: string | null }): number {
+  if (car?.fuelType === "DIESEL") return FUEL_PRICE_DIESEL_GEL;
+  return FUEL_PRICE_95_GEL;
+}
 
 // Заводские объемы топливных баков популярных моделей автопарка (в литрах)
 export const MODEL_TANK_VOLUMES: Record<string, number> = {
@@ -65,9 +71,9 @@ export const MODEL_TANK_VOLUMES: Record<string, number> = {
   "Outback": 63,
   "Legacy": 70,
   // Land Rover
-  "Range Rover Sport": 86,
   "Range Rover Velar": 82,
-  "Range Rover": 90,
+  "Range Rover": 86,
+  "Range Rover Sport": 86,
   "Discovery": 85,
   "Evoque": 67,
   // Mazda

@@ -244,11 +244,20 @@ function ensureSchema(dbFilePath: string) {
             else if (m.includes("sienna") || m.includes("touareg") || m.includes("grand caravan")) vol = 76;
             else if (m.includes("ghibli")) vol = 80;
             else if (m.includes("velar")) vol = 82;
-            else if (m.includes("x5") || m.includes("q7") || m.includes("range rover sport")) vol = 85;
+            else if (m.includes("x5") || m.includes("q7") || m.includes("range rover")) vol = 86;
             updateStmt.run(vol, car.id);
           }
         } catch {}
       }
+
+      // Land Rover Range Rover (Full size, 3.0 Diesel) update
+      try {
+        db.prepare(`
+          UPDATE Car 
+          SET model = 'Range Rover', fuelType = 'DIESEL', engineVolume = '3.0L Diesel', tankVolumeLiters = 86 
+          WHERE plateNumber = 'RP-132-RR' OR (brand = 'Land Rover' AND model LIKE '%Sport%')
+        `).run();
+      } catch {}
     } catch {}
 
     // 3. Check Booking table columns
