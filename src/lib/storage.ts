@@ -103,6 +103,18 @@ export function getMimeType(fileName: string): string {
       return "image/heic";
     case ".heif":
       return "image/heif";
+    case ".mp4":
+      return "video/mp4";
+    case ".mov":
+      return "video/quicktime";
+    case ".webm":
+      return "video/webm";
+    case ".m4v":
+      return "video/x-m4v";
+    case ".3gp":
+      return "video/3gpp";
+    case ".avi":
+      return "video/x-msvideo";
     default:
       return "application/octet-stream";
   }

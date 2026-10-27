@@ -3,7 +3,7 @@ import { resolveUploadedFile } from "@/lib/storage";
 import fs from "fs";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
@@ -19,12 +19,43 @@ export async function GET(
       return new NextResponse("File Not Found", { status: 404 });
     }
 
+    const stat = fs.statSync(resolved.filePath);
+    const fileSize = stat.size;
+    const range = request.headers.get("range");
+
+    // Support HTTP Range requests (crucial for iOS Safari / Mobile video playback)
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (!isNaN(start) && start < fileSize) {
+        const chunkSize = end - start + 1;
+        const fileBuffer = Buffer.alloc(chunkSize);
+        const fd = fs.openSync(resolved.filePath, "r");
+        fs.readSync(fd, fileBuffer, 0, chunkSize, start);
+        fs.closeSync(fd);
+
+        return new NextResponse(fileBuffer, {
+          status: 206,
+          headers: {
+            "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+            "Accept-Ranges": "bytes",
+            "Content-Length": String(chunkSize),
+            "Content-Type": resolved.mimeType,
+          },
+        });
+      }
+    }
+
     const fileBuffer = fs.readFileSync(resolved.filePath);
 
     return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
         "Content-Type": resolved.mimeType,
+        "Content-Length": String(fileSize),
+        "Accept-Ranges": "bytes",
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { saveUploadedFile } from "@/lib/storage";
 
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   try {
     const contentType = request.headers.get("content-type") || "";

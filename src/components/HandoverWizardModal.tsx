@@ -20,6 +20,10 @@ import {
   Sparkles,
   MapPin,
   ExternalLink,
+  Upload,
+  Loader2,
+  Trash2,
+  RefreshCw,
 } from "lucide-react";
 
 interface HandoverWizardModalProps {
@@ -79,13 +83,13 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
   const [expectedReturnDate, setExpectedReturnDate] = useState<string>(defaultReturnDate);
 
   const [dashboardPhoto, setDashboardPhoto] = useState<string | null>(
-    "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80"
+    booking?.handoverReport?.dashboardPhotoUrl || null
   );
   const [techPassportPhoto, setTechPassportPhoto] = useState<string | null>(
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80"
+    booking?.handoverReport?.techPassportPhotoUrl || null
   );
   const [carBodyVideo, setCarBodyVideo] = useState<string | null>(
-    "inspection_video_walkaround_geo.mp4"
+    booking?.handoverReport?.carBodyVideoUrl || null
   );
 
   // Step 2: Extras
@@ -95,8 +99,51 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
 
   // Step 3: Contract Photo
   const [contractPhoto, setContractPhoto] = useState<string | null>(
-    "https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=600&q=80"
+    booking?.handoverReport?.contractPhotoUrl || null
   );
+
+  // Media uploading state
+  const [uploadingSlots, setUploadingSlots] = useState<{
+    dashboard?: boolean;
+    techPassport?: boolean;
+    video?: boolean;
+    contract?: boolean;
+  }>({});
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFileUpload = async (
+    file: File,
+    type: "dashboard" | "techPassport" | "video" | "contract"
+  ) => {
+    try {
+      setUploadError(null);
+      setUploadingSlots((prev) => ({ ...prev, [type]: true }));
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", type === "video" ? "inspections_video" : "inspections");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Не удалось загрузить файл на сервер");
+      }
+
+      if (type === "dashboard") setDashboardPhoto(data.url);
+      else if (type === "techPassport") setTechPassportPhoto(data.url);
+      else if (type === "video") setCarBodyVideo(data.url);
+      else if (type === "contract") setContractPhoto(data.url);
+    } catch (err: any) {
+      console.error(`Error uploading ${type}:`, err);
+      setUploadError(`Ошибка при загрузке: ${err.message || "Сетевая ошибка"}`);
+    } finally {
+      setUploadingSlots((prev) => ({ ...prev, [type]: false }));
+    }
+  };
 
   // Step 4: Payments
   const [rentalAmount, setRentalAmount] = useState<number>(booking.totalAmount);
@@ -553,42 +600,260 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
 
               {/* Media capture / Upload Simulation */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Обязательная фото/видео фиксация (на телефон):
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Обязательная фото/видео фиксация (на телефон):
+                  </h4>
+                  <span className="text-[10px] text-amber-400/90 font-medium">
+                    камера или галерея
+                  </span>
+                </div>
+
+                {uploadError && (
+                  <div className="bg-rose-500/20 border border-rose-500/40 text-rose-300 p-2.5 rounded-xl text-xs flex items-center justify-between">
+                    <span>{uploadError}</span>
+                    <button
+                      type="button"
+                      onClick={() => setUploadError(null)}
+                      className="text-rose-400 hover:text-white ml-2 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* Photo 1: Dashboard */}
-                  <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700 flex flex-col items-center text-center">
-                    <Camera className="w-5 h-5 text-amber-400 mb-1" />
-                    <span className="text-xs font-semibold text-slate-200">Фото панели приборов</span>
-                    <span className="text-[10px] text-slate-400 mb-2">(одометр + уровень топлива)</span>
-                    <div className="w-full bg-emerald-950/40 border border-emerald-500/40 rounded px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-medium">
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Приборка зафиксирована</span>
+                  <div className={`p-3 rounded-xl border flex flex-col items-center text-center transition-all ${
+                    dashboardPhoto ? "bg-slate-800/80 border-emerald-500/50" : "bg-slate-800/50 border-slate-700/80 hover:border-amber-500/50"
+                  }`}>
+                    <div className="flex items-center space-x-1.5 mb-1">
+                      <Camera className={`w-4 h-4 ${dashboardPhoto ? "text-emerald-400" : "text-amber-400"}`} />
+                      <span className="text-xs font-bold text-slate-200">Панель приборов</span>
                     </div>
+                    <span className="text-[10px] text-slate-400 mb-2">одометр + уровень топлива</span>
+
+                    {uploadingSlots.dashboard ? (
+                      <div className="w-full py-4 flex flex-col items-center justify-center space-y-1.5 bg-slate-900/60 rounded-lg border border-slate-700">
+                        <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
+                        <span className="text-[11px] text-amber-300 font-medium">Загрузка фото...</span>
+                      </div>
+                    ) : dashboardPhoto ? (
+                      <div className="w-full space-y-2">
+                        <div className="relative group rounded-lg overflow-hidden border border-slate-700 max-h-28 bg-black">
+                          <img
+                            src={dashboardPhoto}
+                            alt="Панель приборов"
+                            className="w-full h-24 object-cover"
+                          />
+                          <a
+                            href={dashboardPhoto}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-black text-white rounded-md text-[10px]"
+                            title="Открыть в полном размере"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                        <div className="w-full bg-emerald-950/60 border border-emerald-500/50 rounded-lg px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-semibold">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Приборка зафиксирована</span>
+                        </div>
+                        <div className="flex items-center justify-center space-x-2 pt-0.5">
+                          <label className="cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, "dashboard");
+                              }}
+                            />
+                            <RefreshCw className="w-3 h-3 text-amber-400" />
+                            <span>Заменить</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setDashboardPhoto(null)}
+                            className="text-[11px] text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-1 rounded-lg flex items-center space-x-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Удалить</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full mt-auto space-y-1.5">
+                        <label className="cursor-pointer w-full py-2 px-3 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow transition active:scale-95">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file, "dashboard");
+                            }}
+                          />
+                          <Camera className="w-4 h-4 text-amber-400" />
+                          <span>Снять / Загрузить фото</span>
+                        </label>
+                      </div>
+                    )}
                   </div>
 
                   {/* Photo 2: Tech passport */}
-                  <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700 flex flex-col items-center text-center">
-                    <FileCheck className="w-5 h-5 text-blue-400 mb-1" />
-                    <span className="text-xs font-semibold text-slate-200">Фото техпаспорта</span>
-                    <span className="text-[10px] text-slate-400 mb-2">(свидетельство о регистрации)</span>
-                    <div className="w-full bg-emerald-950/40 border border-emerald-500/40 rounded px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-medium">
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Техпаспорт зафиксирован</span>
+                  <div className={`p-3 rounded-xl border flex flex-col items-center text-center transition-all ${
+                    techPassportPhoto ? "bg-slate-800/80 border-emerald-500/50" : "bg-slate-800/50 border-slate-700/80 hover:border-blue-500/50"
+                  }`}>
+                    <div className="flex items-center space-x-1.5 mb-1">
+                      <FileCheck className={`w-4 h-4 ${techPassportPhoto ? "text-emerald-400" : "text-blue-400"}`} />
+                      <span className="text-xs font-bold text-slate-200">Фото техпаспорта</span>
                     </div>
+                    <span className="text-[10px] text-slate-400 mb-2">свидетельство о регистрации</span>
+
+                    {uploadingSlots.techPassport ? (
+                      <div className="w-full py-4 flex flex-col items-center justify-center space-y-1.5 bg-slate-900/60 rounded-lg border border-slate-700">
+                        <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                        <span className="text-[11px] text-blue-300 font-medium">Загрузка техпаспорта...</span>
+                      </div>
+                    ) : techPassportPhoto ? (
+                      <div className="w-full space-y-2">
+                        <div className="relative group rounded-lg overflow-hidden border border-slate-700 max-h-28 bg-black">
+                          <img
+                            src={techPassportPhoto}
+                            alt="Техпаспорт"
+                            className="w-full h-24 object-cover"
+                          />
+                          <a
+                            href={techPassportPhoto}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-black text-white rounded-md text-[10px]"
+                            title="Открыть в полном размере"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                        <div className="w-full bg-emerald-950/60 border border-emerald-500/50 rounded-lg px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-semibold">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Техпаспорт зафиксирован</span>
+                        </div>
+                        <div className="flex items-center justify-center space-x-2 pt-0.5">
+                          <label className="cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, "techPassport");
+                              }}
+                            />
+                            <RefreshCw className="w-3 h-3 text-blue-400" />
+                            <span>Заменить</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setTechPassportPhoto(null)}
+                            className="text-[11px] text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-1 rounded-lg flex items-center space-x-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Удалить</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full mt-auto space-y-1.5">
+                        <label className="cursor-pointer w-full py-2 px-3 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow transition active:scale-95">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file, "techPassport");
+                            }}
+                          />
+                          <Camera className="w-4 h-4 text-blue-400" />
+                          <span>Снять / Загрузить фото</span>
+                        </label>
+                      </div>
+                    )}
                   </div>
 
                   {/* Video: Walkaround */}
-                  <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700 flex flex-col items-center text-center">
-                    <Video className="w-5 h-5 text-red-400 mb-1" />
-                    <span className="text-xs font-semibold text-slate-200">Круговое видео кузова</span>
-                    <span className="text-[10px] text-slate-400 mb-2">(фиксация царапин и сколов)</span>
-                    <div className="w-full bg-emerald-950/40 border border-emerald-500/40 rounded px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-medium">
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Видео 360° загружено</span>
+                  <div className={`p-3 rounded-xl border flex flex-col items-center text-center transition-all ${
+                    carBodyVideo ? "bg-slate-800/80 border-emerald-500/50" : "bg-slate-800/50 border-slate-700/80 hover:border-red-500/50"
+                  }`}>
+                    <div className="flex items-center space-x-1.5 mb-1">
+                      <Video className={`w-4 h-4 ${carBodyVideo ? "text-emerald-400" : "text-rose-400"}`} />
+                      <span className="text-xs font-bold text-slate-200">Круговое видео кузова</span>
                     </div>
+                    <span className="text-[10px] text-slate-400 mb-2">царапины и сколы по кругу 360°</span>
+
+                    {uploadingSlots.video ? (
+                      <div className="w-full py-4 flex flex-col items-center justify-center space-y-1.5 bg-slate-900/60 rounded-lg border border-slate-700">
+                        <Loader2 className="w-5 h-5 text-rose-400 animate-spin" />
+                        <span className="text-[11px] text-rose-300 font-medium">Загрузка видео...</span>
+                        <span className="text-[9px] text-slate-400">Пожалуйста, подождите</span>
+                      </div>
+                    ) : carBodyVideo ? (
+                      <div className="w-full space-y-2">
+                        <div className="rounded-lg overflow-hidden border border-slate-700 bg-black max-h-28">
+                          <video
+                            src={carBodyVideo}
+                            controls
+                            playsInline
+                            className="w-full h-24 object-contain"
+                          />
+                        </div>
+                        <div className="w-full bg-emerald-950/60 border border-emerald-500/50 rounded-lg px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-semibold">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Видео 360° загружено</span>
+                        </div>
+                        <div className="flex items-center justify-center space-x-2 pt-0.5">
+                          <label className="cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
+                            <input
+                              type="file"
+                              accept="video/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, "video");
+                              }}
+                            />
+                            <RefreshCw className="w-3 h-3 text-rose-400" />
+                            <span>Заменить</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setCarBodyVideo(null)}
+                            className="text-[11px] text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-1 rounded-lg flex items-center space-x-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Удалить</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full mt-auto space-y-1.5">
+                        <label className="cursor-pointer w-full py-2 px-3 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow transition active:scale-95">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file, "video");
+                            }}
+                          />
+                          <Video className="w-4 h-4 text-rose-400" />
+                          <span>Записать / Загрузить видео</span>
+                        </label>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -704,14 +969,79 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   <h4 className="font-bold text-white text-sm">
                     Фото подписанного договора + паспорт + права
                   </h4>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Снимок подтверждает физическое присутствие клиента и юридическую силу договора
+                  <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                    Снимок подтверждает физическое присутствие клиента и юридическую силу договора. Сделайте фото договора вместе с оригиналами документов клиента.
                   </p>
                 </div>
-                <div className="bg-emerald-950/50 border border-emerald-500/50 text-emerald-400 text-xs px-3 py-1.5 rounded-lg inline-flex items-center space-x-1.5 font-medium">
-                  <Check className="w-4 h-4" />
-                  <span>Фото успешно сделано и прикреплено к отчёту</span>
-                </div>
+
+                {uploadingSlots.contract ? (
+                  <div className="py-4 flex flex-col items-center justify-center space-y-1.5 bg-slate-900/60 rounded-xl border border-slate-700 max-w-sm mx-auto">
+                    <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+                    <span className="text-xs text-amber-300 font-medium">Загрузка фото договора...</span>
+                  </div>
+                ) : contractPhoto ? (
+                  <div className="max-w-sm mx-auto space-y-2">
+                    <div className="relative group rounded-xl overflow-hidden border border-slate-700 max-h-48 bg-black">
+                      <img
+                        src={contractPhoto}
+                        alt="Подписанный договор и документы"
+                        className="w-full h-44 object-cover"
+                      />
+                      <a
+                        href={contractPhoto}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black text-white rounded-lg text-xs"
+                        title="Открыть в полном размере"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                    <div className="bg-emerald-950/60 border border-emerald-500/50 text-emerald-400 text-xs px-3 py-1.5 rounded-lg inline-flex items-center space-x-1.5 font-medium">
+                      <Check className="w-4 h-4" />
+                      <span>Фото успешно сделано и прикреплено к отчёту</span>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2 pt-1">
+                      <label className="cursor-pointer text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 border border-slate-700 transition active:scale-95">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file, "contract");
+                          }}
+                        />
+                        <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Заменить фото</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setContractPhoto(null)}
+                        className="text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 rounded-xl flex items-center space-x-1 border border-rose-500/30 transition active:scale-95"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Удалить</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pt-2">
+                    <label className="cursor-pointer inline-flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition active:scale-95">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file, "contract");
+                        }}
+                      />
+                      <Camera className="w-4 h-4" />
+                      <span>Снять на камеру / Загрузить фото</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div className="bg-slate-800/40 p-3.5 rounded-xl border border-slate-700/50 text-xs text-slate-300 space-y-1">

@@ -28,6 +28,9 @@ import {
   Printer,
   Copy,
   Wrench,
+  Loader2,
+  Trash2,
+  Upload,
 } from "lucide-react";
 
 interface ReturnWizardModalProps {
@@ -90,6 +93,30 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const [damagesDescription, setDamagesDescription] = useState<string>("");
   const [damageChargeAmount, setDamageChargeAmount] = useState<number>(0);
   const [damagePhotoUrl, setDamagePhotoUrl] = useState<string>("");
+  const [isUploadingDamagePhoto, setIsUploadingDamagePhoto] = useState<boolean>(false);
+
+  const handleDamagePhotoUpload = async (file: File) => {
+    try {
+      setIsUploadingDamagePhoto(true);
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "damages");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Ошибка загрузки фото");
+      }
+      setDamagePhotoUrl(data.url);
+    } catch (err: any) {
+      alert("Не удалось загрузить фото: " + (err.message || "Ошибка"));
+    } finally {
+      setIsUploadingDamagePhoto(false);
+    }
+  };
 
   // Чек-лист деталей кузова
   const [inspectedItems, setInspectedItems] = useState<{ [key: string]: boolean }>({
@@ -720,15 +747,70 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     </div>
                     <div>
                       <label className="text-slate-400 text-[10px] block mb-0.5">
-                        Ссылка на фото дефекта (необязательно):
+                        Фото дефекта / повреждения:
                       </label>
-                      <input
-                        type="text"
-                        value={damagePhotoUrl}
-                        onChange={(e) => setDamagePhotoUrl(e.target.value)}
-                        placeholder="https://... фото дефекта"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white text-xs"
-                      />
+                      <div className="space-y-1.5">
+                        {damagePhotoUrl ? (
+                          <div className="flex items-center space-x-2 bg-slate-900 border border-slate-700 p-2 rounded-xl">
+                            <img
+                              src={damagePhotoUrl}
+                              alt="Повреждение"
+                              className="w-12 h-12 object-cover rounded-lg border border-slate-700"
+                            />
+                            <div className="flex-1 truncate">
+                              <span className="text-xs text-emerald-400 font-semibold block">✓ Фото загружено</span>
+                              <a
+                                href={damagePhotoUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[10px] text-sky-400 hover:underline block truncate"
+                              >
+                                {damagePhotoUrl}
+                              </a>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setDamagePhotoUrl("")}
+                              className="p-1.5 text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-500/20 rounded-lg"
+                              title="Удалить"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <label className="cursor-pointer flex-1 py-2 px-3 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition active:scale-95">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleDamagePhotoUpload(file);
+                                }}
+                              />
+                              {isUploadingDamagePhoto ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Загрузка...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Camera className="w-3.5 h-3.5 text-red-400" />
+                                  <span>Снять на камеру / Загрузить фото</span>
+                                </>
+                              )}
+                            </label>
+                          </div>
+                        )}
+                        <input
+                          type="text"
+                          value={damagePhotoUrl}
+                          onChange={(e) => setDamagePhotoUrl(e.target.value)}
+                          placeholder="Или вставьте прямую ссылку https://..."
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white text-[11px]"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
