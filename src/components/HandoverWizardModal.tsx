@@ -365,26 +365,76 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   <div className="flex items-center justify-between mb-2">
                     <label className="flex items-center space-x-2 text-xs font-semibold text-slate-300">
                       <Fuel className="w-4 h-4 text-emerald-400" />
-                      <span>Уровень топлива: {fuelPercent}%</span>
+                      <span>Уровень топлива:</span>
                     </label>
                     <span className="text-xs font-mono font-bold text-emerald-400">
-                      {fuelPercent === 100 ? "Полный бак (1/1)" : `${fuelPercent}%`}
+                      {fuelPercent === 100
+                        ? "1 (100% / Полный бак)"
+                        : fuelPercent === 75
+                        ? "3/4 (75%)"
+                        : fuelPercent === 50
+                        ? "1/2 (50%)"
+                        : fuelPercent === 25
+                        ? "1/4 (25%)"
+                        : fuelPercent === 0
+                        ? "0 (0% / Пустой)"
+                        : `${fuelPercent}%`}
                     </span>
                   </div>
+
                   <input
                     type="range"
-                    min="10"
+                    min="0"
                     max="100"
                     step="5"
                     value={fuelPercent}
                     onChange={(e) => setFuelPercent(Number(e.target.value))}
                     className="w-full accent-amber-500 cursor-pointer"
                   />
-                  <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-                    <span>1/4</span>
-                    <span>1/2</span>
-                    <span>3/4</span>
-                    <span>Полный</span>
+
+                  {/* 5 marks: 0 - 1/4 - 1/2 - 3/4 - 1 */}
+                  <div className="flex justify-between text-[11px] text-slate-400 mt-1.5 font-bold px-0.5">
+                    <span className={fuelPercent === 0 ? "text-amber-400 font-extrabold" : ""}>0</span>
+                    <span className={fuelPercent === 25 ? "text-amber-400 font-extrabold" : ""}>1/4</span>
+                    <span className={fuelPercent === 50 ? "text-amber-400 font-extrabold" : ""}>1/2</span>
+                    <span className={fuelPercent === 75 ? "text-amber-400 font-extrabold" : ""}>3/4</span>
+                    <span className={fuelPercent === 100 ? "text-emerald-400 font-extrabold" : ""}>1</span>
+                  </div>
+
+                  {/* Corresponding percentages: 0% - 25% - 50% - 75% - 100% */}
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono px-0.5 mb-2.5">
+                    <span>0%</span>
+                    <span>25%</span>
+                    <span>50%</span>
+                    <span>75%</span>
+                    <span>100%</span>
+                  </div>
+
+                  {/* Quick preset buttons for instant 1-touch mobile selection */}
+                  <div className="grid grid-cols-5 gap-1.5 pt-2 border-t border-slate-700/60">
+                    {[
+                      { label: "0", pct: "0%", val: 0 },
+                      { label: "1/4", pct: "25%", val: 25 },
+                      { label: "1/2", pct: "50%", val: 50 },
+                      { label: "3/4", pct: "75%", val: 75 },
+                      { label: "1", pct: "100%", val: 100 },
+                    ].map((btn) => (
+                      <button
+                        key={btn.val}
+                        type="button"
+                        onClick={() => setFuelPercent(btn.val)}
+                        className={`py-1.5 px-1 rounded-xl border text-center transition active:scale-95 ${
+                          fuelPercent === btn.val
+                            ? "bg-amber-500 text-slate-950 border-amber-400 font-black shadow-md shadow-amber-500/20"
+                            : "bg-slate-900/90 border-slate-700/80 text-slate-300 hover:text-white hover:border-slate-600"
+                        }`}
+                      >
+                        <span className="block text-xs font-bold leading-tight">{btn.label}</span>
+                        <span className={`block text-[9px] ${fuelPercent === btn.val ? "text-slate-950 font-bold" : "text-slate-400"}`}>
+                          {btn.pct}
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

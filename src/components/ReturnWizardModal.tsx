@@ -590,7 +590,19 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[10px]">Бак при выдаче:</span>
-                  <span className="font-bold text-emerald-400">{fuelAtHandover}% ({(fuelAtHandover / 12.5).toFixed(0)}/8)</span>
+                  <span className="font-bold text-emerald-400">
+                    {fuelAtHandover === 100
+                      ? "1 (100%)"
+                      : fuelAtHandover === 75
+                      ? "3/4 (75%)"
+                      : fuelAtHandover === 50
+                      ? "1/2 (50%)"
+                      : fuelAtHandover === 25
+                      ? "1/4 (25%)"
+                      : fuelAtHandover === 0
+                      ? "0 (0%)"
+                      : `${fuelAtHandover}%`}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[10px]">Менеджер выдачи:</span>
@@ -982,16 +994,39 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     fuelShortagePercent > 0 ? "border-amber-500/70 text-amber-300" : "border-slate-700"
                   }`}
                 >
-                  <option value={100}>Полный бак (100% / 8 делений) - ОК</option>
-                  <option value={87.5}>7/8 бака (87.5%)</option>
-                  <option value={75}>6/8 бака (75%)</option>
-                  <option value={62.5}>5/8 бака (62.5%)</option>
-                  <option value={50}>Половина бака (50% / 4 деления)</option>
-                  <option value={37.5}>3/8 бака (37.5%)</option>
-                  <option value={25}>Четверть бака (25% / 2 деления)</option>
-                  <option value={12.5}>1/8 бака (12.5%)</option>
-                  <option value={5}>Пустой бак (лампочка горит)</option>
+                  <option value={100}>1 - Полный бак (100%) - ОК</option>
+                  <option value={75}>3/4 бака (75%)</option>
+                  <option value={50}>1/2 бака (50%)</option>
+                  <option value={25}>1/4 бака (25%)</option>
+                  <option value={0}>0 - Пустой бак (0%)</option>
                 </select>
+
+                {/* Quick preset buttons: 0, 1/4, 1/2, 3/4, 1 */}
+                <div className="grid grid-cols-5 gap-1.5 pt-1">
+                  {[
+                    { label: "0", pct: "0%", val: 0 },
+                    { label: "1/4", pct: "25%", val: 25 },
+                    { label: "1/2", pct: "50%", val: 50 },
+                    { label: "3/4", pct: "75%", val: 75 },
+                    { label: "1", pct: "100%", val: 100 },
+                  ].map((btn) => (
+                    <button
+                      key={btn.val}
+                      type="button"
+                      onClick={() => setReturnFuelLevel(btn.val)}
+                      className={`py-1 px-1 rounded-lg border text-center transition active:scale-95 ${
+                        returnFuelLevel === btn.val
+                          ? "bg-amber-500 text-slate-950 border-amber-400 font-black shadow"
+                          : "bg-slate-900 border-slate-700/80 text-slate-300 hover:text-white"
+                      }`}
+                    >
+                      <span className="block text-xs font-bold leading-tight">{btn.label}</span>
+                      <span className={`block text-[9px] ${returnFuelLevel === btn.val ? "text-slate-950 font-bold" : "text-slate-400"}`}>
+                        {btn.pct}
+                      </span>
+                    </button>
+                  ))}
+                </div>
 
                 {fuelShortagePercent > 0 ? (
                   <div className="flex items-center justify-between text-[11px] text-amber-300 pt-0.5">
