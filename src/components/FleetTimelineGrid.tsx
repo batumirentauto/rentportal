@@ -447,18 +447,10 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
             <button
               type="button"
               onClick={() => setIsMobileControlsOpen(!isMobileControlsOpen)}
-              className="flex items-center space-x-1 px-2 py-1.5 bg-slate-800 border border-slate-700 hover:border-amber-500/50 text-slate-200 text-xs font-bold rounded-xl transition"
+              className="flex items-center space-x-1 px-2.5 py-1.5 bg-slate-800 border border-slate-700 hover:border-amber-500/50 text-slate-200 text-xs font-bold rounded-xl transition shrink-0"
             >
               <Search className="w-3 h-3 text-amber-400" />
               <span>{isMobileControlsOpen ? "Свернуть ▲" : "Фильтры ▼"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={scrollToGrid}
-              className="p-1.5 bg-amber-500/15 border border-amber-500/40 text-amber-300 rounded-xl text-xs font-bold"
-              title="Прокрутить экран вниз к шахматке"
-            >
-              <ArrowDown className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -954,51 +946,14 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
           <div className="w-max min-w-full pb-24">
             {/* Header row: Cars column + Day columns - Sticky at top of the grid */}
             <div className="flex border-b border-slate-800 bg-slate-950 sticky top-0 z-30 shadow-md">
-              <div className="w-[136px] sm:w-[220px] shrink-0 p-2 sm:p-3 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-40 bg-slate-950 shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
-                <div className="flex items-center space-x-1 truncate">
-                  {!isFullscreen && (
-                    <button
-                      type="button"
-                      onClick={scrollToFilters}
-                      className="p-1 -ml-1 text-slate-400 hover:text-amber-400 rounded-md transition hover:bg-slate-850 shrink-0"
-                      title="Прокрутить экран наверх к поиску и фильтрам"
-                    >
-                      <ArrowUp className="w-3.5 h-3.5 text-amber-400" />
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setIsFullscreen(!isFullscreen)}
-                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-black flex items-center space-x-0.5 transition shrink-0 ${
-                      isFullscreen
-                        ? "bg-amber-400 text-slate-950 shadow"
-                        : "bg-indigo-600 hover:bg-indigo-500 text-white shadow border border-indigo-400/50"
-                    }`}
-                    title={isFullscreen ? "Выйти из полноэкранного режима (Esc)" : "Развернуть шахматку на весь экран"}
-                  >
-                    {isFullscreen ? (
-                      <>
-                        <Minimize2 className="w-3 h-3 text-slate-950" />
-                        <span>Свернуть</span>
-                      </>
-                    ) : (
-                      <>
-                        <Maximize2 className="w-3 h-3 text-white" />
-                        <span>Экран</span>
-                      </>
-                    )}
-                  </button>
-                  <span className="truncate hidden sm:inline">Автомобиль</span>
-                  <span className="text-[10px] text-slate-500 hidden sm:inline">({filteredCars.length})</span>
+              <div className="w-[136px] sm:w-[220px] shrink-0 px-2.5 sm:px-3 py-2 sm:py-2.5 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-40 bg-slate-950 shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
+                <div className="flex items-center space-x-1.5 truncate">
+                  <Car className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="truncate">Автомобили</span>
                 </div>
-                <button
-                  onClick={() => handleOpenNewBooking()}
-                  className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 text-[10px] font-black rounded-lg shadow transition active:scale-95 shrink-0"
-                  title="Быстро создать новую бронь (всегда зафиксировано)"
-                >
-                  <PlusCircle className="w-3 h-3" />
-                  <span>+ Бронь</span>
-                </button>
+                <span className="text-[10px] font-mono text-slate-400 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded shrink-0">
+                  {filteredCars.length}
+                </span>
               </div>
 
               {/* Day headers */}
@@ -2492,39 +2447,6 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
 
 
-      {/* Floating Fullscreen Action Button - Pinned on screen while scrolling */}
-      <button
-        type="button"
-        onClick={() => setIsFullscreen(!isFullscreen)}
-        className={`fixed bottom-16 sm:bottom-20 left-3 sm:left-6 z-40 flex items-center space-x-1.5 px-3 py-1.5 rounded-xl shadow-xl border active:scale-95 transition-all text-xs font-black group ${
-          isFullscreen
-            ? "bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 border-amber-300 shadow-amber-500/30"
-            : "bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 hover:from-blue-500 text-white border-blue-400/50 shadow-indigo-950/70 ring-1 ring-blue-400/40"
-        }`}
-        title={isFullscreen ? "Свернуть полноэкранный режим" : "Развернуть шахматку на весь экран"}
-      >
-        {isFullscreen ? (
-          <>
-            <Minimize2 className="w-3.5 h-3.5 text-slate-950" />
-            <span>✖ Свернуть</span>
-          </>
-        ) : (
-          <>
-            <Maximize2 className="w-3.5 h-3.5 text-blue-200 group-hover:scale-110 transition-transform animate-pulse" />
-            <span>⛶ Во весь экран</span>
-          </>
-        )}
-      </button>
-
-      {/* Floating Action Button (FAB) - Always fixed on screen */}
-      <button
-        onClick={() => handleOpenNewBooking()}
-        className="fixed bottom-4 sm:bottom-6 left-3 sm:left-6 z-40 flex items-center space-x-1.5 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl sm:rounded-2xl shadow-xl shadow-amber-500/30 border border-amber-300/60 active:scale-95 transition-all text-xs sm:text-sm group hover:scale-105"
-        title="Создать новую бронь"
-      >
-        <PlusCircle className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-slate-950 transition-transform group-hover:rotate-90 duration-300" />
-        <span className="tracking-tight font-black">+ Новая бронь</span>
-      </button>
     </div>
   );
 };
