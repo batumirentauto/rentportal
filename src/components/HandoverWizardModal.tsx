@@ -25,6 +25,7 @@ import {
   Trash2,
   RefreshCw,
   Droplets,
+  Download,
 } from "lucide-react";
 
 interface HandoverWizardModalProps {
@@ -705,21 +706,40 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                             alt="Панель приборов"
                             className="w-full h-24 object-cover"
                           />
-                          <a
-                            href={dashboardPhoto}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-black text-white rounded-md text-[10px]"
-                            title="Открыть в полном размере"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
+                          <div className="absolute top-1 right-1 flex items-center space-x-1">
+                            <a
+                              href={`${dashboardPhoto}?download=1`}
+                              download
+                              className="p-1 bg-black/70 hover:bg-black text-white rounded-md text-[10px]"
+                              title="Скачать фото приборки"
+                            >
+                              <Download className="w-3 h-3 text-amber-400" />
+                            </a>
+                            <a
+                              href={dashboardPhoto}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1 bg-black/70 hover:bg-black text-white rounded-md text-[10px]"
+                              title="Открыть в полном размере"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
                         </div>
                         <div className="w-full bg-emerald-950/60 border border-emerald-500/50 rounded-lg px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-semibold">
                           <Check className="w-3.5 h-3.5" />
                           <span>Приборка зафиксирована</span>
                         </div>
-                        <div className="flex items-center justify-center space-x-2 pt-0.5">
+                        <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
+                          <a
+                            href={`${dashboardPhoto}?download=1`}
+                            download
+                            className="text-[11px] text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-500/25 px-2 py-1 rounded-lg flex items-center space-x-1 border border-amber-500/30 transition"
+                            title="Скачать фото приборки"
+                          >
+                            <Download className="w-3 h-3 text-amber-400" />
+                            <span>Скачать</span>
+                          </a>
                           <label className="cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
                             <input
                               type="file"
@@ -785,21 +805,40 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                             alt="Техпаспорт"
                             className="w-full h-24 object-cover"
                           />
-                          <a
-                            href={techPassportPhoto}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-black text-white rounded-md text-[10px]"
-                            title="Открыть в полном размере"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
+                          <div className="absolute top-1 right-1 flex items-center space-x-1">
+                            <a
+                              href={`${techPassportPhoto}?download=1`}
+                              download
+                              className="p-1 bg-black/70 hover:bg-black text-white rounded-md text-[10px]"
+                              title="Скачать фото техпаспорта"
+                            >
+                              <Download className="w-3 h-3 text-blue-400" />
+                            </a>
+                            <a
+                              href={techPassportPhoto}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1 bg-black/70 hover:bg-black text-white rounded-md text-[10px]"
+                              title="Открыть в полном размере"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
                         </div>
                         <div className="w-full bg-emerald-950/60 border border-emerald-500/50 rounded-lg px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-semibold">
                           <Check className="w-3.5 h-3.5" />
                           <span>Техпаспорт зафиксирован</span>
                         </div>
-                        <div className="flex items-center justify-center space-x-2 pt-0.5">
+                        <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
+                          <a
+                            href={`${techPassportPhoto}?download=1`}
+                            download
+                            className="text-[11px] text-blue-300 hover:text-white bg-blue-500/10 hover:bg-blue-500/25 px-2 py-1 rounded-lg flex items-center space-x-1 border border-blue-500/30 transition"
+                            title="Скачать фото техпаспорта"
+                          >
+                            <Download className="w-3 h-3 text-blue-400" />
+                            <span>Скачать</span>
+                          </a>
                           <label className="cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
                             <input
                               type="file"
@@ -872,7 +911,16 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                           <Check className="w-3.5 h-3.5" />
                           <span>Видео 360° загружено</span>
                         </div>
-                        <div className="flex items-center justify-center space-x-2 pt-0.5">
+                        <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
+                          <a
+                            href={`${carBodyVideo}?download=1`}
+                            download
+                            className="text-[11px] text-rose-300 hover:text-white bg-rose-500/15 hover:bg-rose-500/25 px-2 py-1 rounded-lg flex items-center space-x-1 border border-rose-500/30 transition font-medium"
+                            title="Скачать видео осмотра"
+                          >
+                            <Download className="w-3 h-3 text-rose-400" />
+                            <span>Скачать видео</span>
+                          </a>
                           <label className="cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
                             <input
                               type="file"
@@ -1055,21 +1103,40 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                         alt="Подписанный договор и документы"
                         className="w-full h-44 object-cover"
                       />
-                      <a
-                        href={contractPhoto}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black text-white rounded-lg text-xs"
-                        title="Открыть в полном размере"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
+                      <div className="absolute top-2 right-2 flex items-center space-x-1.5">
+                        <a
+                          href={`${contractPhoto}?download=1`}
+                          download
+                          className="p-1.5 bg-black/70 hover:bg-black text-amber-300 rounded-lg text-xs flex items-center space-x-1"
+                          title="Скачать фото договора"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          href={contractPhoto}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 bg-black/70 hover:bg-black text-white rounded-lg text-xs"
+                          title="Открыть в полном размере"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
                     </div>
                     <div className="bg-emerald-950/60 border border-emerald-500/50 text-emerald-400 text-xs px-3 py-1.5 rounded-lg inline-flex items-center space-x-1.5 font-medium">
                       <Check className="w-4 h-4" />
                       <span>Фото успешно сделано и прикреплено к отчёту</span>
                     </div>
-                    <div className="flex items-center justify-center space-x-2 pt-1">
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                      <a
+                        href={`${contractPhoto}?download=1`}
+                        download
+                        className="text-xs text-amber-300 hover:text-white bg-amber-500/15 hover:bg-amber-500/25 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 border border-amber-500/30 transition active:scale-95 font-medium"
+                        title="Скачать фото договора"
+                      >
+                        <Download className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Скачать фото</span>
+                      </a>
                       <label className="cursor-pointer text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 border border-slate-700 transition active:scale-95">
                         <input
                           type="file"

@@ -23,8 +23,13 @@ export async function GET(
     const fileSize = stat.size;
     const range = request.headers.get("range");
 
+    const url = new URL(request.url);
+    const isDownload = url.searchParams.get("download") === "1";
+    const rawFileName = pathSegments[pathSegments.length - 1] || "file";
+    const displayFileName = rawFileName.replace(/^[a-zA-Z0-9_-]+-\d{10,}-/, "") || rawFileName;
+
     // Support HTTP Range requests (crucial for iOS Safari / Mobile video playback)
-    if (range) {
+    if (range && !isDownload) {
       const parts = range.replace(/bytes=/, "").split("-");
       const start = parseInt(parts[0], 10);
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
@@ -50,14 +55,20 @@ export async function GET(
 
     const fileBuffer = fs.readFileSync(resolved.filePath);
 
+    const headers: Record<string, string> = {
+      "Content-Type": resolved.mimeType,
+      "Content-Length": String(fileSize),
+      "Accept-Ranges": "bytes",
+      "Cache-Control": isDownload ? "no-cache" : "public, max-age=31536000, immutable",
+    };
+
+    if (isDownload) {
+      headers["Content-Disposition"] = `attachment; filename="${encodeURIComponent(displayFileName)}"`;
+    }
+
     return new NextResponse(fileBuffer, {
       status: 200,
-      headers: {
-        "Content-Type": resolved.mimeType,
-        "Content-Length": String(fileSize),
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "public, max-age=31536000, immutable",
-      },
+      headers,
     });
   } catch (error) {
     console.error("Error serving upload:", error);

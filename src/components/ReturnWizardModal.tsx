@@ -31,6 +31,7 @@ import {
   Loader2,
   Trash2,
   Upload,
+  Download,
 } from "lucide-react";
 
 interface ReturnWizardModalProps {
@@ -685,6 +686,16 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                         <span>Круговое видео возврата сохранено</span>
                       </div>
                       <div className="flex items-center space-x-2">
+                        <a
+                          href={`${returnVideoUrl}${returnVideoUrl.includes("?") ? "&" : "?"}download=1`}
+                          download
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1 text-purple-300 hover:text-white hover:bg-purple-500/20 rounded-md transition"
+                          title="Скачать видео возврата"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
                         <label className="cursor-pointer text-[10px] text-purple-300 hover:text-white bg-purple-500/20 hover:bg-purple-500/30 px-2 py-1 rounded-md transition">
                           <input
                             type="file"
@@ -880,6 +891,16 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                                 {damagePhotoUrl}
                               </a>
                             </div>
+                            <a
+                              href={`${damagePhotoUrl}${damagePhotoUrl.includes("?") ? "&" : "?"}download=1`}
+                              download
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-500/20 rounded-lg transition"
+                              title="Скачать фото дефекта"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </a>
                             <button
                               type="button"
                               onClick={() => setDamagePhotoUrl("")}
@@ -1710,38 +1731,76 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
               </div>
 
               <div className="aspect-video bg-black rounded-xl overflow-hidden flex items-center justify-center border border-slate-800">
-                {handoverReport?.carBodyVideoUrl?.startsWith("http") ? (
+                {handoverReport?.carBodyVideoUrl ? (
                   <video
                     src={handoverReport.carBodyVideoUrl}
                     controls
+                    playsInline
                     autoPlay
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 ) : (
                   <div className="p-6 text-center text-slate-400 space-y-2">
-                    <Video className="w-10 h-10 mx-auto text-purple-400 animate-pulse" />
+                    <Video className="w-10 h-10 mx-auto text-purple-400" />
                     <p className="text-xs">
-                      Видеофиксация кузова: <strong>{handoverReport?.carBodyVideoUrl || "Круговой осмотр (видеофайл)"}</strong>
+                      Видеофиксация кузова не найдена
                     </p>
                     <p className="text-[11px] text-slate-500">
-                      Менеджер {handoverReport?.managerName} зафиксировал отсутствие внешних дефектов при передаче клиенту.
+                      Видеофайл отсутствует или был удалён по истечении срока хранения (4 мес.)
                     </p>
                   </div>
                 )}
               </div>
 
-              {handoverReport?.dashboardPhotoUrl && (
-                <div className="text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-                  <span>Фото щитка приборов при выдаче:</span>
+              {/* Download and view actions for video */}
+              {handoverReport?.carBodyVideoUrl && (
+                <div className="flex items-center justify-between gap-2 pt-1">
                   <a
-                    href={handoverReport.dashboardPhotoUrl}
+                    href={`${handoverReport.carBodyVideoUrl}${handoverReport.carBodyVideoUrl.includes("?") ? "&" : "?"}download=1`}
+                    download
                     target="_blank"
                     rel="noreferrer"
-                    className="text-amber-400 hover:underline flex items-center space-x-1 font-bold"
+                    className="flex-1 py-2 px-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition shadow active:scale-95"
                   >
-                    <span>Открыть фото одометра</span>
-                    <ExternalLink className="w-3 h-3" />
+                    <Download className="w-4 h-4" />
+                    <span>Скачать видео осмотра</span>
                   </a>
+                  <a
+                    href={handoverReport.carBodyVideoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition"
+                    title="Открыть в новой вкладке"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              )}
+
+              {handoverReport?.dashboardPhotoUrl && (
+                <div className="text-[11px] text-slate-300 bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-slate-400">Фото щитка приборов (выдача):</span>
+                  <div className="flex items-center space-x-2">
+                    <a
+                      href={`${handoverReport.dashboardPhotoUrl}${handoverReport.dashboardPhotoUrl.includes("?") ? "&" : "?"}download=1`}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 rounded-lg text-xs font-bold flex items-center space-x-1 transition"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Скачать фото</span>
+                    </a>
+                    <a
+                      href={handoverReport.dashboardPhotoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-slate-400 hover:text-white p-1"
+                      title="Открыть в новой вкладке"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
                 </div>
               )}
 
