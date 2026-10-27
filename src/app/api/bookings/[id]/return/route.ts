@@ -40,6 +40,7 @@ export async function POST(
       finalBalanceType = "ZERO_SETTLED", // "REFUND_TO_CLIENT" | "PAYMENT_BY_CLIENT" | "ZERO_SETTLED"
       finalBalanceAmount = 0,
       settlementMethod = "CASH", // "CASH", "CARD_POS", "TBC_BANK", "BOG_BANK"
+      skipStopBlock = false, // Возможность принять авто без постановки на СТОП
       conditionNotes = "",
     } = body;
 
@@ -272,7 +273,7 @@ export async function POST(
       stopReasons.push(`Истек страховой полис КАСКО от ${expDateFormatted}`);
     }
 
-    if (stopReasons.length > 0) {
+    if (stopReasons.length > 0 && !skipStopBlock) {
       isStopBlocked = true;
       newCarStatus = "MAINTENANCE_BLOCKED";
     }
@@ -295,7 +296,7 @@ export async function POST(
         },
       });
     } else {
-      // Автомобиль в полном порядке — переводим в статус AVAILABLE
+      // Автомобиль переводим в статус AVAILABLE (или принят без СТОПа по решению менеджера)
       await prisma.car.update({
         where: { id: car.id },
         data: {
@@ -305,6 +306,9 @@ export async function POST(
           washStatus: finalWashStatus,
           isStopBlocked: false,
           stopReason: null,
+          stopNotes: skipStopBlock && stopReasons.length > 0
+            ? `Принят без СТОПа менеджером ${managerName}. Предупреждения: ${stopReason}`
+            : null,
         },
       });
     }
@@ -313,11 +317,13 @@ export async function POST(
       success: true,
       message: isStopBlocked
         ? `Автомобиль успешно принят, но АВТОМАТИЧЕСКИ ПОСТАВЛЕН НА СТОП! Причина: ${stopReason}`
+        : skipStopBlock && stopReasons.length > 0
+        ? `Автомобиль принят БЕЗ СТОПа по решению менеджера (предупреждение: ${stopReason})`
         : needsWash
         ? "Автомобиль успешно принят из аренды, взаиморасчет произведен и авто направлено на мойку!"
         : "Автомобиль принят чистым (мойка не требуется), взаиморасчет закрыт, авто готово к выдаче!",
       isStopBlocked,
-      stopReason,
+      stopReason: isStopBlocked ? stopReason : null,
       returnReport,
       car: {
         id: car.id,

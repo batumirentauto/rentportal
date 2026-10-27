@@ -294,8 +294,8 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
     : false;
   const willStopBlock = isInsuranceExpired || !techPassportReturned || isOilOverdue;
 
-  const handleSubmitReturn = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmitReturn = async (e?: React.FormEvent, forceSkipStop: boolean = false) => {
+    if (e) e.preventDefault();
     setIsSubmitting(true);
 
     try {
@@ -318,6 +318,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
           lostTechPassportCharge: lostPassportFee,
           needsWash,
           cleanlinessState,
+          extraWashFee,
           finesChecked: true,
           finesDetectedCount: trafficFines.length,
           finesTotalAmountGEL: selectedFinesTotalGEL,
@@ -334,6 +335,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
           finalBalanceAmount,
           settlementMethod,
           conditionNotes,
+          skipStopBlock: forceSkipStop,
         }),
       });
 
@@ -1693,7 +1695,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                       )}
                     </p>
                     <p className="text-[10px] text-red-300/80 font-medium italic">
-                      Система автоматически заблокирует авто для новых броней до прохождения ТО или продления документов.
+                      Система рекомендует заблокировать авто на СТОП до прохождения ТО или продления документов. Вы можете принять авто со СТОПом или нажать «Принять БЕЗ СТОПа».
                     </p>
                   </div>
                 </div>
@@ -1840,34 +1842,53 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
             </div>
 
             {/* Actions */}
-            <div className="pt-2 flex justify-end space-x-3 border-t border-slate-800 shrink-0">
+            <div className="pt-2 flex flex-wrap sm:flex-nowrap items-center justify-end gap-2.5 border-t border-slate-800 shrink-0">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-4 py-2.5 text-slate-400 hover:text-white rounded-xl text-xs font-bold"
+                className="px-3.5 py-2.5 text-slate-400 hover:text-white rounded-xl text-xs font-bold"
               >
                 Отмена
               </button>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={`flex items-center space-x-2 px-6 py-2.5 font-black rounded-xl shadow-lg transition active:scale-95 ${
-                  willStopBlock
-                    ? "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 text-white"
-                    : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white"
-                }`}
-              >
-                <Check className="w-4 h-4" />
-                <span>
-                  {isSubmitting
-                    ? "Сохранение..."
-                    : willStopBlock
-                    ? "Принять авто и поставить на СТОП"
-                    : "Завершить возврат и закрыть бронь"}
-                </span>
-              </button>
+              {willStopBlock ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleSubmitReturn(undefined, true)}
+                    disabled={isSubmitting}
+                    className="flex items-center space-x-1.5 px-4 py-2.5 bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-400/50 rounded-xl text-xs font-bold shadow-lg shadow-emerald-950/40 transition active:scale-95"
+                    title="Принять автомобиль без блокировки в статус 'Свободен / Доступен'"
+                  >
+                    <Check className="w-4 h-4 text-white" />
+                    <span>Принять БЕЗ СТОПа</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSubmitReturn(undefined, false)}
+                    disabled={isSubmitting}
+                    className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 text-white font-black rounded-xl shadow-lg shadow-red-950/60 transition active:scale-95"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>
+                      {isSubmitting ? "Сохранение..." : "Принять авто и поставить на СТОП"}
+                    </span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-black rounded-xl shadow-lg transition active:scale-95"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>
+                    {isSubmitting ? "Сохранение..." : "Завершить возврат и закрыть бронь"}
+                  </span>
+                </button>
+              )}
             </div>
           </form>
         )}
