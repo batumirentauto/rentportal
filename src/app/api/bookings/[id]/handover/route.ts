@@ -34,7 +34,7 @@ export async function POST(
       rentalAmount,
       rentalCurrency = "GEL",
       paymentMethod = "CASH", // "CASH", "CARD_POS", "TBC_BANK", "BOG_BANK", "CREDO_BANK", "CRYPTO"
-      depositAmount = 300,
+      depositAmount = 0,
       depositCurrency = "GEL",
       depositMethod = "CASH",
       amountExpected,

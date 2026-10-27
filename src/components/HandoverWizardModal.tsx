@@ -152,7 +152,9 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
   const [rentalAmount, setRentalAmount] = useState<number>(booking.totalAmount);
   const [rentalCurrency, setRentalCurrency] = useState<string>(booking.currency || "GEL");
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH"); // "CASH", "CARD_POS", "TBC_BANK", "BOG_BANK", "CREDO_BANK", "CRYPTO"
-  const [depositAmount, setDepositAmount] = useState<number>(booking.depositAmount || 300);
+  const [depositAmount, setDepositAmount] = useState<number>(
+    booking.depositAmount !== undefined && booking.depositAmount !== null ? Number(booking.depositAmount) : 0
+  );
   const [depositCurrency, setDepositCurrency] = useState<string>("GEL");
   const [depositMethod, setDepositMethod] = useState<string>("CASH");
   
@@ -262,7 +264,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
         {/* Step Indicator */}
         <div className="grid grid-cols-4 border-b border-slate-800 text-center text-xs font-medium bg-slate-950/60">
           <div
-            className={`py-2.5 px-1 border-b-2 transition-all ${
+            className={`py-2 px-1 border-b-2 transition-all truncate ${
               currentStep === 1
                 ? "border-amber-500 text-amber-400 font-bold"
                 : currentStep > 1
@@ -270,10 +272,11 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 : "border-transparent text-slate-500"
             }`}
           >
-            1. Авто & Медиа
+            <span className="sm:hidden">1. Авто</span>
+            <span className="hidden sm:inline">1. Авто & Медиа</span>
           </div>
           <div
-            className={`py-2.5 px-1 border-b-2 transition-all ${
+            className={`py-2 px-1 border-b-2 transition-all truncate ${
               currentStep === 2
                 ? "border-amber-500 text-amber-400 font-bold"
                 : currentStep > 2
@@ -281,10 +284,11 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 : "border-transparent text-slate-500"
             }`}
           >
-            2. Доп. оборудование
+            <span className="sm:hidden">2. Опции</span>
+            <span className="hidden sm:inline">2. Оборудование</span>
           </div>
           <div
-            className={`py-2.5 px-1 border-b-2 transition-all ${
+            className={`py-2 px-1 border-b-2 transition-all truncate ${
               currentStep === 3
                 ? "border-amber-500 text-amber-400 font-bold"
                 : currentStep > 3
@@ -292,16 +296,18 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 : "border-transparent text-slate-500"
             }`}
           >
-            3. Договор & Доки
+            <span className="sm:hidden">3. Доки</span>
+            <span className="hidden sm:inline">3. Договор & Доки</span>
           </div>
           <div
-            className={`py-2.5 px-1 border-b-2 transition-all ${
+            className={`py-2 px-1 border-b-2 transition-all truncate ${
               currentStep === 4
                 ? "border-amber-500 text-amber-400 font-bold"
                 : "border-transparent text-slate-500"
             }`}
           >
-            4. Оплата & Касса
+            <span className="sm:hidden">4. Оплата</span>
+            <span className="hidden sm:inline">4. Оплата & Касса</span>
           </div>
         </div>
 
@@ -1117,24 +1123,29 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
           {/* STEP 4: PAYMENT & CASH REGISTER */}
           {currentStep === 4 && (
             <div className="space-y-5 animate-in fade-in duration-200">
-              <div className="bg-gradient-to-r from-amber-950/40 to-slate-800/60 p-4 rounded-xl border border-amber-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
-                      Сумма к оплате (Аренда + Допы + Доставка):
-                    </span>
-                    <div className="text-2xl font-extrabold text-amber-400 font-mono mt-0.5">
-                      {rentalAmount} <span className="text-sm font-bold text-amber-500/80">₾ (GEL)</span>
-                    </div>
+              <div className="bg-gradient-to-r from-amber-950/40 to-slate-800/60 p-4 rounded-xl border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="text-[11px] sm:text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+                    Сумма к оплате (Аренда + Допы + Доставка):
+                  </span>
+                  <div className="text-2xl font-extrabold text-amber-400 font-mono mt-0.5">
+                    {rentalAmount} <span className="text-sm font-bold text-amber-500/80">₾ (GEL)</span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
-                      Депозит (Залог):
-                    </span>
+                </div>
+                <div className="text-left sm:text-right shrink-0">
+                  <span className="text-[11px] sm:text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+                    Депозит (Залог):
+                  </span>
+                  {depositAmount > 0 ? (
                     <div className="text-lg font-bold text-emerald-400 font-mono mt-0.5">
                       {depositAmount} <span className="text-sm font-bold text-emerald-500/80">₾ (GEL)</span>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="inline-flex items-center space-x-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg text-xs font-bold mt-1">
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>0 ₾ (Без залога)</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1147,131 +1158,138 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("CASH")}
-                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-xl border text-xs font-bold text-left transition-all min-w-0 overflow-hidden ${
                       paymentMethod === "CASH"
                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
                         : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
                     }`}
                   >
-                    💵 Наличные
-                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">GEL, USD, EUR</span>
+                    <div className="truncate">💵 Наличные</div>
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5 truncate">GEL, USD, EUR</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("CARD_POS")}
-                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-xl border text-xs font-bold text-left transition-all min-w-0 overflow-hidden ${
                       paymentMethod === "CARD_POS"
                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
                         : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
                     }`}
                   >
-                    💳 Терминал / Карта
-                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">POS-терминал</span>
+                    <div className="truncate">💳 Терминал / Карта</div>
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5 truncate">POS-терминал</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("BOG_BANK")}
-                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-xl border text-xs font-bold text-left transition-all min-w-0 overflow-hidden ${
                       paymentMethod === "BOG_BANK"
                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
                         : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
                     }`}
                   >
-                    🏦 Bank of Georgia
-                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">BOG перевод</span>
+                    <div className="truncate">🏦 Bank of Georgia</div>
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5 truncate">BOG перевод</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("TBC_BANK")}
-                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-xl border text-xs font-bold text-left transition-all min-w-0 overflow-hidden ${
                       paymentMethod === "TBC_BANK"
                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
                         : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
                     }`}
                   >
-                    🏦 TBC Bank
-                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">TBC перевод</span>
+                    <div className="truncate">🏦 TBC Bank</div>
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5 truncate">TBC перевод</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("CREDO_BANK")}
-                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-xl border text-xs font-bold text-left transition-all min-w-0 overflow-hidden ${
                       paymentMethod === "CREDO_BANK"
                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
                         : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
                     }`}
                   >
-                    🏦 Credo Bank
-                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">Credo перевод</span>
+                    <div className="truncate">🏦 Credo Bank</div>
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5 truncate">Credo перевод</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("CRYPTO")}
-                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-xl border text-xs font-bold text-left transition-all min-w-0 overflow-hidden ${
                       paymentMethod === "CRYPTO"
                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
                         : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800"
                     }`}
                   >
-                    💎 Криптовалюта
-                    <span className="block text-[10px] font-normal opacity-80 mt-0.5">USDT TRC20</span>
+                    <div className="truncate">💎 Криптовалюта</div>
+                    <span className="block text-[10px] font-normal opacity-80 mt-0.5 truncate">USDT TRC20</span>
                   </button>
                 </div>
               </div>
 
-              {/* Deposit Method */}
-              <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    Способ приёма залога (депозита):
-                  </label>
-                  <span className="text-xs text-amber-400 font-semibold">{depositAmount} ₾ (GEL)</span>
+              {/* Deposit Method - only shown if depositAmount > 0 */}
+              {depositAmount > 0 ? (
+                <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-2">
+                  <div className="flex items-center justify-between flex-wrap gap-1">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                      Способ приёма залога (депозита):
+                    </label>
+                    <span className="text-xs text-amber-400 font-bold font-mono">{depositAmount} ₾ (GEL)</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDepositMethod("CASH")}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold text-center transition ${
+                        depositMethod === "CASH"
+                          ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow"
+                          : "bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
+                      }`}
+                    >
+                      💵 Наличные
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDepositMethod("CARD_HOLD")}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold text-center transition ${
+                        depositMethod === "CARD_HOLD"
+                          ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow"
+                          : "bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
+                      }`}
+                    >
+                      💳 Холдирование карты
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDepositMethod("TRANSFER")}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold text-center transition ${
+                        depositMethod === "TRANSFER"
+                          ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow"
+                          : "bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
+                      }`}
+                    >
+                      🏦 Банк перевод
+                    </button>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDepositMethod("CASH")}
-                    className={`py-2 px-3 rounded-lg border text-xs font-medium text-center transition ${
-                      depositMethod === "CASH"
-                        ? "bg-emerald-500 text-slate-950 border-emerald-400 font-bold"
-                        : "bg-slate-900 border-slate-700 text-slate-300"
-                    }`}
-                  >
-                    Наличные
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDepositMethod("CARD_HOLD")}
-                    className={`py-2 px-3 rounded-lg border text-xs font-medium text-center transition ${
-                      depositMethod === "CARD_HOLD"
-                        ? "bg-emerald-500 text-slate-950 border-emerald-400 font-bold"
-                        : "bg-slate-900 border-slate-700 text-slate-300"
-                    }`}
-                  >
-                    Холдирование карты
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDepositMethod("TRANSFER")}
-                    className={`py-2 px-3 rounded-lg border text-xs font-medium text-center transition ${
-                      depositMethod === "TRANSFER"
-                        ? "bg-emerald-500 text-slate-950 border-emerald-400 font-bold"
-                        : "bg-slate-900 border-slate-700 text-slate-300"
-                    }`}
-                  >
-                    Банк перевод
-                  </button>
+              ) : (
+                <div className="bg-emerald-950/30 border border-emerald-500/30 p-3 rounded-xl flex items-center space-x-2 text-xs text-emerald-300">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Тариф без залога: залог 0 ₾ — средства на карте клиента не удерживаются.</span>
                 </div>
-              </div>
+              )}
 
               {/* Change calculator (Сдача при возврате) */}
               <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-1.5">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                     Калькулятор сдачи:
                   </span>
@@ -1282,8 +1300,8 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="min-w-0">
                     <label className="text-[11px] text-slate-400 block mb-1">
                       Получено фактически от клиента (₾):
                     </label>
@@ -1294,7 +1312,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                       className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono font-bold focus:border-amber-500 focus:outline-none"
                     />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="text-[11px] text-slate-400 block mb-1">
                       Сдача к возврату клиенту (₾):
                     </label>
@@ -1308,7 +1326,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 </div>
 
                 <p className="text-[11px] text-slate-400">
-                  💡 Если клиент дал крупную купюру (например \$400 вместо \$375) и у менеджера нет сдачи, сумма сдачи \$25 фиксируется в системе и автоматически будет выдана клиенту при возврате автомобиля.
+                  💡 Если клиент дал крупную купюру и у менеджера нет сдачи, сумма сдачи фиксируется в системе и автоматически будет выдана клиенту при возврате автомобиля.
                 </p>
               </div>
 
