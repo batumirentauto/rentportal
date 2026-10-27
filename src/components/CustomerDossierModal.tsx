@@ -21,6 +21,7 @@ import {
   Check,
   Clock,
   Car,
+  Coins,
 } from "lucide-react";
 
 interface CustomerDossierModalProps {
@@ -71,6 +72,142 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  // Debts state
+  const [debts, setDebts] = useState<any[]>([]);
+  const [totalActiveDebt, setTotalActiveDebt] = useState<number>(0);
+  const [isAddingDebt, setIsAddingDebt] = useState<boolean>(false);
+  const [newDebtAmount, setNewDebtAmount] = useState<string>("");
+  const [newDebtCategory, setNewDebtCategory] = useState<string>("FINES");
+  const [newDebtDescription, setNewDebtDescription] = useState<string>("");
+  const [newDebtCarPlate, setNewDebtCarPlate] = useState<string>("");
+  const [newDebtDueDate, setNewDebtDueDate] = useState<string>("");
+  const [newDebtNotes, setNewDebtNotes] = useState<string>("");
+  const [isSubmittingDebt, setIsSubmittingDebt] = useState<boolean>(false);
+
+  // Pay debt modal state
+  const [payingDebt, setPayingDebt] = useState<any | null>(null);
+  const [payAmount, setPayAmount] = useState<string>("");
+  const [payMethod, setPayMethod] = useState<string>("CASH");
+  const [payManagerName, setPayManagerName] = useState<string>("Менеджер смены");
+  const [payNotes, setPayNotes] = useState<string>("");
+  const [isSubmittingPay, setIsSubmittingPay] = useState<boolean>(false);
+
+  const fetchDebts = async () => {
+    if (!customerId) return;
+    try {
+      const res = await fetch(`/api/customers/${customerId}/debts`);
+      const json = await res.json();
+      if (json.success) {
+        setDebts(json.debts || []);
+        setTotalActiveDebt(json.totalActiveDebt || 0);
+      }
+    } catch (e) {
+      console.error("Error fetching customer debts:", e);
+    }
+  };
+
+  const handleCreateDebt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDebtAmount || Number(newDebtAmount) <= 0) {
+      alert("Укажите сумму долга");
+      return;
+    }
+    if (!newDebtDescription.trim()) {
+      alert("Укажите описание долга");
+      return;
+    }
+
+    try {
+      setIsSubmittingDebt(true);
+      const res = await fetch(`/api/customers/${customerId}/debts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number(newDebtAmount),
+          category: newDebtCategory,
+          description: newDebtDescription.trim(),
+          carPlate: newDebtCarPlate.trim() || null,
+          dueDate: newDebtDueDate || null,
+          notes: newDebtNotes.trim() || null,
+          createdByName: "Менеджер смены",
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccessMsg(`Долг ${newDebtAmount} ₾ успешно записан на клиента!`);
+        setIsAddingDebt(false);
+        setNewDebtAmount("");
+        setNewDebtDescription("");
+        setNewDebtCarPlate("");
+        setNewDebtDueDate("");
+        setNewDebtNotes("");
+        fetchDebts();
+      } else {
+        alert(json.error || "Ошибка создания долга");
+      }
+    } catch (err: any) {
+      alert("Ошибка сети при сохранении долга: " + err.message);
+    } finally {
+      setIsSubmittingDebt(false);
+    }
+  };
+
+  const handlePayDebt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payingDebt) return;
+    const val = Number(payAmount);
+    if (!val || val <= 0) {
+      alert("Укажите сумму платежа");
+      return;
+    }
+
+    try {
+      setIsSubmittingPay(true);
+      const res = await fetch(`/api/customers/${customerId}/debts/${payingDebt.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentAmount: val,
+          paymentMethod: payMethod,
+          managerName: payManagerName,
+          notes: payNotes.trim() || null,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccessMsg(json.message || "Оплата долга успешно принята!");
+        setPayingDebt(null);
+        setPayAmount("");
+        setPayNotes("");
+        fetchDebts();
+      } else {
+        alert(json.error || "Ошибка проведения платежа");
+      }
+    } catch (err: any) {
+      alert("Ошибка сети при проведении платежа: " + err.message);
+    } finally {
+      setIsSubmittingPay(false);
+    }
+  };
+
+  const handleCancelDebt = async (debtId: string) => {
+    if (!confirm("Вы уверены, что хотите списать / аннулировать этот долг?")) return;
+    try {
+      const res = await fetch(`/api/customers/${customerId}/debts/${debtId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccessMsg("Долг списан");
+        fetchDebts();
+      } else {
+        alert(json.error || "Ошибка списания долга");
+      }
+    } catch (err: any) {
+      alert("Ошибка: " + err.message);
+    }
+  };
+
   // Fetch full customer details
   const fetchCustomer = async () => {
     if (!customerId) return;
@@ -107,6 +244,7 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
   useEffect(() => {
     if (isOpen && customerId) {
       fetchCustomer();
+      fetchDebts();
     }
   }, [isOpen, customerId]);
 
@@ -281,6 +419,12 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
                   <span className="text-xs bg-slate-800 text-amber-300 px-2 py-0.5 rounded-full font-mono font-bold flex items-center space-x-1 border border-slate-700">
                     <Crown className="w-3 h-3 text-amber-400" />
                     <span>{customer.loyaltyTier}</span>
+                  </span>
+                )}
+                {totalActiveDebt > 0 && (
+                  <span className="text-xs bg-rose-950/90 text-rose-300 px-2.5 py-0.5 rounded-full font-mono font-black flex items-center space-x-1 border border-rose-500/50 animate-pulse">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+                    <span>ДОЛГ: {totalActiveDebt} ₾</span>
                   </span>
                 )}
               </div>
@@ -845,6 +989,255 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
               </div>
             </div>
 
+            {/* СЕКЦИЯ: ДОЛГИ И ОБЯЗАТЕЛЬСТВА КЛИЕНТА */}
+            <div className={`p-4 rounded-2xl border space-y-3 transition ${
+              totalActiveDebt > 0
+                ? "bg-rose-950/20 border-rose-500/40"
+                : "bg-slate-950 border-slate-800"
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                <div className="flex items-center space-x-2">
+                  <Coins className={`w-4 h-4 ${totalActiveDebt > 0 ? "text-rose-400" : "text-slate-400"}`} />
+                  <span className="text-xs font-black uppercase tracking-wider text-white">
+                    Задолженности и штрафы клиента
+                  </span>
+                  {totalActiveDebt > 0 ? (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-black bg-rose-600 text-white animate-pulse">
+                      Непогашено: {totalActiveDebt} ₾
+                    </span>
+                  ) : (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/30">
+                      ✓ Задолженностей нет
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAddingDebt(!isAddingDebt)}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition flex items-center space-x-1 border border-slate-700 self-start sm:self-auto"
+                >
+                  <span>{isAddingDebt ? "✕ Отмена" : "+ Навесить долг"}</span>
+                </button>
+              </div>
+
+              {/* Форма навешивания долга вручную */}
+              {isAddingDebt && (
+                <form onSubmit={handleCreateDebt} className="p-3 bg-slate-900 border border-amber-600/40 rounded-xl space-y-2.5 animate-in fade-in duration-150">
+                  <div className="text-xs font-bold text-amber-300 flex items-center space-x-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Фиксация нового долга за клиентом:</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Сумма долга (₾ GEL): *</label>
+                      <input
+                        type="number"
+                        required
+                        value={newDebtAmount}
+                        onChange={(e) => setNewDebtAmount(e.target.value)}
+                        placeholder="150"
+                        className="w-full bg-slate-950 border border-amber-500/60 rounded-lg p-1.5 text-white font-mono font-bold focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Категория:</label>
+                      <select
+                        value={newDebtCategory}
+                        onChange={(e) => setNewDebtCategory(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white focus:outline-none"
+                      >
+                        <option value="FINES">🚨 Штрафы ПДД</option>
+                        <option value="DAMAGE">🔨 Повреждения / ущерб</option>
+                        <option value="FUEL">⛽ Нехватка топлива</option>
+                        <option value="RENTAL">⏱️ Аренда / продление</option>
+                        <option value="WASH">🧼 Мойка</option>
+                        <option value="GENERAL">📋 Другое / общий долг</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Госномер авто (если известно):</label>
+                      <input
+                        type="text"
+                        value={newDebtCarPlate}
+                        onChange={(e) => setNewDebtCarPlate(e.target.value)}
+                        placeholder="AA-123-BB"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white font-mono focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Причина / Описание долга: *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newDebtDescription}
+                        onChange={(e) => setNewDebtDescription(e.target.value)}
+                        placeholder="Например: Штраф за превышение скорости (протокол VID-89412)"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Обещанный срок оплаты:</label>
+                      <input
+                        type="date"
+                        value={newDebtDueDate}
+                        onChange={(e) => setNewDebtDueDate(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-1">Заметка менеджера / договоренности:</label>
+                    <input
+                      type="text"
+                      value={newDebtNotes}
+                      onChange={(e) => setNewDebtNotes(e.target.value)}
+                      placeholder="Например: Обещал оплатить переводом на карту TBC в четверг"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingDebt(false)}
+                      className="px-3 py-1 bg-slate-800 text-slate-400 rounded-lg text-xs"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingDebt}
+                      className="px-4 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold shadow"
+                    >
+                      {isSubmittingDebt ? "Запись..." : "Сохранить долг в CRM"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Список долгов */}
+              {debts.length === 0 ? (
+                <div className="text-center py-3 text-slate-500 text-xs">
+                  У данного клиента нет зафиксированных задолженностей.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {debts.map((d: any) => {
+                    const remaining = Math.max(0, d.amount - (d.paidAmount || 0));
+                    const isClosed = d.status === "PAID" || d.status === "CANCELLED";
+                    return (
+                      <div
+                        key={d.id}
+                        className={`p-3 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          d.status === "ACTIVE"
+                            ? "bg-slate-900 border-rose-500/30"
+                            : d.status === "PARTIALLY_PAID"
+                            ? "bg-slate-900 border-amber-500/30"
+                            : "bg-slate-900/60 border-slate-800 opacity-60"
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                            <span className={`text-[9px] px-2 py-0.5 rounded font-black tracking-wider uppercase ${
+                              d.category === "FINES"
+                                ? "bg-red-950 text-red-300 border border-red-500/30"
+                                : d.category === "DAMAGE"
+                                ? "bg-purple-950 text-purple-300 border border-purple-500/30"
+                                : d.category === "FUEL"
+                                ? "bg-amber-950 text-amber-300 border border-amber-500/30"
+                                : "bg-blue-950 text-blue-300 border border-blue-500/30"
+                            }`}>
+                              {d.category === "FINES" && "🚨 Штрафы"}
+                              {d.category === "DAMAGE" && "🔨 Ущерб"}
+                              {d.category === "FUEL" && "⛽ Бензин"}
+                              {d.category === "RENTAL" && "⏱️ Аренда"}
+                              {d.category === "WASH" && "🧼 Мойка"}
+                              {d.category === "GENERAL" && "📋 Долг"}
+                            </span>
+
+                            <span className="font-bold text-white">{d.description}</span>
+
+                            {d.carPlate && (
+                              <span className="font-mono text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">
+                                🚗 {d.carPlate}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-[11px] text-slate-400 flex items-center space-x-3 flex-wrap gap-y-0.5">
+                            <span>Дата: {new Date(d.createdAt).toLocaleDateString("ru-RU")}</span>
+                            {d.dueDate && (
+                              <span className="text-amber-400">
+                                Срок: {new Date(d.dueDate).toLocaleDateString("ru-RU")}
+                              </span>
+                            )}
+                            {d.createdByName && <span>Менеджер: {d.createdByName}</span>}
+                          </div>
+
+                          {d.notes && (
+                            <div className="text-[10px] text-slate-400 italic bg-slate-950/60 px-2 py-1 rounded">
+                              💬 {d.notes}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end space-x-3 shrink-0">
+                          <div className="text-right">
+                            <div className="font-mono font-black text-sm text-white">
+                              {remaining} ₾ <span className="text-[10px] font-normal text-slate-400 font-sans">к оплате</span>
+                            </div>
+                            {d.paidAmount > 0 && (
+                              <div className="text-[10px] text-emerald-400 font-mono">
+                                Оплачено: {d.paidAmount} ₾ (из {d.amount} ₾)
+                              </div>
+                            )}
+                            <div className="text-[9px] uppercase font-bold mt-0.5">
+                              {d.status === "ACTIVE" && <span className="text-rose-400">● Не оплачен</span>}
+                              {d.status === "PARTIALLY_PAID" && <span className="text-amber-400">● Частично</span>}
+                              {d.status === "PAID" && <span className="text-emerald-400">✓ Погашен</span>}
+                              {d.status === "CANCELLED" && <span className="text-slate-400">Списан</span>}
+                            </div>
+                          </div>
+
+                          {!isClosed && (
+                            <div className="flex items-center space-x-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPayingDebt(d);
+                                  setPayAmount(String(remaining));
+                                }}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow"
+                              >
+                                <span>💰 Погасить</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCancelDebt(d.id)}
+                                className="p-1 hover:bg-red-950/60 text-slate-500 hover:text-red-400 rounded-lg transition"
+                                title="Списать долг"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* RENTAL HISTORY LIST */}
             {customer?.bookings && customer.bookings.length > 0 && (
               <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
@@ -925,6 +1318,104 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
             )}
           </button>
         </div>
+
+        {/* Modal: Прием оплаты долга */}
+        {payingDebt && (
+          <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
+            <form
+              onSubmit={handlePayDebt}
+              className="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl animate-in fade-in"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <span className="font-bold text-white text-sm flex items-center space-x-2">
+                  <Coins className="w-4 h-4 text-emerald-400" />
+                  <span>Погашение долга клиента</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPayingDebt(null)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-3 bg-slate-950 rounded-xl space-y-1 text-xs">
+                <div className="text-slate-400">Долг: <span className="text-white font-bold">{payingDebt.description}</span></div>
+                <div className="text-slate-400">Сумма долга: <span className="font-mono text-white font-bold">{payingDebt.amount} ₾</span></div>
+                <div className="text-slate-400">
+                  Остаток к оплате: <span className="font-mono text-rose-400 font-black">{Math.max(0, payingDebt.amount - (payingDebt.paidAmount || 0))} ₾</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="text-slate-300 block mb-1 font-bold">Сумма вносимого платежа (₾ GEL): *</label>
+                  <input
+                    type="number"
+                    required
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                    className="w-full bg-slate-950 border border-emerald-500/60 rounded-xl p-2.5 text-white font-mono font-bold text-base focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-300 block mb-1 font-bold">Способ оплаты:</label>
+                  <select
+                    value={payMethod}
+                    onChange={(e) => setPayMethod(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-white focus:outline-none"
+                  >
+                    <option value="CASH">💵 Наличные (CASH)</option>
+                    <option value="CARD_POS">💳 Банковская карта / POS-терминал</option>
+                    <option value="TBC_BANK">🏦 Перевод на счет TBC Bank</option>
+                    <option value="BOG_BANK">🏦 Перевод на счет Bank of Georgia</option>
+                    <option value="CRYPTO">🪙 Криптовалюта (USDT)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-slate-300 block mb-1 font-bold">Менеджер, принявший оплату:</label>
+                  <input
+                    type="text"
+                    value={payManagerName}
+                    onChange={(e) => setPayManagerName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-white focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-300 block mb-1">Комментарий / квитанция:</label>
+                  <input
+                    type="text"
+                    value={payNotes}
+                    onChange={(e) => setPayNotes(e.target.value)}
+                    placeholder="Например: Перевод получен на TBC в 14:30"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setPayingDebt(null)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPay}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-950/40"
+                >
+                  {isSubmittingPay ? "Проведение..." : "Принять оплату в кассу"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
       </div>
     </div>

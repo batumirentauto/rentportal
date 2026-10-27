@@ -38,6 +38,7 @@ import {
   RefreshCw,
   Maximize2,
   Minimize2,
+  Coins,
 } from "lucide-react";
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
@@ -1575,6 +1576,17 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                         Карточка →
                       </span>
                     </button>
+                    {selectedBooking.customer?.totalActiveDebt > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomerDossierOpen(true)}
+                        className="text-[10px] px-2 py-0.5 rounded-full font-mono font-black bg-rose-600 hover:bg-rose-500 text-white animate-pulse flex items-center space-x-1 shadow transition"
+                        title="У клиента есть непогашенный долг! Нажмите для просмотра и погашения"
+                      >
+                        <Coins className="w-3 h-3 text-rose-200" />
+                        <span>ДОЛГ: {selectedBooking.customer.totalActiveDebt} ₾</span>
+                      </button>
+                    )}
                     {selectedBooking.source && (
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${

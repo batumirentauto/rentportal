@@ -39,7 +39,13 @@ export async function GET(request: Request) {
               status: { notIn: ["CANCELLED"] },
             },
             include: {
-              customer: true,
+              customer: {
+                include: {
+                  debts: {
+                    where: { status: { in: ["ACTIVE", "PARTIALLY_PAID"] } },
+                  },
+                },
+              },
               pickupLocation: {
                 include: { city: true },
               },
@@ -79,7 +85,13 @@ export async function GET(request: Request) {
               status: { notIn: ["CANCELLED"] },
             },
             include: {
-              customer: true,
+              customer: {
+                include: {
+                  debts: {
+                    where: { status: { in: ["ACTIVE", "PARTIALLY_PAID"] } },
+                  },
+                },
+              },
               pickupLocation: {
                 include: { city: true },
               },
@@ -140,8 +152,16 @@ export async function GET(request: Request) {
           oneWayActiveCount++;
         }
 
+        let customerTotalActiveDebt = 0;
+        if (b.customer?.debts) {
+          b.customer.debts.forEach((d: any) => {
+            customerTotalActiveDebt += Math.max(0, (d.amount || 0) - (d.paidAmount || 0));
+          });
+        }
+
         return {
           ...b,
+          customer: b.customer ? { ...b.customer, totalActiveDebt: customerTotalActiveDebt } : null,
           car: {
             id: car.id,
             brand: car.brand,

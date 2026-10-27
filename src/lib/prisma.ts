@@ -182,6 +182,28 @@ function ensureSchema(dbFilePath: string) {
         CONSTRAINT "BookingCarSwap_oldCarId_fkey" FOREIGN KEY ("oldCarId") REFERENCES "Car" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
         CONSTRAINT "BookingCarSwap_newCarId_fkey" FOREIGN KEY ("newCarId") REFERENCES "Car" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
       );
+
+      CREATE TABLE IF NOT EXISTS "CustomerDebt" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "customerId" TEXT NOT NULL,
+        "bookingId" TEXT,
+        "carId" TEXT,
+        "carPlate" TEXT,
+        "amount" REAL NOT NULL,
+        "paidAmount" REAL NOT NULL DEFAULT 0,
+        "currency" TEXT NOT NULL DEFAULT 'GEL',
+        "category" TEXT NOT NULL DEFAULT 'GENERAL',
+        "description" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+        "dueDate" DATETIME,
+        "resolvedAt" DATETIME,
+        "createdByName" TEXT NOT NULL DEFAULT 'Менеджер смены',
+        "notes" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CustomerDebt_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "CustomerDebt_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+      );
     `);
 
     // 2. Check Car table columns

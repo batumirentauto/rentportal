@@ -175,6 +175,7 @@ model Customer {
   blacklistReason    String?
   trustRating        Int       @default(100)
   bookings           Booking[]
+  debts              CustomerDebt[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 }
@@ -240,6 +241,7 @@ model Booking {
   extensions          BookingExtension[]
   swapsFrom           BookingCarSwap[] @relation("OriginalBookingSwaps")
   swapsTo             BookingCarSwap[] @relation("NewBookingSwaps")
+  debts               CustomerDebt[]
   swappedFromBookingId String?
   swappedToBookingId   String?
   extraHoursCount     Int?            @default(0) // Количество доп. часов
@@ -766,6 +768,29 @@ model BookingCarSwap {
   notes                   String?
   
   createdAt               DateTime  @default(now())
+}
+
+// Долги клиентов (штрафы, повреждения, неоплаченная аренда, топливо, мойка)
+model CustomerDebt {
+  id            String    @id @default(cuid())
+  customerId    String
+  customer      Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  bookingId     String?
+  booking       Booking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  carId         String?
+  carPlate      String?   // Госномер авто (например: "AA-123-BB")
+  amount        Float     // Первоначальная сумма долга в GEL
+  paidAmount    Float     @default(0) // Сколько уже фактически погашено
+  currency      String    @default("GEL")
+  category      String    @default("GENERAL") // "FINES", "DAMAGE", "FUEL", "RENTAL", "WASH", "GENERAL"
+  description   String    // Описание долга ("Штрафы ПДД VID-...", "Повреждение заднего бампера", etc.)
+  status        String    @default("ACTIVE") // "ACTIVE" (не оплачен), "PARTIALLY_PAID" (частично), "PAID" (погашен), "CANCELLED" (списан)
+  dueDate       DateTime? // Обещанный срок погашения
+  resolvedAt    DateTime? // Время закрытия/полного погашения
+  createdByName String    @default("Менеджер смены")
+  notes         String?   // Комментарий и договоренности с клиентом
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 

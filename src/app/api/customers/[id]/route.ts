@@ -11,6 +11,11 @@ export async function GET(
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
       include: {
+        debts: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
         bookings: {
           include: {
             car: {
@@ -45,6 +50,15 @@ export async function GET(
       }
     });
 
+    let totalActiveDebt = 0;
+    let activeDebtsCount = 0;
+    customer.debts?.forEach((d: any) => {
+      if (d.status === "ACTIVE" || d.status === "PARTIALLY_PAID") {
+        totalActiveDebt += Math.max(0, (d.amount || 0) - (d.paidAmount || 0));
+        activeDebtsCount += 1;
+      }
+    });
+
     return NextResponse.json({
       success: true,
       customer,
@@ -52,6 +66,8 @@ export async function GET(
         totalSpentUSD,
         totalRentalDays,
         bookingsCount: customer.bookings.length,
+        totalActiveDebt,
+        activeDebtsCount,
       },
     });
   } catch (error) {

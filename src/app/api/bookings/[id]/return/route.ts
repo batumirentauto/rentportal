@@ -43,6 +43,13 @@ export async function POST(
       settlementMethod = "CASH", // "CASH", "CARD_POS", "TBC_BANK", "BOG_BANK"
       skipStopBlock = false, // Возможность принять авто без постановки на СТОП
       conditionNotes = "",
+      // Навешивание долга на клиента при возврате
+      recordAsDebt = false,
+      debtAmount = 0,
+      debtCategory = "GENERAL", // "FINES" | "DAMAGE" | "FUEL" | "RENTAL" | "WASH" | "GENERAL"
+      debtDescription = "",
+      debtDueDate = null,
+      debtNotes = "",
     } = body;
 
     const booking = await prisma.booking.findUnique({
@@ -187,33 +194,69 @@ export async function POST(
     }
 
     // 3. Обработка штрафов: если клиент оплатил штрафы компании при возврате
+    // 3. Обработка штрафов: если клиент оплатил штрафы компании при возврате ИЛИ перенес в долг
     if (finesPaidByClientToCompany && Array.isArray(selectedFineIds) && selectedFineIds.length > 0) {
-      await prisma.trafficFine.updateMany({
-        where: { id: { in: selectedFineIds } },
-        data: {
-          status: "PAID_BY_CLIENT_TO_COMPANY",
-          deductedFromDeposit: depositAmount > 0,
-          checkedByManager: managerName,
-          notes: `Штраф оплачен клиентом ${booking.customer.fullName} компании при возврате авто (Бронь: ${booking.bookingNumber}). Сумма принята в кассу (${settlementMethod}), ожидает оплаты в полицию / protocols.ge`,
-        },
-      });
+      if (recordAsDebt) {
+        await prisma.trafficFine.updateMany({
+          where: { id: { in: selectedFineIds } },
+          data: {
+            status: "TRANSFERRED_TO_CLIENT_DEBT",
+            checkedByManager: managerName,
+            notes: `Штрафы перенесены в личный долг клиента ${booking.customer.fullName} при возврате авто (Бронь: ${booking.bookingNumber}).`,
+          },
+        });
+      } else {
+        await prisma.trafficFine.updateMany({
+          where: { id: { in: selectedFineIds } },
+          data: {
+            status: "PAID_BY_CLIENT_TO_COMPANY",
+            deductedFromDeposit: depositAmount > 0,
+            checkedByManager: managerName,
+            notes: `Штраф оплачен клиентом ${booking.customer.fullName} компании при возврате авто (Бронь: ${booking.bookingNumber}). Сумма принята в кассу (${settlementMethod}), ожидает оплаты в полицию / protocols.ge`,
+          },
+        });
 
-      // Финансовая проводка приема штрафа в кассу компании
-      await prisma.payment.create({
+        // Финансовая проводка приема штрафа в кассу компании
+        await prisma.payment.create({
+          data: {
+            bookingId: id,
+            type: "OTHER",
+            amount: Number(finesTotalAmountGEL),
+            currency: booking.currency || "GEL",
+            method: settlementMethod,
+            status: "PAID",
+            managerName,
+            notes: `Прием оплаты штрафов ПДД (${finesTotalAmountGEL} ₾) от клиента ${booking.customer.fullName}. Компания производит погашение в МВД Грузии.`,
+          },
+        });
+      }
+    }
+
+    // 3.5. 🚨 НАВЕШИВАНИЕ ДОЛГА НА КЛИЕНТА (ЕСЛИ ВЫБРАНО МЕНЕДЖЕРОМ)
+    let createdCustomerDebt = null;
+    const finalDebtValue = Number(debtAmount) > 0 ? Number(debtAmount) : (recordAsDebt ? Number(finalBalanceAmount) : 0);
+
+    if (recordAsDebt && finalDebtValue > 0) {
+      createdCustomerDebt = await prisma.customerDebt.create({
         data: {
+          customerId: booking.customerId,
           bookingId: id,
-          type: "OTHER",
-          amount: Number(finesTotalAmountGEL),
+          carId: booking.carId,
+          carPlate: car.plateNumber,
+          amount: finalDebtValue,
+          paidAmount: 0,
           currency: booking.currency || "GEL",
-          method: settlementMethod,
-          status: "PAID",
-          managerName,
-          notes: `Прием оплаты штрафов ПДД (${finesTotalAmountGEL} ₾) от клиента ${booking.customer.fullName}. Компания производит погашение в МВД Грузии.`,
+          category: debtCategory || "GENERAL",
+          description: debtDescription || `Долг при возврате ${car.brand} ${car.model} (${car.plateNumber})`,
+          status: "ACTIVE",
+          dueDate: debtDueDate ? new Date(debtDueDate) : null,
+          createdByName: managerName,
+          notes: debtNotes || `Зафиксирован долг при возврате авто ${booking.bookingNumber}. Согласовано менеджером ${managerName}`,
         },
       });
     }
 
-    // 4. Логируем возврат залога или сдачи
+    // 4. Логируем возврат залога или сдачи, либо доплату на месте
     if (finalBalanceType === "REFUND_TO_CLIENT" && Number(finalBalanceAmount) > 0) {
       await prisma.payment.create({
         data: {
@@ -228,18 +271,23 @@ export async function POST(
         },
       });
     } else if (finalBalanceType === "PAYMENT_BY_CLIENT" && Number(finalBalanceAmount) > 0) {
-      await prisma.payment.create({
-        data: {
-          bookingId: id,
-          type: "RENTAL",
-          amount: Number(finalBalanceAmount),
-          currency: booking.currency || "GEL",
-          method: settlementMethod,
-          status: "PAID",
-          managerName,
-          notes: `Доплата клиентом при сдаче авто: ${finalBalanceAmount} ₾ (недостающее топливо: ${fuelChargeAmount} ₾, штрафы: ${finesTotalAmountGEL} ₾, повреждения: ${damageChargeAmount} ₾, продление: ${extraHoursFee} ₾${extraWashFee > 0 ? `, мойка/уборка: ${extraWashFee} ₾` : ""})`,
-        },
-      });
+      // Если часть или вся сумма переведена в долг:
+      const amountPaidNow = recordAsDebt ? Math.max(0, Number(finalBalanceAmount) - finalDebtValue) : Number(finalBalanceAmount);
+
+      if (amountPaidNow > 0) {
+        await prisma.payment.create({
+          data: {
+            bookingId: id,
+            type: "RENTAL",
+            amount: amountPaidNow,
+            currency: booking.currency || "GEL",
+            method: settlementMethod,
+            status: "PAID",
+            managerName,
+            notes: `Доплата клиентом на месте при сдаче авто: ${amountPaidNow} ₾ (недостающее топливо: ${fuelChargeAmount} ₾, штрафы: ${finesTotalAmountGEL} ₾, повреждения: ${damageChargeAmount} ₾, продление: ${extraHoursFee} ₾${extraWashFee > 0 ? `, мойка/уборка: ${extraWashFee} ₾` : ""})`,
+          },
+        });
+      }
     }
 
     // 5. Запись в журнал пробега
@@ -326,6 +374,7 @@ export async function POST(
       isStopBlocked,
       stopReason: isStopBlocked ? stopReason : null,
       returnReport,
+      customerDebt: createdCustomerDebt,
       car: {
         id: car.id,
         brand: car.brand,

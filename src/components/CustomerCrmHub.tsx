@@ -30,6 +30,7 @@ import {
   Crown,
   Building,
   Copy,
+  Coins,
 } from "lucide-react";
 import { CustomerDocumentUploadModal } from "./CustomerDocumentUploadModal";
 
@@ -57,6 +58,9 @@ export interface CustomerItem {
   isBlacklisted: boolean;
   blacklistReason?: string | null;
   trustRating: number;
+  totalActiveDebt?: number;
+  activeDebtsCount?: number;
+  debts?: any[];
   bookings: any[];
   createdAt: string;
   updatedAt: string;
@@ -75,6 +79,7 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTier, setSelectedTier] = useState<string>("ALL");
   const [blacklistedFilter, setBlacklistedFilter] = useState<string>("ALL");
+  const [hasDebtFilter, setHasDebtFilter] = useState<string>("ALL");
 
   // Modals state
   const [selectedCustomerDossier, setSelectedCustomerDossier] = useState<CustomerItem | null>(null);
@@ -109,6 +114,7 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
       if (searchQuery) params.set("query", searchQuery);
       if (selectedTier !== "ALL") params.set("tier", selectedTier);
       if (blacklistedFilter !== "ALL") params.set("blacklisted", blacklistedFilter);
+      if (hasDebtFilter !== "ALL") params.set("hasDebt", hasDebtFilter);
 
       const res = await fetch(`/api/customers?${params.toString()}`);
       const data = await res.json();
@@ -125,7 +131,7 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
 
   useEffect(() => {
     fetchCustomers();
-  }, [selectedTier, blacklistedFilter]);
+  }, [selectedTier, blacklistedFilter, hasDebtFilter]);
 
   // Debounced search
   useEffect(() => {
@@ -346,7 +352,7 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
 
       {/* Metrics Row */}
       {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 text-xs">
           <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow">
             <span className="text-slate-400 block text-[11px] font-semibold">Всего в базе CRM:</span>
             <div className="text-2xl font-black text-white mt-1">{summary.totalCount}</div>
@@ -373,7 +379,26 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
             <span className="text-[10px] text-blue-400/80">Средний LTV: {summary.averageLTV} ₾</span>
           </div>
 
-          <div className="bg-slate-900 border border-rose-500/40 p-4 rounded-2xl shadow col-span-2 sm:col-span-1">
+          <div className={`p-4 rounded-2xl shadow transition ${
+            (summary.totalCustomerDebtGEL || 0) > 0
+              ? "bg-rose-950/40 border border-rose-500/60"
+              : "bg-slate-900 border border-slate-800"
+          }`}>
+            <span className="text-rose-300 block text-[11px] font-semibold flex items-center space-x-1">
+              <Coins className="w-3.5 h-3.5 text-rose-400" />
+              <span>Долги клиентов:</span>
+            </span>
+            <div className={`text-2xl font-black font-mono mt-1 ${
+              (summary.totalCustomerDebtGEL || 0) > 0 ? "text-rose-400" : "text-slate-400"
+            }`}>
+              {(summary.totalCustomerDebtGEL || 0).toLocaleString()} ₾
+            </div>
+            <span className="text-[10px] text-slate-400">
+              {summary.indebtedCustomersCount || 0} чел. с долгами
+            </span>
+          </div>
+
+          <div className="bg-slate-900 border border-rose-500/40 p-4 rounded-2xl shadow">
             <span className="text-rose-300 block text-[11px] font-semibold">Чёрный список (STOP):</span>
             <div className="text-2xl font-black text-rose-400 mt-1">{summary.blacklistedCount}</div>
             <span className="text-[10px] text-rose-400/80">Запрет на выдачу авто</span>
@@ -424,6 +449,18 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                 {t.label}
               </button>
             ))}
+
+            <button
+              onClick={() => setHasDebtFilter(hasDebtFilter === "YES" ? "ALL" : "YES")}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1 ${
+                hasDebtFilter === "YES"
+                  ? "bg-rose-600 text-white shadow shadow-rose-950/60"
+                  : "bg-slate-950 text-rose-400 hover:text-white border border-rose-500/30"
+              }`}
+            >
+              <Coins className="w-3.5 h-3.5 text-rose-400" />
+              <span>С долгами ({summary?.indebtedCustomersCount || 0})</span>
+            </button>
 
             <button
               onClick={() =>
@@ -523,6 +560,19 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                             <span>⛔ В ЧЁРНОМ СПИСКЕ</span>
                           </span>
                         )}
+
+                        {/* Debt badge */}
+                        {(c.totalActiveDebt || 0) > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCustomerDossier(c)}
+                            className="bg-rose-950/90 text-rose-300 border border-rose-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center space-x-1 animate-pulse hover:bg-rose-900 transition"
+                            title="Открыть задолженности клиента"
+                          >
+                            <Coins className="w-3 h-3 text-rose-400" />
+                            <span>ДОЛГ: {c.totalActiveDebt} ₾</span>
+                          </button>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
@@ -558,6 +608,14 @@ export const CustomerCrmHub: React.FC<CustomerCrmHubProps> = ({
                         {totalSpent.toLocaleString()} ₾ (GEL)
                       </span>
                     </div>
+                    {(c.totalActiveDebt || 0) > 0 && (
+                      <div className="border-l border-slate-800 pl-4">
+                        <span className="text-[10px] text-rose-400 block font-bold">Долг:</span>
+                        <span className="font-mono font-black text-rose-400 text-sm">
+                          {c.totalActiveDebt} ₾
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

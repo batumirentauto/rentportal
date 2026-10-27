@@ -273,6 +273,14 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [returnResult, setReturnResult] = useState<any | null>(null);
 
+  // 8. Навешивание долга на клиента при возврате
+  const [recordAsDebt, setRecordAsDebt] = useState<boolean>(false);
+  const [debtAmount, setDebtAmount] = useState<number | "">("");
+  const [debtCategory, setDebtCategory] = useState<string>("GENERAL");
+  const [debtDescription, setDebtDescription] = useState<string>("");
+  const [debtDueDate, setDebtDueDate] = useState<string>("");
+  const [debtNotes, setDebtNotes] = useState<string>("");
+
   // Общие начисления/удержания:
   const finesToDeduct = finesPaidByClientToCompany ? selectedFinesTotalGEL : 0;
   const lostPassportFee = !techPassportReturned ? lostTechPassportCharge : 0;
@@ -340,6 +348,12 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
           settlementMethod,
           conditionNotes,
           skipStopBlock: forceSkipStop,
+          recordAsDebt,
+          debtAmount: Number(debtAmount !== "" ? debtAmount : finalBalanceAmount),
+          debtCategory,
+          debtDescription: debtDescription || "Задолженность при возврате автомобиля",
+          debtDueDate: debtDueDate || null,
+          debtNotes,
         }),
       });
 
@@ -1878,7 +1892,9 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
               {/* Главная плашка ИТОГО */}
               <div className={`p-3 rounded-xl border flex items-center justify-between ${
-                finalBalanceType === "REFUND_TO_CLIENT"
+                recordAsDebt
+                  ? "bg-amber-950/70 border-amber-500 text-amber-200"
+                  : finalBalanceType === "REFUND_TO_CLIENT"
                   ? "bg-emerald-950/60 border-emerald-500/80 text-emerald-200"
                   : finalBalanceType === "PAYMENT_BY_CLIENT"
                   ? "bg-amber-950/60 border-amber-500/80 text-amber-200"
@@ -1886,26 +1902,177 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
               }`}>
                 <div>
                   <span className="text-[10px] uppercase font-black tracking-wider block opacity-80">
-                    {finalBalanceType === "REFUND_TO_CLIENT" && "К возврату клиенту на руки:"}
-                    {finalBalanceType === "PAYMENT_BY_CLIENT" && "К доплате клиентом:"}
-                    {finalBalanceType === "ZERO_SETTLED" && "Взаиморасчет:"}
+                    {recordAsDebt && "Зафиксировано в личный долг клиента:"}
+                    {!recordAsDebt && finalBalanceType === "REFUND_TO_CLIENT" && "К возврату клиенту на руки:"}
+                    {!recordAsDebt && finalBalanceType === "PAYMENT_BY_CLIENT" && "К доплате клиентом:"}
+                    {!recordAsDebt && finalBalanceType === "ZERO_SETTLED" && "Взаиморасчет:"}
                   </span>
                   <span className="text-xs font-bold">
-                    {finalBalanceType === "REFUND_TO_CLIENT" && (hasDeposit ? "Остаток залога + сдача" : "Сдача клиенту")}
-                    {finalBalanceType === "PAYMENT_BY_CLIENT" && "Оплата штрафов, топлива и дефектов"}
-                    {finalBalanceType === "ZERO_SETTLED" && "Все платежи закрыты в ноль"}
+                    {recordAsDebt && `Отложено на клиента ${booking.customer?.fullName || ""}`}
+                    {!recordAsDebt && finalBalanceType === "REFUND_TO_CLIENT" && (hasDeposit ? "Остаток залога + сдача" : "Сдача клиенту")}
+                    {!recordAsDebt && finalBalanceType === "PAYMENT_BY_CLIENT" && "Оплата штрафов, топлива и дефектов"}
+                    {!recordAsDebt && finalBalanceType === "ZERO_SETTLED" && "Все платежи закрыты в ноль"}
                   </span>
                 </div>
 
                 <div className="text-right font-mono">
                   <div className="text-2xl font-black text-white">
-                    {finalBalanceAmount} ₾
+                    {recordAsDebt ? (debtAmount !== "" ? debtAmount : finalBalanceAmount) : finalBalanceAmount} ₾
                   </div>
                   <div className="text-[10px] text-slate-400 font-sans font-medium">
-                    GEL (Лари)
+                    {recordAsDebt ? "ДОЛГ (GEL)" : "GEL (Лари)"}
                   </div>
                 </div>
               </div>
+
+              {/* Блок переключения: Оплата на месте vs Навешивание долга на клиента */}
+              {(finalBalanceType === "PAYMENT_BY_CLIENT" || deductionsTotal > 0) && (
+                <div className="p-3 bg-slate-900/90 border border-slate-750 rounded-xl space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-slate-200 flex items-center space-x-1.5">
+                      <Coins className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Формат расчета доплаты / штрафов:</span>
+                    </span>
+
+                    <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setRecordAsDebt(false)}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition ${
+                          !recordAsDebt ? "bg-emerald-600 text-white shadow" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        💵 Оплата на месте
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRecordAsDebt(true);
+                          if (debtAmount === "") setDebtAmount(finalBalanceAmount);
+                          if (!debtDescription) {
+                            const parts = [];
+                            if (finesToDeduct > 0) parts.push(`Штрафы ПДД (${finesToDeduct} ₾)`);
+                            if (hasNewDamages && damageChargeAmount > 0) parts.push(`Повреждения (${damageChargeAmount} ₾)`);
+                            if (fuelChargeAmount > 0) parts.push(`Топливо (${fuelChargeAmount} ₾)`);
+                            if (extraHoursFee > 0 && !isExtraHoursPaid) parts.push(`Доп. часы (${extraHoursFee} ₾)`);
+                            if (extraWashFee > 0) parts.push(`Мойка (${extraWashFee} ₾)`);
+                            setDebtDescription(parts.length > 0 ? parts.join(", ") : "Задолженность при возврате");
+                          }
+                          if (!debtDueDate) {
+                            const d = new Date();
+                            d.setDate(d.getDate() + 7);
+                            setDebtDueDate(d.toISOString().split("T")[0]);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center space-x-1 ${
+                          recordAsDebt ? "bg-amber-600 text-white shadow" : "text-amber-400 hover:text-amber-300"
+                        }`}
+                      >
+                        <span>⚠️ В долг клиента</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {recordAsDebt && (
+                    <div className="pt-2 border-t border-amber-900/40 space-y-2.5 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-amber-300 flex items-center space-x-1.5">
+                          <AlertCircle className="w-4 h-4 text-amber-400" />
+                          <span>Навешивание задолженности на клиента:</span>
+                        </span>
+                        <span className="text-[10px] bg-amber-900/50 text-amber-300 px-2 py-0.5 rounded font-mono">
+                          {booking.customer?.isLoyalClient ? "⭐ Постоянный клиент" : "Клиент"}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <label className="text-[11px] text-slate-400 block mb-1">Сумма долга (₾ GEL):</label>
+                          <input
+                            type="number"
+                            value={debtAmount !== "" ? debtAmount : finalBalanceAmount}
+                            onChange={(e) => setDebtAmount(Number(e.target.value) || 0)}
+                            className="w-full bg-slate-950 border border-amber-500/70 rounded-lg px-2.5 py-1.5 text-white font-mono font-bold focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] text-slate-400 block mb-1">Обещанный срок оплаты:</label>
+                          <div className="flex space-x-1.5">
+                            <input
+                              type="date"
+                              value={debtDueDate}
+                              onChange={(e) => setDebtDueDate(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const d = new Date();
+                                d.setDate(d.getDate() + 7);
+                                setDebtDueDate(d.toISOString().split("T")[0]);
+                              }}
+                              className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 rounded whitespace-nowrap"
+                              title="+7 дней"
+                            >
+                              +7 дн
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Категория задолженности:</label>
+                        <div className="flex flex-wrap gap-1 text-[11px]">
+                          {[
+                            { id: "FINES", label: "🚨 Штрафы ПДД" },
+                            { id: "DAMAGE", label: "🔨 Повреждения/ущерб" },
+                            { id: "FUEL", label: "⛽ Нехватка топлива" },
+                            { id: "RENTAL", label: "⏱️ Продление аренды" },
+                            { id: "WASH", label: "🧼 Мойка" },
+                            { id: "GENERAL", label: "📋 Общий долг" },
+                          ].map((cat) => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => setDebtCategory(cat.id)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                                debtCategory === cat.id
+                                  ? "bg-amber-600 border-amber-400 text-white"
+                                  : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                              }`}
+                            >
+                              {cat.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Причина / Описание долга:</label>
+                        <input
+                          type="text"
+                          value={debtDescription}
+                          onChange={(e) => setDebtDescription(e.target.value)}
+                          placeholder="Например: Штрафы с камер и повреждение бампера"
+                          className="w-full bg-slate-950 border border-slate-750 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Договоренности / примечание менеджера:</label>
+                        <input
+                          type="text"
+                          value={debtNotes}
+                          onChange={(e) => setDebtNotes(e.target.value)}
+                          placeholder="Например: Постоянный клиент, переведет на TBC до конца недели"
+                          className="w-full bg-slate-950 border border-slate-750 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Actions */}
@@ -1929,7 +2096,9 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     title="Принять автомобиль без блокировки в статус 'Свободен / Доступен'"
                   >
                     <Check className="w-4 h-4 text-white" />
-                    <span>Принять БЕЗ СТОПа</span>
+                    <span>
+                      {recordAsDebt ? "Принять БЕЗ СТОПа (с долгом)" : "Принять БЕЗ СТОПа"}
+                    </span>
                   </button>
 
                   <button
@@ -1940,7 +2109,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   >
                     <Check className="w-4 h-4" />
                     <span>
-                      {isSubmitting ? "Сохранение..." : "Принять авто и поставить на СТОП"}
+                      {isSubmitting
+                        ? "Сохранение..."
+                        : recordAsDebt
+                        ? `Принять авто со СТОПом (долг ${debtAmount !== "" ? debtAmount : finalBalanceAmount} ₾)`
+                        : "Принять авто и поставить на СТОП"}
                     </span>
                   </button>
                 </>
@@ -1948,11 +2121,19 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-black rounded-xl shadow-lg transition active:scale-95"
+                  className={`flex items-center space-x-2 px-6 py-2.5 font-black rounded-xl shadow-lg transition active:scale-95 text-white ${
+                    recordAsDebt
+                      ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500"
+                      : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500"
+                  }`}
                 >
                   <Check className="w-4 h-4" />
                   <span>
-                    {isSubmitting ? "Сохранение..." : "Завершить возврат и закрыть бронь"}
+                    {isSubmitting
+                      ? "Сохранение..."
+                      : recordAsDebt
+                      ? `Завершить возврат с навешиванием долга (${debtAmount !== "" ? debtAmount : finalBalanceAmount} ₾)`
+                      : "Завершить возврат и закрыть бронь"}
                   </span>
                 </button>
               )}

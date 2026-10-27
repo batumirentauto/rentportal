@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     const query = searchParams.get("query")?.trim().toLowerCase() || "";
     const tier = searchParams.get("tier"); // "ALL", "PLATINUM_VIP", "GOLD_VIP", "STANDARD", "CORPORATE"
     const blacklisted = searchParams.get("blacklisted"); // "ALL", "YES", "NO"
+    const hasDebt = searchParams.get("hasDebt"); // "ALL", "YES", "NO"
 
     const where: any = {};
 
@@ -23,6 +24,11 @@ export async function GET(request: Request) {
     const allCustomers = await prisma.customer.findMany({
       where,
       include: {
+        debts: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
         bookings: {
           include: {
             car: {
@@ -44,9 +50,33 @@ export async function GET(request: Request) {
       },
     });
 
+    // Map each customer with calculated debt metrics
+    const customersWithDebts = allCustomers.map((c) => {
+      let totalActiveDebt = 0;
+      let activeDebtsCount = 0;
+      (c.debts || []).forEach((d) => {
+        if (d.status === "ACTIVE" || d.status === "PARTIALLY_PAID") {
+          totalActiveDebt += Math.max(0, (d.amount || 0) - (d.paidAmount || 0));
+          activeDebtsCount += 1;
+        }
+      });
+      return {
+        ...c,
+        totalActiveDebt,
+        activeDebtsCount,
+      };
+    });
+
+    // Filter by debt if requested
+    const debtFiltered = hasDebt === "YES"
+      ? customersWithDebts.filter((c) => c.totalActiveDebt > 0)
+      : hasDebt === "NO"
+      ? customersWithDebts.filter((c) => c.totalActiveDebt === 0)
+      : customersWithDebts;
+
     // Client-side query filter for text (matching name, phone, passport, license, email)
     const filteredCustomers = query
-      ? allCustomers.filter((c) => {
+      ? debtFiltered.filter((c) => {
           return (
             c.fullName.toLowerCase().includes(query) ||
             c.phone.toLowerCase().includes(query) ||
@@ -57,7 +87,7 @@ export async function GET(request: Request) {
             (c.tags && c.tags.toLowerCase().includes(query))
           );
         })
-      : allCustomers;
+      : debtFiltered;
 
     // Calculate CRM Analytics & Metrics
     const totalCount = allCustomers.length;
@@ -68,8 +98,14 @@ export async function GET(request: Request) {
 
     let totalRevenueUSD = 0;
     let totalBookingsCount = 0;
+    let totalCustomerDebtGEL = 0;
+    let indebtedCustomersCount = 0;
 
-    allCustomers.forEach((c) => {
+    customersWithDebts.forEach((c) => {
+      if (c.totalActiveDebt > 0) {
+        totalCustomerDebtGEL += c.totalActiveDebt;
+        indebtedCustomersCount += 1;
+      }
       c.bookings.forEach((b) => {
         if (b.status !== "CANCELLED") {
           totalRevenueUSD += b.totalAmount || 0;
@@ -90,6 +126,8 @@ export async function GET(request: Request) {
         totalRevenueUSD,
         totalBookingsCount,
         averageLTV,
+        totalCustomerDebtGEL,
+        indebtedCustomersCount,
       },
     });
   } catch (error) {
