@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { triggerAsyncFinancialSheetsSync } from "@/lib/financial-sheets-sync";
 
 export async function GET(
   request: Request,
@@ -184,6 +185,9 @@ export async function PATCH(
     if (body.cityId && body.cityId !== car.cityId) {
       message = `Город присутствия автомобиля ${updatedCar.brand} ${updatedCar.model} изменен на: ${updatedCar.city.nameRu}!`;
     }
+
+    // Auto-sync fleet & financial indicators to Google Sheets backup
+    triggerAsyncFinancialSheetsSync();
 
     return NextResponse.json({
       success: true,

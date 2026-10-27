@@ -438,6 +438,16 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
+      // Нормализуем путь к фото (если ввели просто имя файла без http/ или /uploads/)
+      let cleanImageUrl = imageUrl?.trim() || null;
+      if (cleanImageUrl && !cleanImageUrl.startsWith("http://") && !cleanImageUrl.startsWith("https://") && !cleanImageUrl.startsWith("/")) {
+        if (cleanImageUrl.startsWith("car_photos-") || cleanImageUrl.startsWith("cards-")) {
+          cleanImageUrl = `/uploads/car_photos/${cleanImageUrl}`;
+        } else {
+          cleanImageUrl = `/uploads/${cleanImageUrl}`;
+        }
+      }
+
       const res = await fetch(`/api/fleet/cars/${carId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -466,7 +476,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           year: year || null,
           plateNumber: plateNumber || null,
           insurancePolicyPhotoUrl,
-          imageUrl: imageUrl || null,
+          imageUrl: cleanImageUrl,
           cardBannerUrl: cardBannerUrl || null,
           inspectionPhotoUrl: inspectionPhotoUrl || null,
           inspectionNumber: inspectionNumber || null,
@@ -477,14 +487,15 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
       const data = await res.json();
       if (data.success) {
         setCar(data.car);
-        setSuccessMsg("Параметры автомобиля успешно сохранены!");
+        if (cleanImageUrl) setImageUrl(cleanImageUrl);
+        setSuccessMsg("✓ Параметры автомобиля успешно сохранены!");
         if (onUpdated) onUpdated();
       } else {
         setErrorMsg(data.error || "Не удалось сохранить изменения");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setErrorMsg("Ошибка сервера при сохранении");
+      setErrorMsg("Ошибка сервера при сохранении: " + (e.message || ""));
     } finally {
       setSaving(false);
     }
@@ -799,7 +810,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
             <>
               {/* TAB 1: GENERAL & CITY PRESENCE */}
               {activeTab === "general" && (
-                <form onSubmit={handleSaveGeneral} className="space-y-4 text-xs">
+                <form onSubmit={handleSaveGeneral} noValidate className="space-y-4 text-xs">
                   {/* CITY OF PRESENCE - PRIMARY HIGHLIGHTED BLOCK */}
                   <div className="bg-gradient-to-br from-cyan-950/40 via-slate-900 to-indigo-950/40 border-2 border-cyan-500/50 rounded-2xl p-4 space-y-3 shadow-xl">
                     <div className="flex items-center justify-between">
@@ -1005,12 +1016,14 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                         </div>
 
                         <div className="pt-1">
-                          <label className="text-[10px] text-slate-400 block mb-1">Или прямая ссылка на изображение:</label>
+                          <label className="text-[10px] text-slate-400 block mb-1">
+                            Или ссылка на фото / имя файла изображения:
+                          </label>
                           <input
-                            type="url"
+                            type="text"
                             value={imageUrl || ""}
                             onChange={(e) => setImageUrl(e.target.value)}
-                            placeholder="https://.../car-photo.jpg"
+                            placeholder="https://... или имя файла картинки"
                             className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:border-amber-500"
                           />
                         </div>
@@ -1637,6 +1650,20 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                       </button>
                     )}
 
+                    {/* Inline feedback right next to buttons */}
+                    {successMsg && (
+                      <div className="w-full p-2.5 bg-emerald-950/90 border border-emerald-500 text-emerald-200 text-xs font-bold rounded-xl flex items-center space-x-2 animate-in fade-in">
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>{successMsg}</span>
+                      </div>
+                    )}
+                    {errorMsg && (
+                      <div className="w-full p-2.5 bg-red-950/90 border border-red-500 text-red-200 text-xs font-bold rounded-xl flex items-center space-x-2 animate-in fade-in">
+                        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                        <span>{errorMsg}</span>
+                      </div>
+                    )}
+
                     <div className="flex items-center space-x-2 ml-auto">
                       <button
                         type="button"
@@ -1648,9 +1675,27 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                       <button
                         type="submit"
                         disabled={saving}
-                        className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl shadow-lg transition active:scale-95"
+                        className={`px-6 py-2.5 font-black rounded-xl shadow-lg transition active:scale-95 flex items-center space-x-1.5 ${
+                          saving
+                            ? "bg-amber-600 text-white cursor-wait"
+                            : successMsg
+                            ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                            : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950"
+                        }`}
                       >
-                        {saving ? "Сохранение..." : "Сохранить параметры"}
+                        {saving ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Сохранение...</span>
+                          </>
+                        ) : successMsg ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            <span>✓ Сохранено!</span>
+                          </>
+                        ) : (
+                          <span>Сохранить параметры</span>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -1663,6 +1708,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                   {/* Create New Block Form */}
                   <form
                     onSubmit={handleCreateAvailabilityBlock}
+                    noValidate
                     className="bg-slate-950 p-4 rounded-2xl border border-red-500/40 space-y-3.5 shadow-xl"
                   >
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800">
