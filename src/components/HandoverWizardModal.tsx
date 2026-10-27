@@ -36,9 +36,11 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  const car = booking?.car || {};
+
   // Step 1: Vehicle & Checklist
-  const [mileage, setMileage] = useState<number>(booking.car.currentMileage);
-  const [fuelPercent, setFuelPercent] = useState<number>(booking.car.currentFuelPerc);
+  const [mileage, setMileage] = useState<number>(car.currentMileage || 50000);
+  const [fuelPercent, setFuelPercent] = useState<number>(car.currentFuelPerc !== undefined ? car.currentFuelPerc : 100);
   const [techPassportVerified, setTechPassportVerified] = useState<boolean>(true);
   const [clientBriefed, setClientBriefed] = useState<boolean>(true);
 
@@ -88,7 +90,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
 
   // Step 2: Extras
   const [issuedExtras, setIssuedExtras] = useState<string[]>(
-    booking.extras.map((e: any) => e.id)
+    booking?.extras ? booking.extras.map((e: any) => e.id) : []
   );
 
   // Step 3: Contract Photo
@@ -196,7 +198,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
               </span>
             </div>
             <h2 className="text-lg font-bold text-white mt-1">
-              Выдача: {booking.car.brand} {booking.car.model} ({booking.car.plateNumber})
+              Выдача: {car.brand || ""} {car.model || "Автомобиль"} {car.plateNumber ? `(${car.plateNumber})` : ""}
             </h2>
           </div>
           <button
@@ -308,7 +310,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                     className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-amber-500"
                   />
                   <span className="text-[11px] text-slate-500 mt-1 block">
-                    По базе: {booking.car.currentMileage.toLocaleString()} км
+                    По базе: {(car.currentMileage || mileage || 0).toLocaleString()} км
                   </span>
                 </div>
 

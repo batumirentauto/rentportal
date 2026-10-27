@@ -1126,7 +1126,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                             return (
                               <div
                                 key={booking.id}
-                                onClick={() => setSelectedBooking(booking)}
+                                onClick={() => setSelectedBooking({ ...booking, car: booking.car || car })}
                                 style={{
                                   left: `${leftPercent}%`,
                                   width: `${widthPercent}%`,
@@ -1253,11 +1253,11 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div>
-                <div className="flex items-center space-x-2">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-800">
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                   <span
-                    className={`text-xs font-bold px-2.5 py-0.5 rounded border ${
+                    className={`text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded border ${
                       selectedBooking.isOneWay
                         ? "bg-purple-950/80 text-purple-300 border-purple-500/50"
                         : "bg-amber-500/20 text-amber-400 border-amber-500/30"
@@ -1265,31 +1265,23 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                   >
                     {selectedBooking.isOneWay ? "⇄ МЕЖДУГОРОДНЯЯ (ONE-WAY)" : "ЛОКАЛЬНАЯ АРЕНДА"}
                   </span>
-                  <span className="font-mono text-xs text-slate-400">
+                  <span className="font-mono text-xs text-slate-300 font-bold">
                     {selectedBooking.bookingNumber}
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-white mt-1">
-                  {selectedBooking.car?.brand} {selectedBooking.car?.model} ({selectedBooking.car?.plateNumber})
+                <h3 className="text-base font-black text-white">
+                  {selectedBooking.car?.brand
+                    ? `${selectedBooking.car.brand} ${selectedBooking.car.model} (${selectedBooking.car.plateNumber})`
+                    : "Автомобиль бронирования"}
                 </h3>
               </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditBookingOpen(true)}
-                  className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center space-x-1.5 transition shadow-sm active:scale-95"
-                  title="Редактировать параметры бронирования, даты и автомобиль"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Редактировать</span>
-                </button>
-                <button
-                  onClick={() => setSelectedBooking(null)}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                onClick={() => setSelectedBooking(null)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition"
+                title="Закрыть"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* One-Way Logistical Route Banner */}
@@ -1323,18 +1315,20 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
             <div className="space-y-3 text-xs">
               {/* Customer */}
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setIsCustomerDossierOpen(true)}
-                    className="font-bold text-amber-300 hover:text-amber-200 flex items-center space-x-1.5 hover:underline group text-left transition"
-                    title="Открыть карточку клиента и фото документов"
-                  >
-                    <User className="w-4 h-4 text-amber-400 group-hover:scale-110 transition shrink-0" />
-                    <span className="text-sm font-black">{selectedBooking.customer.fullName}</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-normal">
-                      Карточка клиента →
-                    </span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomerDossierOpen(true)}
+                      className="font-bold text-amber-300 hover:text-amber-200 flex items-center space-x-1.5 hover:underline group text-left transition"
+                      title="Открыть карточку клиента и фото документов"
+                    >
+                      <User className="w-4 h-4 text-amber-400 group-hover:scale-110 transition shrink-0" />
+                      <span className="text-sm font-black">{selectedBooking.customer?.fullName}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-normal">
+                        Карточка →
+                      </span>
+                    </button>
                     {selectedBooking.source && (
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${
@@ -1352,34 +1346,30 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                           : "🟢 WhatsApp"}
                       </span>
                     )}
-                  </button>
-                  <div className="flex items-center space-x-1.5 font-mono text-[11px] text-slate-300 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
-                    <span>📞 {selectedBooking.customer.phone}</span>
-                    {selectedBooking.customer?.phone && (
+                  </div>
+
+                  {/* Phone with 1-click icon copy */}
+                  {selectedBooking.customer?.phone && (
+                    <div className="flex items-center space-x-1.5 font-mono text-[11px] text-slate-300 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800 self-start sm:self-auto">
+                      <span>📞 {selectedBooking.customer.phone}</span>
                       <button
                         type="button"
                         onClick={() => handleCopyPopupPhone(selectedBooking.customer.phone)}
-                        className={`px-1.5 py-0.5 rounded transition flex items-center space-x-1 text-[10px] font-sans font-bold shadow-sm ${
+                        className={`p-1 rounded transition border shadow-sm ${
                           copiedPopupPhone
-                            ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
-                            : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
+                            ? "bg-emerald-500/25 text-emerald-300 border-emerald-500/50"
+                            : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700"
                         }`}
                         title="Скопировать номер телефона"
                       >
                         {copiedPopupPhone ? (
-                          <>
-                            <Check className="w-3 h-3 text-emerald-400" />
-                            <span>Скопировано!</span>
-                          </>
+                          <Check className="w-3 h-3 text-emerald-400" />
                         ) : (
-                          <>
-                            <Copy className="w-3 h-3 text-amber-400" />
-                            <span>Копировать</span>
-                          </>
+                          <Copy className="w-3 h-3 text-amber-400" />
                         )}
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
                 <p className="text-[11px] text-slate-400">
                   Паспорт: {selectedBooking.customer.passportNumber} • Права: {selectedBooking.customer.driverLicenseNumber}
@@ -1790,86 +1780,127 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 )}
             </div>
 
-            {/* Actions */}
-            <div className="pt-2 flex flex-wrap gap-2 justify-end border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setIsRefundModalOpen(true)}
-                className="flex items-center space-x-1.5 px-3 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-bold transition active:scale-95"
-                title="Оформить возврат клиенту денег (уменьшение срока аренды или по вине автопроката)"
-              >
-                <DollarSign className="w-3.5 h-3.5 text-rose-400" />
-                <span>Возврат денег</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsExtensionModalOpen(true)}
-                className="flex items-center space-x-1.5 px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-bold transition active:scale-95"
-                title="Продлить срок аренды выданного авто на дни или часы"
-              >
-                <Clock className="w-3.5 h-3.5 text-purple-400" />
-                <span>Продлить</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsCarSwapModalOpen(true)}
-                className="flex items-center space-x-1.5 px-3 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 text-cyan-300 border border-cyan-500/40 rounded-xl text-xs font-bold transition active:scale-95"
-                title="Заменить автомобиль в процессе аренды (неисправность, не подошел, апгрейд)"
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Заменить авто</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsEditBookingOpen(true)}
-                className="flex items-center space-x-1.5 px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold transition active:scale-95"
-                title="Редактировать бронь, даты и автомобиль"
-              >
-                <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                <span>Редактировать</span>
-              </button>
-
-              {onOpenContract && (
+            {/* Actions Section */}
+            <div className="pt-3 border-t border-slate-800 space-y-2.5">
+              {/* Primary Call-to-Action */}
+              {onOpenHandover && selectedBooking.status !== "ACTIVE" && selectedBooking.status !== "COMPLETED" && (
                 <button
+                  type="button"
                   onClick={() => {
-                    onOpenContract(selectedBooking);
+                    const bookingWithCar = {
+                      ...selectedBooking,
+                      car: selectedBooking.car || {
+                        id: selectedBooking.carId,
+                        brand: "Автомобиль",
+                        model: "",
+                        plateNumber: "",
+                        currentMileage: 50000,
+                        currentFuelPerc: 100,
+                      },
+                      extras: selectedBooking.extras || [],
+                    };
+                    onOpenHandover(bookingWithCar);
                     setSelectedBooking(null);
                   }}
-                  className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition"
+                  className="w-full flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl text-sm shadow-lg shadow-amber-950/40 transition active:scale-95"
                 >
-                  <FileText className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Договор</span>
-                </button>
-              )}
-
-              {onOpenHandover && selectedBooking.status !== "ACTIVE" && (
-                <button
-                  onClick={() => {
-                    onOpenHandover(selectedBooking);
-                    setSelectedBooking(null);
-                  }}
-                  className="flex items-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black shadow transition"
-                >
-                  <Key className="w-3.5 h-3.5" />
-                  <span>Выдать авто</span>
+                  <Key className="w-4 h-4 text-slate-950" />
+                  <span>Выдать автомобиль клиенту</span>
                 </button>
               )}
 
               {onOpenReturn && (selectedBooking.status === "ACTIVE" || selectedBooking.handoverReport) && (
                 <button
+                  type="button"
                   onClick={() => {
-                    onOpenReturn(selectedBooking);
+                    const bookingWithCar = {
+                      ...selectedBooking,
+                      car: selectedBooking.car || {
+                        id: selectedBooking.carId,
+                        brand: "Автомобиль",
+                        model: "",
+                        plateNumber: "",
+                        currentMileage: 50000,
+                        currentFuelPerc: 100,
+                      },
+                      extras: selectedBooking.extras || [],
+                    };
+                    onOpenReturn(bookingWithCar);
                     setSelectedBooking(null);
                   }}
-                  className="flex items-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-black shadow transition active:scale-95"
+                  className="w-full flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 text-slate-950 font-black rounded-xl text-sm shadow-lg shadow-emerald-950/40 transition active:scale-95"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Принять возврат авто</span>
+                  <RotateCcw className="w-4 h-4 text-slate-950" />
+                  <span>Принять возврат автомобиля</span>
                 </button>
               )}
+
+              {/* Secondary Actions Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditBookingOpen(true)}
+                  className="flex items-center justify-center space-x-1.5 px-3 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold transition active:scale-95"
+                  title="Редактировать параметры бронирования, даты и автомобиль"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Редактировать</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCarSwapModalOpen(true)}
+                  className="flex items-center justify-center space-x-1.5 px-3 py-2 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 rounded-xl text-xs font-bold transition active:scale-95"
+                  title="Заменить автомобиль в процессе аренды"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Заменить авто</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsExtensionModalOpen(true)}
+                  className="flex items-center justify-center space-x-1.5 px-3 py-2 bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-bold transition active:scale-95"
+                  title="Продлить срок аренды на дни или часы"
+                >
+                  <Clock className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Продлить</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsRefundModalOpen(true)}
+                  className="flex items-center justify-center space-x-1.5 px-3 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-bold transition active:scale-95"
+                  title="Оформить возврат клиенту денег"
+                >
+                  <DollarSign className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Возврат денег</span>
+                </button>
+
+                {onOpenContract && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenContract(selectedBooking);
+                      setSelectedBooking(null);
+                    }}
+                    className="flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Договор</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsAdditionalDriversModalOpen(true)}
+                  className="flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition"
+                  title="Дополнительные водители"
+                >
+                  <Users className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Водители ({selectedBooking.additionalDrivers?.length || 0})</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

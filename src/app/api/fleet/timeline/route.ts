@@ -52,6 +52,7 @@ export async function GET(request: Request) {
               additionalDrivers: true,
               refunds: true,
               extensions: true,
+              extras: true,
             },
             orderBy: {
               startDate: "asc",
@@ -88,6 +89,7 @@ export async function GET(request: Request) {
               handoverReport: true,
               returnReport: true,
               payments: true,
+              extras: true,
             },
             orderBy: {
               startDate: "asc",
@@ -140,6 +142,22 @@ export async function GET(request: Request) {
 
         return {
           ...b,
+          car: {
+            id: car.id,
+            brand: car.brand,
+            model: car.model,
+            year: car.year,
+            plateNumber: car.plateNumber,
+            vin: car.vin,
+            currentMileage: car.currentMileage,
+            currentFuelPerc: car.currentFuelPerc,
+            city: car.city,
+            cityId: car.cityId,
+            techPassportNumber: car.techPassportNumber,
+            hasTechPassport: car.hasTechPassport,
+            defaultOwnerDailyRate: car.defaultOwnerDailyRate,
+            imageUrl: car.imageUrl,
+          },
           isOneWay,
           fromCityName: fromCity?.nameRu || "Батуми",
           fromCityCode: fromCity?.code || "BUS",
