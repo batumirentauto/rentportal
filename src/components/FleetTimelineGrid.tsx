@@ -36,6 +36,8 @@ import {
   Copy,
   Check,
   RefreshCw,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
@@ -162,6 +164,26 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [headerHeight, setHeaderHeight] = useState<number>(140);
   const [isPageScrolled, setIsPageScrolled] = useState<boolean>(false);
   const [isMobileControlsOpen, setIsMobileControlsOpen] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Esc key & body scroll lock for Fullscreen mode
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    if (isFullscreen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isFullscreen]);
 
   useEffect(() => {
     const updateH = () => {
@@ -400,11 +422,24 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
           <div className="flex items-center space-x-1.5">
             <button
               type="button"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className={`p-1 border rounded-lg text-xs font-bold flex items-center space-x-1 ${
+                isFullscreen
+                  ? "bg-amber-500 text-slate-950 border-amber-400"
+                  : "bg-cyan-950/60 border-cyan-500/40 text-cyan-300"
+              }`}
+              title={isFullscreen ? "Выйти из полноэкранного режима" : "Развернуть во весь экран"}
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              <span className="text-[10px]">{isFullscreen ? "Свернуть" : "Во весь экран"}</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setIsMobileControlsOpen(!isMobileControlsOpen)}
-              className="flex items-center space-x-1 px-2.5 py-1 bg-slate-800 border border-slate-700 hover:border-amber-500/50 text-slate-200 text-xs font-bold rounded-lg transition"
+              className="flex items-center space-x-1 px-2 py-1 bg-slate-800 border border-slate-700 hover:border-amber-500/50 text-slate-200 text-xs font-bold rounded-lg transition"
             >
               <Search className="w-3 h-3 text-amber-400" />
-              <span>{isMobileControlsOpen ? "Свернуть ▲" : "Фильтры & поиск ▼"}</span>
+              <span>{isMobileControlsOpen ? "Свернуть ▲" : "Фильтры ▼"}</span>
             </button>
             <button
               type="button"
@@ -738,6 +773,21 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
               <span>Расшифровка</span>
             </button>
 
+            {/* Fullscreen Mode CTA */}
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow ${
+                isFullscreen
+                  ? "bg-amber-500 text-slate-950 font-black shadow-lg"
+                  : "bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/40"
+              }`}
+              title={isFullscreen ? "Выйти из полноэкранного режима (Esc)" : "Развернуть шахматку на весь экран"}
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-slate-950" /> : <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />}
+              <span>{isFullscreen ? "Свернуть" : "Во весь экран"}</span>
+            </button>
+
             {/* New Car CTA */}
             <button
               onClick={() => setIsNewCarModalOpen(true)}
@@ -807,26 +857,111 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       {/* TIMELINE GANTT GRID CONTAINER */}
       <div
         id="timeline-main-container"
-        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden"
+        className={
+          isFullscreen
+            ? "fixed inset-0 z-50 bg-slate-950 flex flex-col p-2 sm:p-3 overflow-hidden shadow-2xl animate-in fade-in duration-150"
+            : "bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden"
+        }
       >
+        {/* Fullscreen Dedicated Compact Navigation Bar */}
+        {isFullscreen && (
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/90 gap-2 shrink-0 bg-slate-950 px-1">
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-black text-white flex items-center space-x-1.5">
+                <span className="text-base">📅</span>
+                <span className="hidden sm:inline">Шахматка во весь экран</span>
+                <span className="sm:hidden font-mono">Шахматка</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono hidden md:inline">
+                ({filteredCars.length} авто)
+              </span>
+            </div>
+
+            {/* Quick date navigator inside fullscreen */}
+            <div className="flex items-center space-x-1">
+              <button
+                type="button"
+                onClick={handlePrev}
+                className="p-1.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-200 rounded-lg text-xs"
+                title="Назад"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleToday}
+                className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-xs shadow"
+              >
+                Сегодня
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                className="p-1.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-200 rounded-lg text-xs"
+                title="Вперед"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[11px] font-mono text-slate-300 font-bold ml-1 hidden lg:inline">
+                {days[0]?.dayNumber} {days[0]?.monthName} — {days[days.length - 1]?.dayNumber} {days[days.length - 1]?.monthName}
+              </span>
+            </div>
+
+            {/* Actions: + Бронь & Exit Fullscreen */}
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => handleOpenNewBooking()}
+                className="hidden xs:flex items-center space-x-1 px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow transition active:scale-95"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>+ Бронь</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsFullscreen(false)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/50 hover:border-amber-400 rounded-xl text-xs font-bold transition active:scale-95 shadow shadow-black/60"
+                title="Выйти из полноэкранного режима (Esc)"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Свернуть (Esc)</span>
+                <span className="sm:hidden">Выйти</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div
-          className="overflow-auto rounded-2xl"
-          style={{
-            maxHeight: `calc(100dvh - ${headerHeight}px - 1.25rem)`,
-          }}
+          className={`overflow-auto ${isFullscreen ? "flex-1 rounded-xl border border-slate-800/80" : "rounded-2xl"}`}
+          style={
+            isFullscreen
+              ? { height: "100%" }
+              : { maxHeight: `calc(100dvh - ${headerHeight}px - 1.25rem)` }
+          }
         >
           <div className="w-max min-w-full pb-24">
             {/* Header row: Cars column + Day columns - Sticky at top of the grid */}
             <div className="flex border-b border-slate-800 bg-slate-950 sticky top-0 z-30 shadow-md">
               <div className="w-[130px] sm:w-[220px] shrink-0 p-2 sm:p-3 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-40 bg-slate-950 shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                 <div className="flex items-center space-x-1 truncate">
+                  {!isFullscreen && (
+                    <button
+                      type="button"
+                      onClick={scrollToFilters}
+                      className="p-1 -ml-1 text-slate-400 hover:text-amber-400 rounded-md transition hover:bg-slate-850 shrink-0"
+                      title="Прокрутить экран наверх к поиску и фильтрам"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5 text-amber-400" />
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={scrollToFilters}
-                    className="p-1 -ml-1 text-slate-400 hover:text-amber-400 rounded-md transition hover:bg-slate-850 shrink-0"
-                    title="Прокрутить экран наверх к поиску и фильтрам"
+                    onClick={() => setIsFullscreen(!isFullscreen)}
+                    className="p-1 text-slate-400 hover:text-cyan-400 rounded-md transition hover:bg-slate-850 shrink-0"
+                    title={isFullscreen ? "Выйти из полноэкранного режима (Esc)" : "Развернуть шахматку на весь экран"}
                   >
-                    <ArrowUp className="w-3.5 h-3.5 text-amber-400" />
+                    {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-amber-400" /> : <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />}
                   </button>
                   <span className="truncate">Автомобиль</span>
                   <span className="text-[10px] text-slate-500 hidden sm:inline">({filteredCars.length})</span>
@@ -1294,66 +1429,6 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                   );
                 })
               )}
-            </div>
-
-            {/* Extended Legend: Cities and Trip Types (inside timeline scroll container) */}
-            <div className="sticky left-0 max-w-[calc(100vw-2.5rem)] p-4 bg-slate-950/95 border-t border-slate-800 space-y-3 text-xs">
-              {/* Row 1: City Colors */}
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 border-b border-slate-800 pb-2.5">
-                <span className="font-extrabold text-white uppercase text-[11px] tracking-wider">Цвета городов дислокации:</span>
-
-                <div className="flex items-center space-x-1.5 bg-amber-950/60 border border-amber-500/50 px-2.5 py-1 rounded-lg">
-                  <span className="w-3 h-3 rounded-full bg-amber-500 shadow" />
-                  <span className="font-bold text-amber-300">🏛️ Тбилиси (TBS) — Янтарно-оранжевый</span>
-                </div>
-
-                <div className="flex items-center space-x-1.5 bg-cyan-950/60 border border-cyan-400/50 px-2.5 py-1 rounded-lg">
-                  <span className="w-3 h-3 rounded-full bg-cyan-400 shadow" />
-                  <span className="font-bold text-cyan-300">🌊 Батуми (BUS) — Морской бирюзовый</span>
-                </div>
-
-                <div className="flex items-center space-x-1.5 bg-emerald-950/60 border border-emerald-500/50 px-2.5 py-1 rounded-lg">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 shadow" />
-                  <span className="font-bold text-emerald-300">🌿 Кутаиси (KUT) — Изумрудно-зеленый</span>
-                </div>
-              </div>
-
-              {/* Row 2: Trip Statuses */}
-              <div className="flex flex-wrap items-center justify-between text-slate-300 gap-3">
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                  <span className="font-extrabold text-white uppercase text-[11px] tracking-wider">Статусы поездок:</span>
-                  
-                  <div className="flex items-center space-x-1.5">
-                    <span className="w-3 h-3 rounded-full bg-gradient-to-r from-fuchsia-600 to-purple-600 border border-fuchsia-300" />
-                    <span className="font-bold text-fuchsia-300">В пути между городами (One-Way)</span>
-                  </div>
-
-                  <div className="flex items-center space-x-1.5">
-                    <span className="w-3 h-3 rounded-full bg-purple-700 border border-purple-400" />
-                    <span className="text-purple-300">Бронь со сдачей в другом городе</span>
-                  </div>
-
-                  <div className="flex items-center space-x-1.5">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500" />
-                    <span>Выдан клиенту (локально)</span>
-                  </div>
-
-                  <div className="flex items-center space-x-1.5">
-                    <span className="w-3 h-3 rounded-full bg-blue-500" />
-                    <span>Локальная бронь</span>
-                  </div>
-
-                  <div className="flex items-center space-x-1.5">
-                    <span className="w-3 h-3 rounded-full bg-slate-800 border-2 border-emerald-500" />
-                    <span className="text-emerald-300 font-bold">🏁 Завершена (архив)</span>
-                  </div>
-                </div>
-
-                <div className="text-[11px] text-amber-400/90 flex items-center space-x-1">
-                  <Compass className="w-3.5 h-3.5" />
-                  <span>При One-Way брони цвет карточки авто после даты сдачи изменится на цвет нового города</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
