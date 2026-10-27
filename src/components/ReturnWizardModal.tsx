@@ -71,9 +71,10 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const fuelAtHandover = handoverReport?.fuelLevelPercent ?? 100;
   const [returnFuelLevel, setReturnFuelLevel] = useState<number>(fuelAtHandover);
   const fuelShortagePercent = Math.max(0, fuelAtHandover - returnFuelLevel);
-  // Расчет стоимости топлива: 60 литров бак, 1% ~ 0.6 л. Цена за литр: 3.8 GEL (₾)
+  // Расчет стоимости топлива: 60 литров бак, 1% ~ 0.6 л. Цена 95-го бензина: 4.30 GEL (₾) за литр
+  const FUEL_PRICE_PER_LITER = 4.30;
   const defaultFuelCharge = fuelShortagePercent > 0
-    ? Math.round((fuelShortagePercent * 0.6 * 3.8))
+    ? Math.round(fuelShortagePercent * 0.6 * FUEL_PRICE_PER_LITER)
     : 0;
   const [fuelChargeAmount, setFuelChargeAmount] = useState<number>(defaultFuelCharge);
 
@@ -81,7 +82,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   useEffect(() => {
     const shortage = Math.max(0, fuelAtHandover - returnFuelLevel);
     if (shortage > 0) {
-      setFuelChargeAmount(Math.round(shortage * 0.6 * 3.8));
+      setFuelChargeAmount(Math.round(shortage * 0.6 * FUEL_PRICE_PER_LITER));
     } else {
       setFuelChargeAmount(0);
     }
@@ -1178,7 +1179,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
                 {fuelShortagePercent > 0 ? (
                   <div className="flex items-center justify-between text-[11px] text-amber-300 pt-0.5">
-                    <span>Нехватка: -{fuelShortagePercent}% (~{Math.round(fuelShortagePercent * 0.6)} л)</span>
+                    <span>Нехватка: -{fuelShortagePercent}% (~{Math.round(fuelShortagePercent * 0.6)} л по 4.30 ₾/л)</span>
                     <span className="font-mono font-bold">+{fuelChargeAmount} ₾ (GEL)</span>
                   </div>
                 ) : (
