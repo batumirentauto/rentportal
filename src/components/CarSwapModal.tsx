@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { MileageInput } from "./MileageInput";
 import {
   X,
   RefreshCw,
@@ -384,15 +385,10 @@ export const CarSwapModal: React.FC<CarSwapModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
               {/* Odometer */}
               <div>
-                <label className="text-[11px] text-slate-400 block mb-1 font-semibold flex items-center space-x-1">
-                  <Gauge className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Одометр при сдаче (км):</span>
-                </label>
-                <input
-                  type="number"
-                  value={oldCarMileage}
-                  onChange={(e) => setOldCarMileage(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white text-xs font-mono"
+                <MileageInput
+                  valueKm={oldCarMileage}
+                  onChangeKm={(km) => setOldCarMileage(km)}
+                  label="Одометр при сдаче"
                   required
                 />
               </div>
@@ -574,20 +570,15 @@ export const CarSwapModal: React.FC<CarSwapModalProps> = ({
 
             {/* New Car Odometer & Fuel at pickup */}
             {selectedNewCar && (
-              <div className="p-3 bg-cyan-950/20 border border-cyan-500/30 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                <div className="flex items-center space-x-2">
-                  <Gauge className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <span className="text-slate-300">Одометр нового авто при выдаче:</span>
-                  <input
-                    type="number"
-                    value={newCarMileage}
-                    onChange={(e) => setNewCarMileage(Number(e.target.value))}
-                    className="w-24 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono font-bold text-xs"
-                  />
-                  <span className="text-slate-500 text-[10px]">км</span>
-                </div>
+              <div className="p-3 bg-cyan-950/20 border border-cyan-500/30 rounded-xl space-y-3">
+                <MileageInput
+                  valueKm={newCarMileage}
+                  onChangeKm={(km) => setNewCarMileage(km)}
+                  label="Одометр нового авто при выдаче"
+                  required
+                />
 
-                <div className="flex items-center space-x-2 justify-end">
+                <div className="flex items-center space-x-2 pt-1 border-t border-cyan-500/20">
                   <Fuel className="w-4 h-4 text-cyan-400 shrink-0" />
                   <span className="text-slate-300">Топливо:</span>
                   <input

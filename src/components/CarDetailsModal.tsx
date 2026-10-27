@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { MileageInput } from "./MileageInput";
 import {
   X,
   Car as CarIcon,
@@ -881,16 +882,12 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                       </select>
                     </div>
 
-                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
-                      <label className="text-slate-400 text-[10px] flex items-center space-x-1">
-                        <Gauge className="w-3 h-3 text-amber-400" />
-                        <span>Текущий пробег (км):</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={currentMileage}
-                        onChange={(e) => setCurrentMileage(Number(e.target.value))}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs"
+                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1 col-span-2 sm:col-span-1">
+                      <MileageInput
+                        valueKm={currentMileage}
+                        onChangeKm={(km) => setCurrentMileage(km)}
+                        label="Текущий пробег"
+                        required
                       />
                     </div>
 

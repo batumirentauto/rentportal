@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { MileageInput } from "./MileageInput";
 import {
   Wrench,
   AlertTriangle,
@@ -1244,16 +1245,12 @@ export const FleetMaintenanceHub: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmitOil} className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-300 font-semibold block mb-1">Текущий пробег при замене (км):</label>
-                <input
-                  type="number"
-                  value={oilNewMileage}
-                  onChange={(e) => setOilNewMileage(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-mono font-bold focus:outline-none focus:border-amber-500"
-                  required
-                />
-              </div>
+              <MileageInput
+                valueKm={oilNewMileage}
+                onChangeKm={(km) => setOilNewMileage(km)}
+                label="Текущий пробег при замене"
+                required
+              />
 
               <div>
                 <label className="text-slate-300 font-semibold block mb-1">Марка и вязкость масла:</label>
@@ -1541,12 +1538,10 @@ export const FleetMaintenanceHub: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-300 font-semibold block mb-1">Пробег при проверке (км):</label>
-                  <input
-                    type="number"
-                    value={chkMileage}
-                    onChange={(e) => setChkMileage(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-white font-mono"
+                  <MileageInput
+                    valueKm={chkMileage}
+                    onChangeKm={(km) => setChkMileage(km)}
+                    label="Пробег при проверке"
                     required
                   />
                 </div>

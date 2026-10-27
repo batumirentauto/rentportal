@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { calculateExtraHoursFee } from "@/lib/extra-hours";
 import { getCarTankVolume, FUEL_PRICE_95_GEL, getFuelRate, calculateFuelShortage } from "@/lib/fuelSpecs";
+import { MileageInput } from "./MileageInput";
 import {
   X,
   CheckCircle2,
@@ -1228,26 +1229,21 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
             {/* 4. Пробег и сверка уровня топлива */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Пробег */}
-              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-1.5">
-                <label className="text-slate-200 font-bold block flex items-center justify-between">
-                  <span className="flex items-center space-x-1.5">
-                    <Gauge className="w-4 h-4 text-amber-400" />
-                    <span>Пробег при возврате (км):</span>
-                  </span>
-                  <span className="text-[10px] text-slate-500">был: {initialMileage.toLocaleString()}</span>
-                </label>
-                <input
-                  type="number"
-                  min={initialMileage}
-                  value={returnMileage}
-                  onChange={(e) => setReturnMileage(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white font-mono font-bold text-sm focus:outline-none focus:border-emerald-500"
+              {/* Пробег с калькулятором Мили / Км */}
+              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                <MileageInput
+                  valueKm={returnMileage}
+                  onChangeKm={(km) => setReturnMileage(km)}
+                  label="Пробег при возврате"
+                  minKm={initialMileage}
+                  previousKm={initialMileage}
                   required
+                  subNote={
+                    <span className="text-[10px] text-emerald-400 block font-mono pt-1">
+                      + Пробег за аренду: {tripDistance.toLocaleString("ru-RU")} км
+                    </span>
+                  }
                 />
-                <span className="text-[10px] text-emerald-400 block font-mono">
-                  + Пробег за аренду: {tripDistance.toLocaleString()} км
-                </span>
 
                 {/* Межсервисный интервал ТО (масло) */}
                 <div className={`mt-2 p-2 rounded-xl border text-[11px] flex items-center justify-between ${

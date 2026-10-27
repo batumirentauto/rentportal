@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus, Car as CarIcon, MapPin, Check, AlertTriangle, Sparkles, Upload, Loader2, FileText, Camera } from "lucide-react";
 import { getCarTankVolume } from "@/lib/fuelSpecs";
+import { MileageInput } from "./MileageInput";
 
 interface NewCarModalProps {
   isOpen: boolean;
@@ -483,12 +484,11 @@ export const NewCarModal: React.FC<NewCarModalProps> = ({
               />
             </div>
             <div>
-              <label className="text-slate-400 text-[10px] block mb-1">Текущий пробег (км):</label>
-              <input
-                type="number"
-                value={currentMileage}
-                onChange={(e) => setCurrentMileage(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono"
+              <MileageInput
+                valueKm={currentMileage}
+                onChangeKm={(km) => setCurrentMileage(km)}
+                label="Текущий пробег"
+                required
               />
             </div>
           </div>
