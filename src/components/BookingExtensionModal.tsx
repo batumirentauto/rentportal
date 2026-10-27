@@ -361,8 +361,8 @@ export const BookingExtensionModal: React.FC<BookingExtensionModalProps> = ({
                       className="w-full bg-slate-900 border-2 border-amber-500/70 rounded-xl py-1.5 pl-8 pr-3 text-amber-300 font-mono font-black text-sm focus:outline-none focus:border-amber-400"
                     />
                   </div>
-                  <span className="text-[10px] text-slate-500 block mt-0.5">
-                    Взаимозаменяемо с тарифом за день
+                  <span className="text-[10px] text-amber-400/90 block mt-0.5">
+                    Любая договорная сумма, согласованная с клиентом
                   </span>
                 </div>
               </div>
@@ -421,9 +421,14 @@ export const BookingExtensionModal: React.FC<BookingExtensionModalProps> = ({
               </div>
 
               {/* Manual fee override */}
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs text-slate-400">Сумма доплаты к начислению:</span>
-                <div className="relative w-28">
+              <div className="flex items-center justify-between pt-1 border-t border-slate-800">
+                <div>
+                  <span className="text-xs font-bold text-white block">Сумма доплаты к начислению:</span>
+                  <span className="text-[10px] text-amber-400/90 block">
+                    Можно ввести любую согласованную с клиентом сумму
+                  </span>
+                </div>
+                <div className="relative w-32">
                   <span className="absolute left-2.5 top-1.5 text-slate-500 font-mono font-bold text-xs">
                     ₾
                   </span>
@@ -433,7 +438,7 @@ export const BookingExtensionModal: React.FC<BookingExtensionModalProps> = ({
                     step="any"
                     value={extensionAmount}
                     onChange={(e) => setExtensionAmount(e.target.value)}
-                    className="w-full bg-slate-900 border border-amber-500/60 rounded-lg py-1 pl-6 pr-2 text-right font-mono font-bold text-amber-300 text-xs"
+                    className="w-full bg-slate-900 border-2 border-amber-500/80 rounded-lg py-1 pl-6 pr-2 text-right font-mono font-black text-amber-300 text-sm focus:outline-none focus:border-amber-400"
                   />
                 </div>
               </div>

@@ -71,9 +71,9 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const fuelAtHandover = handoverReport?.fuelLevelPercent ?? 100;
   const [returnFuelLevel, setReturnFuelLevel] = useState<number>(fuelAtHandover);
   const fuelShortagePercent = Math.max(0, fuelAtHandover - returnFuelLevel);
-  // Расчет стоимости топлива: 60 литров бак, 1% ~ 0.6 л. Цена за литр: 3.8 GEL (~ $1.40 USD)
+  // Расчет стоимости топлива: 60 литров бак, 1% ~ 0.6 л. Цена за литр: 3.8 GEL (₾)
   const defaultFuelCharge = fuelShortagePercent > 0
-    ? Math.round((fuelShortagePercent * 0.6 * 1.4))
+    ? Math.round((fuelShortagePercent * 0.6 * 3.8))
     : 0;
   const [fuelChargeAmount, setFuelChargeAmount] = useState<number>(defaultFuelCharge);
 
@@ -81,7 +81,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   useEffect(() => {
     const shortage = Math.max(0, fuelAtHandover - returnFuelLevel);
     if (shortage > 0) {
-      setFuelChargeAmount(Math.round(shortage * 0.6 * 1.4));
+      setFuelChargeAmount(Math.round(shortage * 0.6 * 3.8));
     } else {
       setFuelChargeAmount(0);
     }
@@ -161,7 +161,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
   // 3.5. Проверка наличия оригинала техпаспорта в автомобиле
   const [techPassportReturned, setTechPassportReturned] = useState<boolean>(true);
-  const [lostTechPassportCharge, setLostTechPassportCharge] = useState<number>(100); // 100 USD (270 GEL) за восстановление в Сервисном Агентстве МВД
+  const [lostTechPassportCharge, setLostTechPassportCharge] = useState<number>(250); // 250 GEL за восстановление в Сервисном Агентстве МВД Грузии
 
   // 4. Штрафы ПДД (protocols.ge / Videos Police GE)
   const [trafficFines, setTrafficFines] = useState<any[]>(booking.trafficFines || []);
@@ -253,7 +253,12 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   );
 
   const hoursCalc = calculateExtraHoursFee(extraHours, booking.dailyRate || 50);
-  const extraHoursFee = hoursCalc.totalFee;
+  const [customExtraHoursFee, setCustomExtraHoursFee] = useState<number | null>(
+    booking.extraHoursFee ? Number(booking.extraHoursFee) : null
+  );
+
+  // Если менеджер указал сумму продления вручную (договорились с клиентом) — используем её, иначе расчет по тарифу
+  const extraHoursFee = customExtraHoursFee !== null ? customExtraHoursFee : hoursCalc.totalFee;
   const extraHoursToDeduct = !isExtraHoursPaid ? extraHoursFee : 0;
 
   // 7. Взаиморасчет
@@ -265,7 +270,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const [returnResult, setReturnResult] = useState<any | null>(null);
 
   // Общие начисления/удержания:
-  const finesToDeduct = finesPaidByClientToCompany ? selectedFinesTotalUSD : 0;
+  const finesToDeduct = finesPaidByClientToCompany ? selectedFinesTotalGEL : 0;
   const lostPassportFee = !techPassportReturned ? lostTechPassportCharge : 0;
   const deductionsTotal = fuelChargeAmount + (hasNewDamages ? damageChargeAmount : 0) + finesToDeduct + extraWashFee + lostPassportFee + extraHoursToDeduct;
 
@@ -361,11 +366,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
               <span className="text-xs text-slate-400 font-mono">№ {booking.bookingNumber}</span>
               {hasDeposit ? (
                 <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-bold">
-                  С залогом (${depositAmount})
+                  С залогом ({depositAmount} ₾)
                 </span>
               ) : (
                 <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded font-bold">
-                  Без залога ($0)
+                  Без залога (0 ₾)
                 </span>
               )}
             </div>
@@ -447,7 +452,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 </div>
               )}
 
-              {selectedFinesTotalUSD > 0 && finesPaidByClientToCompany && (
+              {selectedFinesTotalGEL > 0 && finesPaidByClientToCompany && (
                 <div className="flex justify-between py-0.5 text-rose-300">
                   <span>Оплата штрафов ПДД (клиент ➔ компании):</span>
                   <span className="font-mono font-bold">{selectedFinesTotalGEL} ₾ (GEL)</span>
@@ -458,6 +463,26 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 <div className="flex justify-between py-0.5 text-amber-300">
                   <span>Доплата за недостающее топливо ({fuelShortagePercent}%):</span>
                   <span className="font-mono font-bold">{fuelChargeAmount} ₾ (GEL)</span>
+                </div>
+              )}
+
+              {extraWashFee > 0 && (
+                <div className="flex justify-between py-0.5 text-cyan-300">
+                  <span>
+                    {cleanlinessState === "DIRTY_INTERIOR_CLEAN"
+                      ? "Уборка салона:"
+                      : cleanlinessState === "DIRTY_BODY"
+                      ? "Мойка кузова:"
+                      : "Химчистка салона:"}
+                  </span>
+                  <span className="font-mono font-bold">{extraWashFee} ₾ (GEL)</span>
+                </div>
+              )}
+
+              {extraHoursFee > 0 && (
+                <div className="flex justify-between py-0.5 text-amber-300">
+                  <span>Доплата за продление / задержку ({extraHours} ч):</span>
+                  <span className="font-mono font-bold">{extraHoursFee} ₾ (GEL)</span>
                 </div>
               )}
 
@@ -1163,79 +1188,158 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
             </div>
 
             {/* 4.5. Чистота автомобиля и мойка */}
-            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-slate-200 flex items-center space-x-1.5 text-xs">
                   <Sparkles className="w-4 h-4 text-cyan-400" />
-                  <span>Состояние чистоты и необходимость мойки:</span>
+                  <span>Состояние чистоты и необходимость мойки / уборки:</span>
                 </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {extraWashFee > 0 ? `К удержанию: ${extraWashFee} ₾` : "Без удержания"}
+                </span>
+              </div>
 
-                <div className="flex space-x-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNeedsWash(false);
-                      setCleanlinessState("CLEAN");
-                      setExtraWashFee(0);
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
-                      !needsWash
-                        ? "bg-emerald-600 text-white border-emerald-500 shadow"
-                        : "bg-slate-900 text-slate-400 border-slate-700"
-                    }`}
-                  >
-                    ✨ Чистый (Мойка не нужна)
-                  </button>
+              {/* Responsive 4-column cleanliness presets */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNeedsWash(false);
+                    setCleanlinessState("CLEAN");
+                    setExtraWashFee(0);
+                  }}
+                  className={`p-2.5 rounded-xl text-xs font-bold border transition text-center flex flex-col items-center justify-center space-y-1 ${
+                    !needsWash
+                      ? "bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-950/50"
+                      : "bg-slate-900 text-slate-400 border-slate-800 hover:text-white"
+                  }`}
+                >
+                  <span className="text-base">✨</span>
+                  <span className="leading-tight">Чистый</span>
+                  <span className={`text-[10px] font-normal ${!needsWash ? "text-emerald-100" : "text-slate-500"}`}>
+                    Мойка не нужна (0 ₾)
+                  </span>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNeedsWash(true);
-                      setCleanlinessState("DIRTY_BODY");
-                      setExtraWashFee(0);
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
-                      needsWash && cleanlinessState === "DIRTY_BODY"
-                        ? "bg-cyan-600 text-white border-cyan-500 shadow"
-                        : "bg-slate-900 text-slate-400 border-slate-700"
-                    }`}
-                  >
-                    🧼 Грязный кузов
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNeedsWash(true);
+                    setCleanlinessState("DIRTY_BODY");
+                    setExtraWashFee(0);
+                  }}
+                  className={`p-2.5 rounded-xl text-xs font-bold border transition text-center flex flex-col items-center justify-center space-y-1 ${
+                    needsWash && cleanlinessState === "DIRTY_BODY"
+                      ? "bg-cyan-600 text-white border-cyan-500 shadow-lg shadow-cyan-950/50"
+                      : "bg-slate-900 text-slate-400 border-slate-800 hover:text-cyan-300"
+                  }`}
+                >
+                  <span className="text-base">🚗</span>
+                  <span className="leading-tight">Грязный кузов</span>
+                  <span className={`text-[10px] font-normal ${needsWash && cleanlinessState === "DIRTY_BODY" ? "text-cyan-100" : "text-slate-500"}`}>
+                    Мойка кузова
+                  </span>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNeedsWash(true);
-                      setCleanlinessState("DIRTY_INTERIOR");
-                      setExtraWashFee(25);
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
-                      needsWash && cleanlinessState === "DIRTY_INTERIOR"
-                        ? "bg-amber-600 text-white border-amber-500 shadow"
-                        : "bg-slate-900 text-slate-400 border-slate-700"
-                    }`}
-                  >
-                    🫧 Химчистка салона
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNeedsWash(true);
+                    setCleanlinessState("DIRTY_INTERIOR_CLEAN");
+                    setExtraWashFee(20);
+                  }}
+                  className={`p-2.5 rounded-xl text-xs font-bold border transition text-center flex flex-col items-center justify-center space-y-1 ${
+                    needsWash && cleanlinessState === "DIRTY_INTERIOR_CLEAN"
+                      ? "bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-950/50"
+                      : "bg-slate-900 text-slate-400 border-slate-800 hover:text-blue-300"
+                  }`}
+                >
+                  <span className="text-base">🧹</span>
+                  <span className="leading-tight">Уборка салона</span>
+                  <span className={`text-[10px] font-normal ${needsWash && cleanlinessState === "DIRTY_INTERIOR_CLEAN" ? "text-blue-100" : "text-slate-500"}`}>
+                    Пылесос/мусор (~20 ₾)
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNeedsWash(true);
+                    setCleanlinessState("DIRTY_INTERIOR");
+                    setExtraWashFee(70);
+                  }}
+                  className={`p-2.5 rounded-xl text-xs font-bold border transition text-center flex flex-col items-center justify-center space-y-1 ${
+                    needsWash && cleanlinessState === "DIRTY_INTERIOR"
+                      ? "bg-amber-600 text-white border-amber-500 shadow-lg shadow-amber-950/50"
+                      : "bg-slate-900 text-slate-400 border-slate-800 hover:text-amber-300"
+                  }`}
+                >
+                  <span className="text-base">🫧</span>
+                  <span className="leading-tight">Химчистка</span>
+                  <span className={`text-[10px] font-normal ${needsWash && cleanlinessState === "DIRTY_INTERIOR" ? "text-amber-100" : "text-slate-500"}`}>
+                    Пятна/сушка (~70 ₾)
+                  </span>
+                </button>
               </div>
 
               {!needsWash ? (
                 <div className="p-2.5 bg-emerald-950/20 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-300">
                   <div className="flex items-center space-x-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Автомобиль чистый внутри и снаружи. Мойка не требуется — машина сразу готова к выдаче!</span>
+                    <span>Автомобиль чистый внутри и снаружи. Мойка не требуется — сразу готов к следующей сдаче!</span>
                   </div>
-                  <span className="font-mono text-[11px] text-emerald-400 font-black">Готов к сдаче ✓</span>
+                  <span className="font-mono text-[11px] text-emerald-400 font-black">Готов ✓</span>
                 </div>
               ) : cleanlinessState === "DIRTY_BODY" ? (
-                <div className="p-2.5 bg-cyan-950/20 border border-cyan-500/30 rounded-xl flex items-center justify-between text-xs text-cyan-300">
-                  <div className="flex items-center space-x-2">
-                    <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
-                    <span>Обычная эксплуатационная пыль/грязь. Автомобиль после возврата будет направлен на мойку кузова.</span>
+                <div className="p-2.5 bg-cyan-950/20 border border-cyan-500/30 rounded-xl space-y-2 text-xs text-cyan-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span>Обычная эксплуатационная пыль/грязь на кузове. Автомобиль направляется на мойку.</span>
+                    </div>
                   </div>
-                  <span className="font-mono text-[11px] text-cyan-400 font-bold">Очередь на мойку</span>
+                  <div className="flex items-center justify-between pt-1 border-t border-cyan-500/20">
+                    <span className="text-cyan-200 text-[11px]">Стоимость мойки кузова к удержанию:</span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-mono font-bold text-cyan-400">₾</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={extraWashFee}
+                        onChange={(e) => setExtraWashFee(Number(e.target.value))}
+                        className="w-20 bg-slate-900 border border-cyan-500 rounded-lg p-1 text-right text-white font-mono font-bold"
+                      />
+                      <span className="text-slate-400 text-[10px]">GEL</span>
+                    </div>
+                  </div>
+                </div>
+              ) : cleanlinessState === "DIRTY_INTERIOR_CLEAN" ? (
+                <div className="p-3 bg-blue-950/40 border border-blue-500/50 rounded-xl space-y-2 text-xs text-blue-200">
+                  <div className="flex items-center justify-between font-bold text-blue-300">
+                    <span className="flex items-center space-x-1.5">
+                      <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>Простая уборка салона (пылесос, песок, коврики, мусор):</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-blue-300/90 leading-relaxed">
+                    Обычная уборка салона пылесосом и влажная протирка панелей. Глубокая химическая чистка текстиля не требуется.
+                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-blue-500/30">
+                    <span className="text-blue-200 font-semibold text-[11px]">
+                      Стоимость уборки салона к удержанию:
+                    </span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-mono font-bold text-blue-400">₾</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={extraWashFee}
+                        onChange={(e) => setExtraWashFee(Number(e.target.value))}
+                        className="w-20 bg-slate-900 border border-blue-500 rounded-lg p-1 text-right text-white font-mono font-bold"
+                      />
+                      <span className="text-slate-400 text-[10px]">GEL</span>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="p-3 bg-amber-950/40 border border-amber-500/50 rounded-xl space-y-2 text-xs text-amber-200">
@@ -1246,14 +1350,14 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     </span>
                   </div>
                   <p className="text-[11px] text-amber-300/90 leading-relaxed">
-                    Требуется глубокая химчистка и сушка салона. Сумма списывается с клиента в счет затрат на клининг.
+                    Требуется глубокая химчистка с нанесением химии и сушка салона. Сумма удерживается с клиента в счет клининга.
                   </p>
                   <div className="flex items-center justify-between pt-1 border-t border-amber-500/30">
                     <span className="text-amber-200 font-semibold text-[11px]">
                       Стоимость химчистки к удержанию:
                     </span>
                     <div className="flex items-center space-x-1.5">
-                      <span className="font-mono font-bold text-white">$</span>
+                      <span className="font-mono font-bold text-amber-400">₾</span>
                       <input
                         type="number"
                         min="0"
@@ -1261,7 +1365,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                         onChange={(e) => setExtraWashFee(Number(e.target.value))}
                         className="w-20 bg-slate-900 border border-amber-500 rounded-lg p-1 text-right text-white font-mono font-black"
                       />
-                      <span className="text-slate-400 text-[10px]">USD</span>
+                      <span className="text-slate-400 text-[10px]">GEL</span>
                     </div>
                   </div>
                 </div>
@@ -1293,7 +1397,10 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     <button
                       type="button"
                       key={h}
-                      onClick={() => setExtraHours(h)}
+                      onClick={() => {
+                        setExtraHours(h);
+                        setCustomExtraHoursFee(null);
+                      }}
                       className={`py-1.5 px-1 rounded-lg text-xs font-bold border transition text-center ${
                         extraHours === h
                           ? "bg-amber-500/20 border-amber-500 text-amber-300 ring-1 ring-amber-400"
@@ -1311,34 +1418,71 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     type="number"
                     min="0"
                     value={extraHours}
-                    onChange={(e) => setExtraHours(Math.max(0, Number(e.target.value)))}
+                    onChange={(e) => {
+                      const val = Math.max(0, Number(e.target.value));
+                      setExtraHours(val);
+                      setCustomExtraHoursFee(null);
+                    }}
                     className="w-16 bg-slate-900 border border-slate-700 rounded-lg p-1 text-center font-mono font-bold text-white text-xs"
                   />
                   <span className="text-slate-400 text-[11px]">ч.</span>
                 </div>
               </div>
 
-              {/* Extra Hours Rule & Calculation Box */}
-              <div className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-300 font-semibold flex items-center space-x-1.5">
+              {/* Extra Hours Rule & Calculation Box with direct agreed sum input */}
+              <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] space-y-2.5">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span className="font-semibold flex items-center space-x-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Тариф доп. часов:</span>
+                    <span>Тариф по регламенту:</span>
                   </span>
-                  <span className="font-mono font-bold text-amber-300">
-                    {hoursCalc.ratePerHour} ₾/ч (при цене авто {booking.dailyRate || 50} ₾/сутки)
+                  <span className="font-mono text-amber-300 font-bold">
+                    {hoursCalc.ratePerHour} ₾/ч (расчёт за {extraHours} ч: {hoursCalc.totalFee} ₾)
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400">
-                  +1 час бесплатно • Следующие 6 часов (2-7 ч): 10/15/20 ₾/ч • Свыше 7 часов: полные сутки
+                <p className="text-[10px] text-slate-400 leading-tight">
+                  +1 час бесплатно • Следующие 6 часов (2-7 ч): 10/15/20 ₾/ч • Свыше 7 часов: полные сутки ({booking.dailyRate || 50} ₾)
                 </p>
 
-                <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between text-xs font-bold">
-                  <span className="text-slate-300">Начислено:</span>
-                  <span className="font-mono font-black text-amber-400">
-                    {extraHoursFee > 0 ? `${extraHoursFee} ₾ (${hoursCalc.explanation})` : "0 ₾ (Без доплаты)"}
-                  </span>
+                {/* Direct sum input */}
+                <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <span className="text-xs font-bold text-white block">
+                      Сумма к оплате за продление:
+                    </span>
+                    <span className="text-[10px] text-slate-400 block">
+                      {customExtraHoursFee !== null && customExtraHoursFee !== hoursCalc.totalFee
+                        ? "Введена согласованная с клиентом сумма"
+                        : "Рассчитано по регламенту, можно изменить вручную"}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="font-mono font-bold text-amber-400 text-sm">₾</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={extraHoursFee}
+                      onChange={(e) => setCustomExtraHoursFee(Math.max(0, Number(e.target.value)))}
+                      className="w-24 bg-slate-950 border-2 border-amber-500 rounded-lg py-1 px-2 text-right font-mono font-black text-amber-300 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    />
+                    <span className="text-slate-400 text-xs font-medium">GEL</span>
+                  </div>
                 </div>
+
+                {customExtraHoursFee !== null && customExtraHoursFee !== hoursCalc.totalFee && (
+                  <div className="flex items-center justify-between text-[11px] text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
+                    <span>
+                      Договорная сумма: <strong>{customExtraHoursFee} ₾</strong> (по тарифу было бы {hoursCalc.totalFee} ₾)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCustomExtraHoursFee(null)}
+                      className="text-[10px] text-amber-200 underline hover:text-white ml-2"
+                    >
+                      Сбросить к тарифу
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Paid earlier toggle */}
@@ -1475,8 +1619,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                           </div>
 
                           <div className="text-right font-mono">
-                            <div className="font-black text-rose-400">{fine.amountGEL} GEL</div>
-                            <div className="text-[10px] text-slate-400">≈ ${Math.round(fine.amountGEL / 2.7)} USD</div>
+                            <div className="font-black text-rose-400">{fine.amountGEL} ₾</div>
                           </div>
                         </div>
                       );
@@ -1490,7 +1633,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                         className="rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4"
                       />
                       <span className="text-xs text-rose-200 font-bold">
-                        Клиент оплачивает нам сумму штрафа на месте ({selectedFinesTotalGEL} GEL / ${selectedFinesTotalUSD}), а мы погашаем в полицию
+                        Клиент оплачивает нам сумму штрафа на месте ({selectedFinesTotalGEL} ₾), а мы погашаем в полицию
                       </span>
                     </label>
                   </div>
@@ -1515,7 +1658,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
                 <div className="text-right">
                   <div className="text-base font-black text-blue-400 font-mono">
-                    ${changeReturnedToClient} USD
+                    {changeReturnedToClient} ₾
                   </div>
                   <input
                     type="number"
@@ -1602,42 +1745,55 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 {hasDeposit && (
                   <div className="flex justify-between">
                     <span className="text-slate-400">Депозит (залог по брони):</span>
-                    <span className="font-mono text-emerald-400 font-bold">+${depositAmount} USD</span>
+                    <span className="font-mono text-emerald-400 font-bold">+{depositAmount} ₾</span>
                   </div>
                 )}
 
                 {changeReturnedToClient > 0 && (
                   <div className="flex justify-between">
                     <span className="text-blue-300">Сдача клиенту (из переплаты):</span>
-                    <span className="font-mono text-blue-400 font-bold">+${changeReturnedToClient} USD</span>
+                    <span className="font-mono text-blue-400 font-bold">+{changeReturnedToClient} ₾</span>
                   </div>
                 )}
 
                 {fuelChargeAmount > 0 && (
                   <div className="flex justify-between text-amber-300">
                     <span>Недостающее топливо ({fuelShortagePercent}%):</span>
-                    <span className="font-mono font-bold">-${fuelChargeAmount} USD</span>
+                    <span className="font-mono font-bold">-{fuelChargeAmount} ₾</span>
+                  </div>
+                )}
+
+                {extraWashFee > 0 && (
+                  <div className="flex justify-between text-cyan-300">
+                    <span>
+                      {cleanlinessState === "DIRTY_INTERIOR_CLEAN"
+                        ? "Уборка салона:"
+                        : cleanlinessState === "DIRTY_BODY"
+                        ? "Мойка кузова:"
+                        : "Химчистка салона:"}
+                    </span>
+                    <span className="font-mono font-bold">-{extraWashFee} ₾</span>
                   </div>
                 )}
 
                 {hasNewDamages && damageChargeAmount > 0 && (
                   <div className="flex justify-between text-red-300">
                     <span>Ущерб за повреждения ({damagesDescription || "кузов"}):</span>
-                    <span className="font-mono font-bold">-${damageChargeAmount} USD</span>
+                    <span className="font-mono font-bold">-{damageChargeAmount} ₾</span>
                   </div>
                 )}
 
                 {!techPassportReturned && (
                   <div className="flex justify-between text-rose-400 font-bold">
                     <span>Утеря техпаспорта (восстановление в МВД Грузии):</span>
-                    <span className="font-mono">-${lostTechPassportCharge} USD</span>
+                    <span className="font-mono">-{lostTechPassportCharge} ₾</span>
                   </div>
                 )}
 
                 {finesToDeduct > 0 && (
                   <div className="flex justify-between text-rose-300">
                     <span>Штрафы ПДД (клиент оплачивает компании):</span>
-                    <span className="font-mono font-bold">-${finesToDeduct} USD ({selectedFinesTotalGEL} GEL)</span>
+                    <span className="font-mono font-bold">-{finesToDeduct} ₾</span>
                   </div>
                 )}
 
@@ -1673,11 +1829,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 </div>
 
                 <div className="text-right font-mono">
-                  <div className="text-xl font-black">
-                    ${finalBalanceAmount} USD
+                  <div className="text-2xl font-black text-white">
+                    {finalBalanceAmount} ₾
                   </div>
-                  <div className="text-[10px] opacity-75">
-                    ≈ {Math.round(finalBalanceAmount * 2.7)} GEL
+                  <div className="text-[10px] text-slate-400 font-sans font-medium">
+                    GEL (Лари)
                   </div>
                 </div>
               </div>

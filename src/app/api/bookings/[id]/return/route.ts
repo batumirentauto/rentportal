@@ -201,12 +201,12 @@ export async function POST(
         data: {
           bookingId: id,
           type: "OTHER",
-          amount: Number(finesTotalAmountUSD) || (Number(finesTotalAmountGEL) / 2.7),
-          currency: booking.currency || "USD",
+          amount: Number(finesTotalAmountGEL),
+          currency: booking.currency || "GEL",
           method: settlementMethod,
           status: "PAID",
           managerName,
-          notes: `Прием оплаты штрафов ПДД (${finesTotalAmountGEL} GEL / $${finesTotalAmountUSD}) от клиента ${booking.customer.fullName}. Компания производит погашение в МВД Грузии.`,
+          notes: `Прием оплаты штрафов ПДД (${finesTotalAmountGEL} ₾) от клиента ${booking.customer.fullName}. Компания производит погашение в МВД Грузии.`,
         },
       });
     }
@@ -218,11 +218,11 @@ export async function POST(
           bookingId: id,
           type: "DEPOSIT_REFUND",
           amount: Number(finalBalanceAmount),
-          currency: booking.currency || "USD",
+          currency: booking.currency || "GEL",
           method: settlementMethod,
           status: "PAID",
           managerName,
-          notes: `Выплата клиенту при завершении аренды: возврат залога/сдачи на руки (${settlementMethod}). Удержано: $${deductionsTotal}. Выдано сдачи: $${changeReturnedToClient}.`,
+          notes: `Выплата клиенту при завершении аренды: возврат залога/сдачи на руки (${settlementMethod}). Удержано: ${deductionsTotal} ₾. Выдано сдачи: ${changeReturnedToClient} ₾.`,
         },
       });
     } else if (finalBalanceType === "PAYMENT_BY_CLIENT" && Number(finalBalanceAmount) > 0) {
@@ -231,11 +231,11 @@ export async function POST(
           bookingId: id,
           type: "RENTAL",
           amount: Number(finalBalanceAmount),
-          currency: booking.currency || "USD",
+          currency: booking.currency || "GEL",
           method: settlementMethod,
           status: "PAID",
           managerName,
-          notes: `Доплата клиентом при сдаче авто: $${finalBalanceAmount} (недостающее топливо: $${fuelChargeAmount}, штрафы: $${finesTotalAmountUSD}, повреждения: $${damageChargeAmount})`,
+          notes: `Доплата клиентом при сдаче авто: ${finalBalanceAmount} ₾ (недостающее топливо: ${fuelChargeAmount} ₾, штрафы: ${finesTotalAmountGEL} ₾, повреждения: ${damageChargeAmount} ₾, продление: ${extraHoursFee} ₾)`,
         },
       });
     }
