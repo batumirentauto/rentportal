@@ -24,6 +24,7 @@ import {
   Loader2,
   Trash2,
   RefreshCw,
+  Droplets,
 } from "lucide-react";
 
 interface HandoverWizardModalProps {
@@ -47,6 +48,8 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
   const [fuelPercent, setFuelPercent] = useState<number>(car.currentFuelPerc !== undefined ? car.currentFuelPerc : 100);
   const [techPassportVerified, setTechPassportVerified] = useState<boolean>(true);
   const [clientBriefed, setClientBriefed] = useState<boolean>(true);
+  const [washerFluidChecked, setWasherFluidChecked] = useState<boolean>(true);
+  const [tirePressureChecked, setTirePressureChecked] = useState<boolean>(true);
 
   // Мойка авто перед выдачей (20 ₾ полная, 10 ₾ кузов/салон)
   const [washOption, setWashOption] = useState<"NONE" | "FULL" | "BODY" | "INTERIOR">("NONE");
@@ -970,28 +973,37 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 )}
               </div>
 
-              {/* Standard complimentary items */}
-              <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700/40 space-y-2">
+              {/* Технический контроль перед выдачей */}
+              <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700/40 space-y-2.5">
                 <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Стандартный комплект автомобиля в Грузии:
+                  Контроль состояния перед выдачей:
                 </h4>
-                <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
-                  <div className="flex items-center space-x-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Аптечка и огнетушитель</span>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Знак аварийной остановки</span>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Домкрат и запасное колесо</span>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Светоотражающий жилет</span>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <label className="flex items-center space-x-2.5 bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 cursor-pointer hover:border-slate-600 transition">
+                    <input
+                      type="checkbox"
+                      checked={washerFluidChecked}
+                      onChange={(e) => setWasherFluidChecked(e.target.checked)}
+                      className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
+                    />
+                    <div className="flex items-center space-x-2 text-slate-200">
+                      <Droplets className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span className="font-semibold">Жидкость в бачке омывателя</span>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center space-x-2.5 bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 cursor-pointer hover:border-slate-600 transition">
+                    <input
+                      type="checkbox"
+                      checked={tirePressureChecked}
+                      onChange={(e) => setTirePressureChecked(e.target.checked)}
+                      className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
+                    />
+                    <div className="flex items-center space-x-2 text-slate-200">
+                      <Gauge className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="font-semibold">Давление в шинах</span>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>
