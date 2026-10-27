@@ -19,6 +19,8 @@ import {
   Sparkles,
   Info,
   ArrowRight,
+  ArrowUp,
+  ArrowDown,
   Repeat,
   Compass,
   PlusCircle,
@@ -158,18 +160,47 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
   // Dynamic Header Height measurement for sticky top calculations
   const [headerHeight, setHeaderHeight] = useState<number>(140);
+  const [isPageScrolled, setIsPageScrolled] = useState<boolean>(false);
+  const [isMobileControlsOpen, setIsMobileControlsOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const updateH = () => {
       const el = document.getElementById("main-app-header");
       if (el) {
-        setHeaderHeight(el.offsetHeight);
+        setHeaderHeight(el.getBoundingClientRect().height);
       }
     };
     updateH();
     window.addEventListener("resize", updateH);
-    return () => window.removeEventListener("resize", updateH);
+    window.addEventListener("orientationchange", updateH);
+    const observer = new ResizeObserver(updateH);
+    const el = document.getElementById("main-app-header");
+    if (el) observer.observe(el);
+
+    const onScroll = () => {
+      setIsPageScrolled(window.scrollY > 80);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("resize", updateH);
+      window.removeEventListener("orientationchange", updateH);
+      window.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+    };
   }, []);
+
+  const scrollToFilters = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const scrollToGrid = () => {
+    const el = document.getElementById("timeline-main-container");
+    if (el) {
+      const top = el.getBoundingClientRect().top + window.scrollY - headerHeight - 4;
+      window.scrollTo({ top, behavior: "smooth" });
+    }
+  };
 
   const handleOpenNewBooking = (carId?: string, dateStr?: string, days?: number) => {
     setBookingInitialCarId(carId || "");
@@ -329,8 +360,58 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   return (
     <div className="space-y-4">
       {/* Controls Bar: Navigation, Date jump, Search & Period */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-md">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 space-y-3 shadow-md">
         
+        {/* Mobile quick action strip: jump to today / expand filters / jump to grid */}
+        <div className="sm:hidden flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
+          <div className="flex items-center space-x-1">
+            <button
+              type="button"
+              onClick={handlePrev}
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs"
+              title="Назад"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleToday}
+              className="px-2 py-1 bg-amber-500 text-slate-950 font-bold rounded-lg text-xs shadow"
+            >
+              Сегодня
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs"
+              title="Вперед"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-1.5">
+            <button
+              type="button"
+              onClick={() => setIsMobileControlsOpen(!isMobileControlsOpen)}
+              className="flex items-center space-x-1 px-2.5 py-1 bg-slate-800 border border-slate-700 hover:border-amber-500/50 text-slate-200 text-xs font-bold rounded-lg transition"
+            >
+              <Search className="w-3 h-3 text-amber-400" />
+              <span>{isMobileControlsOpen ? "Свернуть ▲" : "Фильтры & поиск ▼"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={scrollToGrid}
+              className="p-1 bg-amber-500/15 border border-amber-500/40 text-amber-300 rounded-lg text-xs font-bold"
+              title="Прокрутить экран вниз к шахматке"
+            >
+              <ArrowDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Full controls: always visible on desktop, toggled on mobile */}
+        <div className={`space-y-3 ${isMobileControlsOpen ? "block" : "hidden sm:block"}`}>
         {/* Row 1: Mode Switcher (Live Timeline vs Archive Timeline) */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
           <div className="flex items-center space-x-2">
@@ -659,6 +740,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
             </button>
           </div>
         </div>
+        </div>
       </div>
 
       {/* Archive Banner Alert when in Archive Mode */}
@@ -705,18 +787,32 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       )}
 
       {/* TIMELINE GANTT GRID CONTAINER */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+      <div
+        id="timeline-main-container"
+        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden sticky z-20"
+        style={{
+          top: `${headerHeight + 2}px`,
+        }}
+      >
         <div
-          className="overflow-auto rounded-2xl overscroll-contain"
+          className="overflow-auto rounded-2xl"
           style={{
-            maxHeight: `calc(100dvh - ${headerHeight}px - 1.5rem)`,
+            maxHeight: `calc(100dvh - ${headerHeight}px - 1.25rem)`,
           }}
         >
           <div className="w-max min-w-full pb-24">
             {/* Header row: Cars column + Day columns - Sticky at top of the grid */}
             <div className="flex border-b border-slate-800 bg-slate-950 sticky top-0 z-30 shadow-md">
               <div className="w-[130px] sm:w-[220px] shrink-0 p-2 sm:p-3 border-r border-slate-800 font-bold text-[11px] sm:text-xs text-slate-300 uppercase tracking-wider flex items-center justify-between sticky left-0 z-40 bg-slate-950 shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
-                <div className="flex items-center space-x-1.5 truncate">
+                <div className="flex items-center space-x-1 truncate">
+                  <button
+                    type="button"
+                    onClick={scrollToFilters}
+                    className="p-1 -ml-1 text-slate-400 hover:text-amber-400 rounded-md transition hover:bg-slate-850 shrink-0"
+                    title="Прокрутить экран наверх к поиску и фильтрам"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5 text-amber-400" />
+                  </button>
                   <span className="truncate">Автомобиль</span>
                   <span className="text-[10px] text-slate-500 hidden sm:inline">({filteredCars.length})</span>
                 </div>
@@ -2206,6 +2302,19 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
             setIsHistoryModalOpen(false);
           }}
         />
+      )}
+
+      {/* Floating button on mobile when scrolled down to easily return to page filters */}
+      {isPageScrolled && (
+        <button
+          type="button"
+          onClick={scrollToFilters}
+          className="fixed bottom-20 sm:bottom-24 right-3 sm:right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-3.5 py-2 rounded-full shadow-2xl border-2 border-slate-900 flex items-center space-x-1.5 transition active:scale-95 animate-in fade-in slide-in-from-bottom-2"
+          title="Прокрутить экран наверх к фильтрам и поиску"
+        >
+          <ArrowUp className="w-4 h-4" />
+          <span>К фильтрам</span>
+        </button>
       )}
 
       {/* Floating Action Button (FAB) - Always fixed on screen */}
