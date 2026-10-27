@@ -89,11 +89,36 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   // 3. Осмотр повреждений и сверка с видео выдачи
   const [videoVerified, setVideoVerified] = useState<boolean>(true);
   const [showVideoModal, setShowVideoModal] = useState<boolean>(false);
+  const [returnVideoUrl, setReturnVideoUrl] = useState<string>("");
+  const [isUploadingReturnVideo, setIsUploadingReturnVideo] = useState<boolean>(false);
   const [hasNewDamages, setHasNewDamages] = useState<boolean>(false);
   const [damagesDescription, setDamagesDescription] = useState<string>("");
   const [damageChargeAmount, setDamageChargeAmount] = useState<number>(0);
   const [damagePhotoUrl, setDamagePhotoUrl] = useState<string>("");
   const [isUploadingDamagePhoto, setIsUploadingDamagePhoto] = useState<boolean>(false);
+
+  const handleReturnVideoUpload = async (file: File) => {
+    try {
+      setIsUploadingReturnVideo(true);
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "inspections_video");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Ошибка загрузки видео возврата");
+      }
+      setReturnVideoUrl(data.url);
+    } catch (err: any) {
+      alert("Не удалось загрузить видео возврата: " + (err.message || "Ошибка"));
+    } finally {
+      setIsUploadingReturnVideo(false);
+    }
+  };
 
   const handleDamagePhotoUpload = async (file: File) => {
     try {
@@ -278,6 +303,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
           fuelDiscrepancyPerc: fuelShortagePercent,
           fuelChargeAmount,
           videoVerified,
+          returnVideoUrl: returnVideoUrl || null,
           hasNewDamages,
           damagesDescription: hasNewDamages ? damagesDescription : null,
           damageChargeAmount: hasNewDamages ? damageChargeAmount : 0,
@@ -624,6 +650,80 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   Сверено с видеозаписью выдачи (сомнений в происхождении дефектов нет)
                 </span>
               </label>
+
+              {/* Видеофиксация кругового осмотра при возврате авто */}
+              <div className="bg-slate-900/70 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-200 flex items-center space-x-1.5">
+                    <Video className="w-4 h-4 text-purple-400" />
+                    <span>Видеофиксация кузова при возврате (360°):</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 font-mono">
+                    хранение 4 мес.
+                  </span>
+                </div>
+
+                {isUploadingReturnVideo ? (
+                  <div className="py-4 flex flex-col items-center justify-center space-y-1 bg-slate-950/60 rounded-xl border border-slate-800">
+                    <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                    <span className="text-xs text-purple-300 font-medium">Загрузка видео возврата...</span>
+                    <span className="text-[9px] text-slate-400">Пожалуйста, подождите</span>
+                  </div>
+                ) : returnVideoUrl ? (
+                  <div className="space-y-2">
+                    <div className="rounded-lg overflow-hidden border border-slate-700 bg-black max-h-32">
+                      <video
+                        src={returnVideoUrl}
+                        controls
+                        playsInline
+                        className="w-full h-28 object-contain"
+                      />
+                    </div>
+                    <div className="w-full bg-emerald-950/60 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-emerald-400 text-xs font-semibold">
+                      <div className="flex items-center space-x-1.5">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Круговое видео возврата сохранено</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <label className="cursor-pointer text-[10px] text-purple-300 hover:text-white bg-purple-500/20 hover:bg-purple-500/30 px-2 py-1 rounded-md transition">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleReturnVideoUpload(file);
+                            }}
+                          />
+                          <span>Сменить</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setReturnVideoUrl("")}
+                          className="p-1 text-rose-400 hover:text-white hover:bg-rose-500/20 rounded-md transition"
+                          title="Удалить видео"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer w-full py-2.5 px-3 bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-2 transition active:scale-95 shadow-sm">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleReturnVideoUpload(file);
+                      }}
+                    />
+                    <Video className="w-4 h-4 text-purple-400" />
+                    <span>Снять на камеру / Загрузить видео возврата</span>
+                  </label>
+                )}
+              </div>
             </div>
 
             {/* 3. Осмотр на новые повреждения */}

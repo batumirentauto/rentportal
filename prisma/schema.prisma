@@ -314,6 +314,7 @@ model ReturnReport {
 
   // Осмотр кузова и сверка с видео выдачи
   videoVerified              Boolean   @default(true) // Сверено с видео выдачи
+  returnVideoUrl             String?   // Видео кругового осмотра при возврате авто (автоочистка через 4 месяца)
   hasNewDamages              Boolean   @default(false) // Обнаружены ли новые дефекты
   damagesDescription         String?   // Описание дефектов/царапин
   damageChargeAmount         Float     @default(0) // Сумма удержания/доплаты за ущерб (USD)

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveUploadedFile } from "@/lib/storage";
+import { cleanupExpiredVideos } from "@/lib/video-retention";
 
 export const maxDuration = 60;
 
@@ -24,6 +25,11 @@ export async function POST(request: Request) {
       const uniqueFileName = `${folder}-${Date.now()}-${cleanFileName}`;
 
       const publicUrl = await saveUploadedFile(buffer, folder, uniqueFileName);
+
+      // Trigger 4-month retention cleanup for old video files in background
+      if (folder.includes("video") || cleanFileName.match(/\.(mp4|mov|webm|m4v|3gp|avi)$/i)) {
+        cleanupExpiredVideos().catch((e) => console.error("[Retention] Background cleanup error:", e));
+      }
 
       return NextResponse.json({
         success: true,

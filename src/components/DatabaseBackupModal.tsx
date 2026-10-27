@@ -12,6 +12,9 @@ import {
   X,
   ShieldCheck,
   FileText,
+  Video,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 
 interface DatabaseBackupModalProps {
@@ -30,6 +33,26 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
   const [isRestoring, setIsRestoring] = useState<boolean>(false);
   const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isCleaningVideos, setIsCleaningVideos] = useState<boolean>(false);
+  const [cleanupVideosResult, setCleanupVideosResult] = useState<any>(null);
+
+  const handleCleanVideos = async () => {
+    try {
+      setIsCleaningVideos(true);
+      setCleanupVideosResult(null);
+      const res = await fetch("/api/admin/database/cleanup-videos", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setCleanupVideosResult(data);
+      } else {
+        setErrorMessage(data.error || "Ошибка очистки видео");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Ошибка соединения");
+    } finally {
+      setIsCleaningVideos(false);
+    }
+  };
 
   const fetchStatus = async () => {
     try {
@@ -216,6 +239,49 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
               <span>{errorMessage}</span>
             </div>
           )}
+
+          {/* Video Retention Policy (4 Months) */}
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-1.5">
+                <Video className="w-3.5 h-3.5 text-purple-400" />
+                <span>Автоочистка видео фиксации авто (&gt; 4 месяцев):</span>
+              </h4>
+              <span className="text-[10px] bg-purple-950/60 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full font-bold">
+                120 дней
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Видеозаписи кругового осмотра при выдаче и возврате авто автоматически удаляются через 4 месяца, предотвращая перегрузку диска сервера.
+            </p>
+
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={handleCleanVideos}
+                disabled={isCleaningVideos}
+                className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-bold text-xs rounded-xl flex items-center space-x-1.5 transition active:scale-95 disabled:opacity-50"
+              >
+                {isCleaningVideos ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Очистка диска...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Проверить и удалить видео старше 4 мес.</span>
+                  </>
+                )}
+              </button>
+
+              {cleanupVideosResult && (
+                <span className="text-[11px] text-emerald-400 font-semibold">
+                  ✓ Удалено файлов: {cleanupVideosResult.deletedFilesCount} (освобождено: {cleanupVideosResult.freedMB} МБ)
+                </span>
+              )}
+            </div>
+          </div>
 
           {/* Railway 3-step Instructions */}
           <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">

@@ -263,6 +263,15 @@ function ensureSchema(dbFilePath: string) {
       }
     } catch {}
 
+    // 5. Check ReturnReport table columns
+    try {
+      const returnReportCols = db.prepare("PRAGMA table_info(ReturnReport)").all();
+      const returnReportColNames = new Set(returnReportCols.map((c: any) => c.name));
+      if (!returnReportColNames.has("returnVideoUrl")) {
+        db.exec("ALTER TABLE ReturnReport ADD COLUMN returnVideoUrl TEXT");
+      }
+    } catch {}
+
     db.close();
   } catch (e) {
     console.warn("[Database] Schema check/migration notice:", e);
