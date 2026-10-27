@@ -74,20 +74,20 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
   const [isUploadingCarPhoto, setIsUploadingCarPhoto] = useState<boolean>(false);
   const [carPhotoUrlInput, setCarPhotoUrlInput] = useState<string>("");
 
-  // Inspection upload & AI recognition state
-  const [recognizingInspectionCarId, setRecognizingInspectionCarId] = useState<string | null>(null);
-  const [inspectionScanModalUrl, setInspectionScanModalUrl] = useState<string | null>(null);
+  // Tech Passport upload & AI recognition state
+  const [recognizingTechPassportCarId, setRecognizingTechPassportCarId] = useState<string | null>(null);
+  const [techPassportScanModalUrl, setTechPassportScanModalUrl] = useState<string | null>(null);
   const [ocrSuccessNotice, setOcrSuccessNotice] = useState<string | null>(null);
 
-  const handleUploadAndRecognizeInspection = async (carId: string, file: File) => {
+  const handleUploadAndRecognizeTechPassport = async (carId: string, file: File) => {
     try {
-      setRecognizingInspectionCarId(carId);
+      setRecognizingTechPassportCarId(carId);
       setOcrSuccessNotice(null);
 
-      // 1. Upload inspection file to /api/upload
+      // 1. Upload tech passport image to /api/upload
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("folder", "inspections");
+      fd.append("folder", "tech_passports");
 
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
@@ -95,48 +95,49 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
       });
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok || !uploadData.success || !uploadData.url) {
-        throw new Error(uploadData.error || "Ошибка загрузки файла техосмотра");
+        throw new Error(uploadData.error || "Ошибка загрузки фото техпаспорта");
       }
 
-      // 2. Run AI OCR recognition
-      const ocrRes = await fetch("/api/ai/recognize-inspection", {
+      // 2. Run AI OCR recognition via /api/ai/recognize-tech-passport
+      const ocrRes = await fetch("/api/ai/recognize-tech-passport", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           carId,
-          photoUrl: uploadData.url,
+          frontUrl: uploadData.url,
           autoSave: true,
         }),
       });
       const ocrData = await ocrRes.json();
       if (!ocrRes.ok || !ocrData.success) {
-        throw new Error(ocrData.error || "Ошибка распознавания техосмотра нейросетью");
+        throw new Error(ocrData.error || "Ошибка распознавания техпаспорта нейросетью");
       }
 
-      // 3. Update local state
-      const expiry = ocrData.extractedData?.inspectionExpiryDate;
-      const formattedExp = expiry ? new Date(expiry).toLocaleDateString("ru-RU") : "";
-      setOcrSuccessNotice(`✓ Техосмотр успешно распознан и сохранен${formattedExp ? `: действует до ${formattedExp}` : ""}!`);
-      setTimeout(() => setOcrSuccessNotice(null), 5000);
+      const d = ocrData.extractedData || {};
+      setOcrSuccessNotice(
+        `✓ Техпаспорт успешно распознан и сохранен! VIN: ${d.vin || "—"}, Госномер: ${d.plateNumber || "—"}, №: ${d.techPassportNumber || "—"}`
+      );
+      setTimeout(() => setOcrSuccessNotice(null), 6000);
 
+      // 3. Update local state
       setCars((prev) =>
         prev.map((c) =>
           c.id === carId
             ? {
                 ...c,
-                inspectionPhotoUrl: uploadData.url,
-                inspectionExpiryDate: ocrData.extractedData?.inspectionExpiryDate || c.inspectionExpiryDate,
-                inspectionDate: ocrData.extractedData?.inspectionDate || c.inspectionDate,
-                inspectionNumber: ocrData.extractedData?.inspectionNumber || c.inspectionNumber,
-                inspectionStatus: ocrData.extractedData?.inspectionExpiryDate && new Date(ocrData.extractedData.inspectionExpiryDate) > new Date() ? "VALID" : c.inspectionStatus,
+                techPassportFrontUrl: uploadData.url,
+                techPassportNumber: d.techPassportNumber || c.techPassportNumber,
+                vin: d.vin || c.vin,
+                plateNumber: d.plateNumber || c.plateNumber,
+                year: d.year || c.year,
               }
             : c
         )
       );
     } catch (err: any) {
-      alert("Ошибка при обработке техосмотра: " + (err.message || "Неизвестная ошибка"));
+      alert("Ошибка при обработке техпаспорта: " + (err.message || "Неизвестная ошибка"));
     } finally {
-      setRecognizingInspectionCarId(null);
+      setRecognizingTechPassportCarId(null);
     }
   };
 
@@ -892,86 +893,78 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
                       </div>
                     </div>
 
-                    <div className="space-y-1 pt-1.5 border-t border-slate-800/80 col-span-2">
-                      <div className="text-slate-500 flex items-center space-x-1">
-                        <FileText className="w-3 h-3 text-purple-400" />
-                        <span>Техпаспорт автомобиля:</span>
-                      </div>
-                      <div className="font-mono font-bold text-slate-300 truncate">
-                        {car.techPassportNumber || "Номер не указан"}
-                      </div>
-                    </div>
+                    {/* ТЕХПАСПОРТ АВТОМОБИЛЯ */}
+                    {(() => {
+                      const hasTechPassport = Boolean(car.techPassportFrontUrl || car.techPassportBackUrl || car.techPassportNumber);
+                      const techPassportScanUrl = car.techPassportFrontUrl || car.techPassportBackUrl;
+                      const isRecognizing = recognizingTechPassportCarId === car.id;
 
-                    {/* PTI Техосмотр */}
-                    <div className="space-y-1.5 pt-1.5 border-t border-slate-800/80 col-span-2 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-1.5">
-                          <ShieldCheck className={`w-3.5 h-3.5 ${
-                            hasValidInspection ? "text-emerald-400" : isInspectionExpired ? "text-red-400" : "text-amber-400"
-                          }`} />
-                          <span className="font-bold text-white text-[11px]">Техосмотр (PTI):</span>
+                      return (
+                        <div className="space-y-1.5 pt-1.5 border-t border-slate-800/80 col-span-2 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-1.5">
+                              <FileText className={`w-3.5 h-3.5 ${hasTechPassport ? "text-emerald-400" : "text-rose-400"}`} />
+                              <span className="font-bold text-white text-[11px]">Техпаспорт автомобиля:</span>
+                            </div>
+
+                            {hasTechPassport ? (
+                              <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/90 border border-emerald-500/40 px-2 py-0.5 rounded">
+                                ✓ {car.techPassportNumber ? `№ ${car.techPassportNumber}` : "Загружен"}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-black text-rose-300 bg-rose-950/90 border border-rose-500/50 px-2 py-0.5 rounded animate-pulse">
+                                ❌ Не загружен
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-850">
+                            {techPassportScanUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => setTechPassportScanModalUrl(techPassportScanUrl)}
+                                className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center space-x-1 hover:underline"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>Посмотреть скан</span>
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-slate-500 italic">Скан не прикреплен</span>
+                            )}
+
+                            <label className={`cursor-pointer px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center space-x-1 transition shadow-sm ${
+                              isRecognizing
+                                ? "bg-amber-600 text-white cursor-wait"
+                                : hasTechPassport
+                                ? "bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-750"
+                                : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 shadow-amber-950/50"
+                            }`}>
+                              {isRecognizing ? (
+                                <>
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  <span>ИИ считывает...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-3 h-3 text-slate-950" />
+                                  <span>{hasTechPassport ? "Обновить" : "Загрузить и распознать"}</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    className="hidden"
+                                    disabled={isRecognizing}
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0];
+                                      if (f) handleUploadAndRecognizeTechPassport(car.id, f);
+                                    }}
+                                  />
+                                </>
+                              )}
+                            </label>
+                          </div>
                         </div>
-
-                        {hasValidInspection ? (
-                          <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/90 border border-emerald-500/40 px-2 py-0.5 rounded">
-                            ✓ до {inspectionExpiryFormatted}
-                          </span>
-                        ) : isInspectionExpired ? (
-                          <span className="text-[10px] font-mono font-bold text-red-400 bg-red-950/90 border border-red-500/40 px-2 py-0.5 rounded animate-pulse">
-                            ⚠️ Просрочен ({inspectionExpiryFormatted})
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-black text-rose-300 bg-rose-950/90 border border-rose-500/50 px-2 py-0.5 rounded">
-                            ❌ Не загружен
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-850">
-                        {car.inspectionPhotoUrl ? (
-                          <button
-                            type="button"
-                            onClick={() => setInspectionScanModalUrl(car.inspectionPhotoUrl)}
-                            className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center space-x-1 hover:underline"
-                          >
-                            <Eye className="w-3 h-3" />
-                            <span>Посмотреть скан</span>
-                          </button>
-                        ) : (
-                          <span className="text-[10px] text-slate-500 italic">Скан не прикреплен</span>
-                        )}
-
-                        <label className={`cursor-pointer px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center space-x-1 transition shadow-sm ${
-                          recognizingInspectionCarId === car.id
-                            ? "bg-amber-600 text-white cursor-wait"
-                            : hasValidInspection
-                            ? "bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-750"
-                            : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 shadow-amber-950/50"
-                        }`}>
-                          {recognizingInspectionCarId === car.id ? (
-                            <>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              <span>ИИ считывает...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-3 h-3 text-amber-950" />
-                              <span>{hasValidInspection ? "Обновить" : "Загрузить и распознать"}</span>
-                              <input
-                                type="file"
-                                accept="image/*,.pdf"
-                                className="hidden"
-                                disabled={recognizingInspectionCarId === car.id}
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0];
-                                  if (f) handleUploadAndRecognizeInspection(car.id, f);
-                                }}
-                              />
-                            </>
-                          )}
-                        </label>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Rates */}
@@ -1091,47 +1084,39 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
                         {(car.currentMileage || 0).toLocaleString("ru-RU")} км
                       </td>
 
-                      <td className="py-3 px-3 font-mono text-slate-400">
-                        {car.techPassportNumber || "—"}
-                      </td>
-
                       <td className="py-3 px-3">
-                        {car.inspectionExpiryDate && new Date(car.inspectionExpiryDate) >= new Date() ? (
-                          <div className="flex items-center space-x-1">
+                        {car.techPassportFrontUrl || car.techPassportNumber ? (
+                          <div className="flex items-center space-x-1.5">
                             <span className="font-mono text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
-                              до {new Date(car.inspectionExpiryDate).toLocaleDateString("ru-RU")}
+                              ✓ {car.techPassportNumber ? `№ ${car.techPassportNumber}` : "Загружен"}
                             </span>
-                            {car.inspectionPhotoUrl && (
+                            {car.techPassportFrontUrl && (
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setInspectionScanModalUrl(car.inspectionPhotoUrl);
+                                  setTechPassportScanModalUrl(car.techPassportFrontUrl);
                                 }}
-                                className="p-1 hover:text-cyan-300 text-slate-400"
-                                title="Посмотреть скан"
+                                className="p-1 hover:text-cyan-300 text-slate-400 transition"
+                                title="Посмотреть скан техпаспорта"
                               >
                                 <Eye className="w-3 h-3" />
                               </button>
                             )}
-                          </div>
-                        ) : car.inspectionExpiryDate && new Date(car.inspectionExpiryDate) < new Date() ? (
-                          <div className="flex items-center space-x-1">
-                            <span className="font-mono text-[10px] text-red-400 font-bold bg-red-950 px-2 py-0.5 rounded border border-red-500/40">
-                              Истек
-                            </span>
                             <label
                               onClick={(e) => e.stopPropagation()}
-                              className="cursor-pointer px-1.5 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[9px] font-bold"
+                              className="cursor-pointer px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-[9px] font-bold"
+                              title="Обновить скан и распознать"
                             >
-                              <span>Обновить</span>
+                              <span>{recognizingTechPassportCarId === car.id ? "..." : "Обновить"}</span>
                               <input
                                 type="file"
                                 accept="image/*,.pdf"
                                 className="hidden"
+                                disabled={recognizingTechPassportCarId === car.id}
                                 onChange={(e) => {
                                   const f = e.target.files?.[0];
-                                  if (f) handleUploadAndRecognizeInspection(car.id, f);
+                                  if (f) handleUploadAndRecognizeTechPassport(car.id, f);
                                 }}
                               />
                             </label>
@@ -1142,18 +1127,32 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
                             className="cursor-pointer px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 rounded text-[10px] font-black inline-flex items-center space-x-1 shadow transition active:scale-95"
                           >
                             <Sparkles className="w-2.5 h-2.5" />
-                            <span>{recognizingInspectionCarId === car.id ? "Считывание..." : "Загрузить"}</span>
+                            <span>{recognizingTechPassportCarId === car.id ? "Считывание..." : "Загрузить"}</span>
                             <input
                               type="file"
                               accept="image/*,.pdf"
                               className="hidden"
-                              disabled={recognizingInspectionCarId === car.id}
+                              disabled={recognizingTechPassportCarId === car.id}
                               onChange={(e) => {
                                 const f = e.target.files?.[0];
-                                if (f) handleUploadAndRecognizeInspection(car.id, f);
+                                if (f) handleUploadAndRecognizeTechPassport(car.id, f);
                               }}
                             />
                           </label>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3">
+                        {car.inspectionExpiryDate && new Date(car.inspectionExpiryDate) >= new Date() ? (
+                          <span className="font-mono text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
+                            до {new Date(car.inspectionExpiryDate).toLocaleDateString("ru-RU")}
+                          </span>
+                        ) : car.inspectionExpiryDate ? (
+                          <span className="font-mono text-[10px] text-red-400 font-bold bg-red-950 px-2 py-0.5 rounded border border-red-500/40">
+                            Истек
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 italic">—</span>
                         )}
                       </td>
 
@@ -1337,17 +1336,17 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
         </div>
       )}
 
-      {/* Modal: Просмотр скана техосмотра */}
-      {inspectionScanModalUrl && (
+      {/* Modal: Просмотр скана техпаспорта */}
+      {techPassportScanModalUrl && (
         <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-3 sm:p-5">
           <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-5 space-y-3 shadow-2xl animate-in fade-in">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <span className="font-bold text-white text-sm flex items-center space-x-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Скан диагностической карты техосмотра (PTI)</span>
+                <FileText className="w-4 h-4 text-amber-400" />
+                <span>Скан техпаспорта автомобиля (Свидетельство о регистрации ТС)</span>
               </span>
               <button
-                onClick={() => setInspectionScanModalUrl(null)}
+                onClick={() => setTechPassportScanModalUrl(null)}
                 className="text-slate-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
@@ -1356,15 +1355,15 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
 
             <div className="max-h-[70vh] overflow-y-auto rounded-2xl bg-black flex items-center justify-center border border-slate-800">
               <img
-                src={inspectionScanModalUrl}
-                alt="Скан техосмотра"
+                src={techPassportScanModalUrl}
+                alt="Скан техпаспорта"
                 className="max-h-[68vh] w-auto object-contain"
               />
             </div>
 
             <div className="flex items-center justify-between pt-2">
               <a
-                href={inspectionScanModalUrl}
+                href={techPassportScanModalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-cyan-400 hover:underline flex items-center space-x-1"
@@ -1374,7 +1373,7 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
               </a>
 
               <button
-                onClick={() => setInspectionScanModalUrl(null)}
+                onClick={() => setTechPassportScanModalUrl(null)}
                 className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
               >
                 Закрыть
