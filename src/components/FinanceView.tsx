@@ -18,6 +18,7 @@ import {
   Building2,
 } from "lucide-react";
 import { RecordExpenseModal } from "./RecordExpenseModal";
+import { GoogleSheetsBackupBanner } from "./GoogleSheetsBackupBanner";
 
 export const FinanceView: React.FC = () => {
   const [activeFinanceTab, setActiveFinanceTab] = useState<"payments" | "expenses" | "manager_cash">("payments");
@@ -140,6 +141,9 @@ export const FinanceView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Google Sheets Backup & Reporting Banner */}
+      <GoogleSheetsBackupBanner onSyncComplete={fetchData} />
 
       {/* Main Switcher: Payments vs Expenses vs Manager Cash */}
       <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800 max-w-xl">

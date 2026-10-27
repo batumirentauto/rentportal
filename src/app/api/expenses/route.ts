@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { triggerAsyncFinancialSheetsSync } from "@/lib/financial-sheets-sync";
 
 export async function GET() {
   try {
@@ -73,6 +74,9 @@ export async function POST(request: Request) {
         },
       });
     }
+
+    // Auto-sync financial data to Google Sheets backup
+    triggerAsyncFinancialSheetsSync();
 
     return NextResponse.json({ success: true, expense });
   } catch (error) {

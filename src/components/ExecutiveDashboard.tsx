@@ -24,6 +24,7 @@ import {
   Users,
 } from "lucide-react";
 import { ManagerTasksSection } from "./ManagerTasksSection";
+import { GoogleSheetsBackupBanner } from "./GoogleSheetsBackupBanner";
 
 export const ExecutiveDashboard: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -239,6 +240,9 @@ export const ExecutiveDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Google Sheets Backup & Live Reporting */}
+      <GoogleSheetsBackupBanner onSyncComplete={fetchAnalytics} />
 
       {/* Subtab Navigation: Finance vs Tasks */}
       <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
