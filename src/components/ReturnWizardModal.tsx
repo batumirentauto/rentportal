@@ -473,9 +473,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 <div className="flex justify-between py-0.5 text-cyan-300">
                   <span>
                     {cleanlinessState === "DIRTY_INTERIOR_CLEAN"
-                      ? "Уборка салона:"
+                      ? "Только салон (уборка):"
                       : cleanlinessState === "DIRTY_BODY"
-                      ? "Мойка кузова:"
+                      ? "Только кузов (мойка):"
+                      : cleanlinessState === "FULL_WASH"
+                      ? "Полная мойка (кузов + салон):"
                       : "Химчистка салона:"}
                   </span>
                   <span className="font-mono font-bold">{extraWashFee} ₾ (GEL)</span>
@@ -1213,8 +1215,8 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 </span>
               </div>
 
-              {/* Responsive 4-column cleanliness presets */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {/* Responsive 5-column cleanliness presets */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -1231,7 +1233,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <span className="text-base">✨</span>
                   <span className="leading-tight">Чистый</span>
                   <span className={`text-[10px] font-normal ${!needsWash ? "text-emerald-100" : "text-slate-500"}`}>
-                    Мойка не нужна (0 ₾)
+                    Без мойки (0 ₾)
                   </span>
                 </button>
 
@@ -1240,7 +1242,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   onClick={() => {
                     setNeedsWash(true);
                     setCleanlinessState("DIRTY_BODY");
-                    setExtraWashFee(0);
+                    setExtraWashFee(10);
                   }}
                   className={`p-2.5 rounded-xl text-xs font-bold border transition text-center flex flex-col items-center justify-center space-y-1 ${
                     needsWash && cleanlinessState === "DIRTY_BODY"
@@ -1249,9 +1251,9 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   }`}
                 >
                   <span className="text-base">🚗</span>
-                  <span className="leading-tight">Грязный кузов</span>
+                  <span className="leading-tight">Только кузов</span>
                   <span className={`text-[10px] font-normal ${needsWash && cleanlinessState === "DIRTY_BODY" ? "text-cyan-100" : "text-slate-500"}`}>
-                    Мойка кузова
+                    Снаружи (10 ₾)
                   </span>
                 </button>
 
@@ -1260,7 +1262,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   onClick={() => {
                     setNeedsWash(true);
                     setCleanlinessState("DIRTY_INTERIOR_CLEAN");
-                    setExtraWashFee(20);
+                    setExtraWashFee(10);
                   }}
                   className={`p-2.5 rounded-xl text-xs font-bold border transition text-center flex flex-col items-center justify-center space-y-1 ${
                     needsWash && cleanlinessState === "DIRTY_INTERIOR_CLEAN"
@@ -1268,10 +1270,30 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                       : "bg-slate-900 text-slate-400 border-slate-800 hover:text-blue-300"
                   }`}
                 >
-                  <span className="text-base">🧹</span>
-                  <span className="leading-tight">Уборка салона</span>
+                  <span className="text-base">💺</span>
+                  <span className="leading-tight">Только салон</span>
                   <span className={`text-[10px] font-normal ${needsWash && cleanlinessState === "DIRTY_INTERIOR_CLEAN" ? "text-blue-100" : "text-slate-500"}`}>
-                    Пылесос/мусор (~20 ₾)
+                    Внутри (10 ₾)
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNeedsWash(true);
+                    setCleanlinessState("FULL_WASH");
+                    setExtraWashFee(20);
+                  }}
+                  className={`p-2.5 rounded-xl text-xs font-bold border transition text-center flex flex-col items-center justify-center space-y-1 ${
+                    needsWash && cleanlinessState === "FULL_WASH"
+                      ? "bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-950/50"
+                      : "bg-slate-900 text-slate-400 border-slate-800 hover:text-indigo-300"
+                  }`}
+                >
+                  <span className="text-base">🧼</span>
+                  <span className="leading-tight">Полная мойка</span>
+                  <span className={`text-[10px] font-normal ${needsWash && cleanlinessState === "FULL_WASH" ? "text-indigo-100" : "text-slate-500"}`}>
+                    Комплекс (20 ₾)
                   </span>
                 </button>
 
@@ -1291,7 +1313,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <span className="text-base">🫧</span>
                   <span className="leading-tight">Химчистка</span>
                   <span className={`text-[10px] font-normal ${needsWash && cleanlinessState === "DIRTY_INTERIOR" ? "text-amber-100" : "text-slate-500"}`}>
-                    Пятна/сушка (~70 ₾)
+                    Пятна (~70 ₾)
                   </span>
                 </button>
               </div>
@@ -1309,7 +1331,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <span>Обычная эксплуатационная пыль/грязь на кузове. Автомобиль направляется на мойку.</span>
+                      <span>Мойка только кузова снаружи (экспресс-смыв пыли и грязи).</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-1 border-t border-cyan-500/20">
@@ -1332,11 +1354,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <div className="flex items-center justify-between font-bold text-blue-300">
                     <span className="flex items-center space-x-1.5">
                       <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span>Простая уборка салона (пылесос, песок, коврики, мусор):</span>
+                      <span>Уборка только салона (пылесос, песок, коврики, мусор):</span>
                     </span>
                   </div>
                   <p className="text-[11px] text-blue-300/90 leading-relaxed">
-                    Обычная уборка салона пылесосом и влажная протирка панелей. Глубокая химическая чистка текстиля не требуется.
+                    Обычная уборка салона пылесосом и влажная протирка панелей.
                   </p>
                   <div className="flex items-center justify-between pt-1 border-t border-blue-500/30">
                     <span className="text-blue-200 font-semibold text-[11px]">
@@ -1350,6 +1372,34 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                         value={extraWashFee}
                         onChange={(e) => setExtraWashFee(Number(e.target.value))}
                         className="w-20 bg-slate-900 border border-blue-500 rounded-lg p-1 text-right text-white font-mono font-bold"
+                      />
+                      <span className="text-slate-400 text-[10px]">GEL</span>
+                    </div>
+                  </div>
+                </div>
+              ) : cleanlinessState === "FULL_WASH" ? (
+                <div className="p-3 bg-indigo-950/40 border border-indigo-500/50 rounded-xl space-y-2 text-xs text-indigo-200">
+                  <div className="flex items-center justify-between font-bold text-indigo-300">
+                    <span className="flex items-center space-x-1.5">
+                      <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
+                      <span>Полная комплексная мойка (кузов снаружи + уборка салона):</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-indigo-300/90 leading-relaxed">
+                    Полный комплекс: мойка кузова пеной, сушка, пылесос салона и влажная протирка.
+                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-indigo-500/30">
+                    <span className="text-indigo-200 font-semibold text-[11px]">
+                      Стоимость полной мойки к удержанию:
+                    </span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-mono font-bold text-indigo-400">₾</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={extraWashFee}
+                        onChange={(e) => setExtraWashFee(Number(e.target.value))}
+                        className="w-20 bg-slate-900 border border-indigo-500 rounded-lg p-1 text-right text-white font-mono font-bold"
                       />
                       <span className="text-slate-400 text-[10px]">GEL</span>
                     </div>
@@ -1781,9 +1831,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <div className="flex justify-between text-cyan-300">
                     <span>
                       {cleanlinessState === "DIRTY_INTERIOR_CLEAN"
-                        ? "Уборка салона:"
+                        ? "Только салон (уборка):"
                         : cleanlinessState === "DIRTY_BODY"
-                        ? "Мойка кузова:"
+                        ? "Только кузов (мойка):"
+                        : cleanlinessState === "FULL_WASH"
+                        ? "Полная мойка (кузов + салон):"
                         : "Химчистка салона:"}
                     </span>
                     <span className="font-mono font-bold">-{extraWashFee} ₾</span>

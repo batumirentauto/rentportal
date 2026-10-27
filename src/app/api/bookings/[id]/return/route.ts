@@ -24,7 +24,8 @@ export async function POST(
       techPassportReturned = true,
       lostTechPassportCharge = 0,
       needsWash = true,
-      cleanlinessState = "CLEAN", // "CLEAN" | "DIRTY_BODY" | "DIRTY_INTERIOR"
+      cleanlinessState = "CLEAN", // "CLEAN" | "DIRTY_BODY" | "DIRTY_INTERIOR" | "FULL_WASH"
+      extraWashFee = 0,
       finesChecked = true,
       finesDetectedCount = 0,
       finesTotalAmountGEL = 0,
@@ -236,7 +237,7 @@ export async function POST(
           method: settlementMethod,
           status: "PAID",
           managerName,
-          notes: `Доплата клиентом при сдаче авто: ${finalBalanceAmount} ₾ (недостающее топливо: ${fuelChargeAmount} ₾, штрафы: ${finesTotalAmountGEL} ₾, повреждения: ${damageChargeAmount} ₾, продление: ${extraHoursFee} ₾)`,
+          notes: `Доплата клиентом при сдаче авто: ${finalBalanceAmount} ₾ (недостающее топливо: ${fuelChargeAmount} ₾, штрафы: ${finesTotalAmountGEL} ₾, повреждения: ${damageChargeAmount} ₾, продление: ${extraHoursFee} ₾${extraWashFee > 0 ? `, мойка/уборка: ${extraWashFee} ₾` : ""})`,
         },
       });
     }
