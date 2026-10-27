@@ -42,8 +42,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header id="main-app-header" className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 sm:h-20">
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-2 lg:gap-4 h-14 sm:h-20">
           {/* Logo & Subtitle - Hidden on mobile, visible on desktop */}
           <div className="hidden md:flex items-center space-x-2.5 sm:space-x-3 shrink-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
@@ -55,14 +55,14 @@ export const Header: React.FC<HeaderProps> = ({
                   Автопрокат
                 </span>
               </div>
-              <p className="text-xs text-slate-400 hidden lg:block">
+              <p className="text-xs text-slate-400 hidden xl:block">
                 Батуми • Тбилиси • Кутаиси | Рабочее место менеджера
               </p>
             </div>
           </div>
 
           {/* Desktop City Selector */}
-          <div className="hidden md:flex items-center space-x-1 sm:space-x-2 bg-slate-800/80 p-1 rounded-xl border border-slate-700">
+          <div className="hidden md:flex items-center space-x-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700 shrink-0">
             <button
               onClick={() => onSelectCity("ALL")}
               className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all ${
@@ -71,45 +71,49 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-slate-300 hover:text-white"
               }`}
             >
-              Все города
+              <span className="hidden xl:inline">Все города</span>
+              <span className="xl:hidden">Все</span>
             </button>
             <button
               onClick={() => onSelectCity("TBS")}
-              className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center space-x-1 ${
+              className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center space-x-1 ${
                 selectedCity === "TBS"
                   ? "bg-amber-500 text-slate-950 font-bold shadow"
                   : "text-amber-300 hover:text-white hover:bg-slate-800"
               }`}
             >
               <span>🏛️</span>
-              <span>Тбилиси (TBS)</span>
+              <span>Тбилиси</span>
+              <span className="hidden xl:inline text-[10px] opacity-75">(TBS)</span>
             </button>
             <button
               onClick={() => onSelectCity("BUS")}
-              className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center space-x-1 ${
+              className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center space-x-1 ${
                 selectedCity === "BUS"
                   ? "bg-cyan-400 text-slate-950 font-bold shadow"
                   : "text-cyan-300 hover:text-white hover:bg-slate-800"
               }`}
             >
               <span>🌊</span>
-              <span>Батуми (BUS)</span>
+              <span>Батуми</span>
+              <span className="hidden xl:inline text-[10px] opacity-75">(BUS)</span>
             </button>
             <button
               onClick={() => onSelectCity("KUT")}
-              className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center space-x-1 ${
+              className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center space-x-1 ${
                 selectedCity === "KUT"
                   ? "bg-emerald-500 text-slate-950 font-bold shadow"
                   : "text-emerald-300 hover:text-white hover:bg-slate-800"
               }`}
             >
               <span>🌿</span>
-              <span>Кутаиси (KUT)</span>
+              <span>Кутаиси</span>
+              <span className="hidden xl:inline text-[10px] opacity-75">(KUT)</span>
             </button>
           </div>
 
           {/* Actions: New Booking, Record Expense, Chat, Backup, Notifications */}
-          <div className="flex items-center justify-between md:justify-end w-full md:w-auto gap-1.5 sm:gap-2">
+          <div className="flex items-center justify-between md:justify-end w-full md:w-auto gap-1.5 sm:gap-2 shrink-0">
             {/* Real New Booking Button - Sticky in Header */}
             <button
               onClick={onOpenNewBooking}
@@ -130,12 +134,12 @@ export const Header: React.FC<HeaderProps> = ({
               <span>+ Расход</span>
             </button>
 
-            {/* Simulation button (desktop only) */}
+            {/* Simulation button (desktop only on extra wide screens) */}
             <button
               onClick={onSimulateNewBooking}
               disabled={isSimulating}
               title="Тестовая эмуляция: появление новой брони в течение дня"
-              className="hidden lg:flex items-center space-x-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] px-2 py-1.5 rounded-lg font-medium border border-slate-700 transition-all active:scale-95 disabled:opacity-50 shrink-0"
+              className="hidden 2xl:flex items-center space-x-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] px-2 py-1.5 rounded-lg font-medium border border-slate-700 transition-all active:scale-95 disabled:opacity-50 shrink-0"
             >
               <RefreshCw className={`w-3 h-3 ${isSimulating ? "animate-spin" : ""}`} />
               <span>{isSimulating ? "..." : "Тест"}</span>
