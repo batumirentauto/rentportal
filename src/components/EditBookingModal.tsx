@@ -1030,20 +1030,26 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               </div>
 
               <div>
-                <label className="text-[10px] text-slate-400 block mb-1">
-                  Залог / Депозит (₾ GEL):
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] text-slate-400 block">
+                    Залог / Депозит (₾ GEL):
+                  </label>
+                  {Number(depositAmount) === 0 && (
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-bold">
+                      ✓ Без залога
+                    </span>
+                  )}
+                </div>
                 <input
                   type="number"
                   min="0"
                   step="any"
-                  value={depositAmount === 0 ? "" : depositAmount}
+                  value={depositAmount === 0 ? 0 : depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value === "" ? 0 : Number(e.target.value))}
                   placeholder="0"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono"
-                  required
                 />
-                <span className="text-[9px] text-slate-500 block mt-0.5">0 ₾ по умолчанию</span>
+                <span className="text-[9px] text-slate-500 block mt-0.5">0 ₾ — аренда без залога</span>
               </div>
 
               <div>

@@ -2078,15 +2078,49 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               </div>
 
               <div className="border-l border-slate-800 pl-3">
-                <span className="text-slate-400 block text-[10px]">Залог с клиента:</span>
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-1.5 mb-0.5">
+                  <span className="text-slate-400 block text-[10px]">Залог с клиента:</span>
+                  {Number(depositAmount) === 0 && (
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1 py-0.2 rounded font-bold">
+                      Без залога
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-1.5">
                   <span className="text-xs font-mono text-slate-500">₾</span>
                   <input
                     type="number"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(Number(e.target.value))}
-                    className="w-20 bg-slate-950 border border-slate-700 rounded-lg p-1 text-xs text-white font-mono font-bold focus:outline-none focus:border-amber-500"
+                    min="0"
+                    step="any"
+                    value={depositAmount === 0 ? 0 : depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value === "" ? 0 : Number(e.target.value))}
+                    placeholder="0"
+                    className="w-16 bg-slate-950 border border-slate-700 rounded-lg p-1 text-xs text-white font-mono font-bold focus:outline-none focus:border-amber-500"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setDepositAmount(0)}
+                    className={`px-1.5 py-0.5 text-[10px] font-bold rounded border transition ${
+                      Number(depositAmount) === 0
+                        ? "bg-emerald-600 text-white border-emerald-500 shadow"
+                        : "bg-slate-900 text-slate-400 border-slate-700 hover:text-white"
+                    }`}
+                    title="Установить 0 ₾ (Без залога)"
+                  >
+                    0 ₾
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDepositAmount(300)}
+                    className={`px-1.5 py-0.5 text-[10px] font-bold rounded border transition ${
+                      Number(depositAmount) === 300
+                        ? "bg-amber-500 text-slate-950 border-amber-400 shadow"
+                        : "bg-slate-900 text-slate-400 border-slate-700 hover:text-white"
+                    }`}
+                    title="Установить стандартный залог 300 ₾"
+                  >
+                    300 ₾
+                  </button>
                 </div>
               </div>
             </div>

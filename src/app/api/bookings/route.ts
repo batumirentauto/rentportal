@@ -228,7 +228,7 @@ export async function POST(request: Request) {
         deliveryFee: Number(deliveryFee || 0),
         extrasTotal: Number(extrasTotal || 0),
         totalAmount: Number(totalAmount),
-        depositAmount: body.depositAmount !== undefined ? Number(body.depositAmount) : 0,
+        depositAmount: (body.depositAmount !== undefined && body.depositAmount !== null && !isNaN(Number(body.depositAmount))) ? Number(body.depositAmount) : 0,
         contractLanguage: body.contractLanguage || "RU",
         source: body.source || source || "WHATSAPP",
         currency: currency || "GEL",

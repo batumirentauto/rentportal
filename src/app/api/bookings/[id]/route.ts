@@ -150,7 +150,7 @@ export async function PATCH(
       bookingUpdateData.totalAmount = Number(body.totalAmount);
     }
     if (body.depositAmount !== undefined) {
-      bookingUpdateData.depositAmount = Number(body.depositAmount);
+      bookingUpdateData.depositAmount = (body.depositAmount !== null && !isNaN(Number(body.depositAmount))) ? Number(body.depositAmount) : 0;
     }
     if (body.contractLanguage !== undefined) {
       bookingUpdateData.contractLanguage = body.contractLanguage;
