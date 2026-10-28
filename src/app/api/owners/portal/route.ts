@@ -257,6 +257,7 @@ export async function GET(request: Request) {
         phone: owner.phone,
         email: owner.email,
         whatsapp: owner.whatsapp,
+        passportNumber: owner.passportNumber,
         bankName: owner.bankName,
         bankIban: owner.bankIban,
         payoutCurrency: owner.payoutCurrency,
@@ -439,6 +440,54 @@ export async function POST(request: Request) {
         success: true,
         message: `Личный кабинет инвестора «${newOwner.fullName}» успешно создан! Привязано авто: ${carIds?.length || 0}`,
         owner: newOwner,
+      });
+    }
+
+    // 0.4. Обновление персональных данных, контактов и реквизитов владельца
+    if (action === "UPDATE_OWNER_PROFILE") {
+      const { targetOwnerId, fullName, phone, email, whatsapp, passportNumber, bankName, bankIban, payoutCurrency, notes } = body;
+      const oId = targetOwnerId || ownerId;
+      if (!oId) {
+        return NextResponse.json({ success: false, error: "ownerId required" }, { status: 400 });
+      }
+
+      if (!fullName || !phone) {
+        return NextResponse.json({ success: false, error: "Имя и телефон обязательны для заполнения" }, { status: 400 });
+      }
+
+      const updated = await prisma.carOwner.update({
+        where: { id: oId },
+        data: {
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          email: email !== undefined ? (email ? email.trim() : null) : undefined,
+          whatsapp: whatsapp !== undefined ? (whatsapp ? whatsapp.trim() : null) : undefined,
+          passportNumber: passportNumber !== undefined ? (passportNumber ? passportNumber.trim() : null) : undefined,
+          bankName: bankName !== undefined ? (bankName ? bankName.trim() : null) : undefined,
+          bankIban: bankIban !== undefined ? (bankIban ? bankIban.trim().toUpperCase() : null) : undefined,
+          payoutCurrency: payoutCurrency || "GEL",
+          notes: notes !== undefined ? (notes ? notes.trim() : null) : undefined,
+        },
+      });
+
+      // Синхронизируем также запись в User (Команда)
+      try {
+        await prisma.user.updateMany({
+          where: { ownerId: oId },
+          data: {
+            fullName: updated.fullName,
+            phone: updated.phone,
+            email: updated.email,
+          },
+        });
+      } catch (syncErr) {
+        console.warn("User sync warning on profile update:", syncErr);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Ваши личные данные и реквизиты успешно сохранены!",
+        owner: updated,
       });
     }
 

@@ -118,6 +118,18 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
   const [payoutMethod, setPayoutMethod] = useState<string>("BANK_TRANSFER");
   const [payoutNotes, setPayoutNotes] = useState<string>("");
 
+  // Modal: Edit Owner Personal Profile & Requisites
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState<boolean>(false);
+  const [profileFullName, setProfileFullName] = useState<string>("");
+  const [profilePhone, setProfilePhone] = useState<string>("");
+  const [profileWhatsapp, setProfileWhatsapp] = useState<string>("");
+  const [profileEmail, setProfileEmail] = useState<string>("");
+  const [profilePassportNumber, setProfilePassportNumber] = useState<string>("");
+  const [profileBankName, setProfileBankName] = useState<string>("TBC Bank");
+  const [profileBankIban, setProfileBankIban] = useState<string>("");
+  const [profilePayoutCurrency, setProfilePayoutCurrency] = useState<string>("GEL");
+  const [profileNotes, setProfileNotes] = useState<string>("");
+
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Sync initialOwnerId
@@ -356,6 +368,61 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleOpenEditProfile = () => {
+    if (!selectedOwner) return;
+    setProfileFullName(selectedOwner.fullName || "");
+    setProfilePhone(selectedOwner.phone || "");
+    setProfileWhatsapp(selectedOwner.whatsapp || selectedOwner.phone || "");
+    setProfileEmail(selectedOwner.email || "");
+    setProfilePassportNumber(selectedOwner.passportNumber || "");
+    setProfileBankName(selectedOwner.bankName || "TBC Bank");
+    setProfileBankIban(selectedOwner.bankIban || "");
+    setProfilePayoutCurrency(selectedOwner.payoutCurrency || "GEL");
+    setProfileNotes(selectedOwner.notes || "");
+    setIsEditProfileOpen(true);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOwner?.id || !profileFullName.trim() || !profilePhone.trim()) {
+      alert("Пожалуйста, укажите ваше имя и телефон");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/owners/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "UPDATE_OWNER_PROFILE",
+          targetOwnerId: selectedOwner.id,
+          fullName: profileFullName.trim(),
+          phone: profilePhone.trim(),
+          whatsapp: profileWhatsapp.trim() || undefined,
+          email: profileEmail.trim() || undefined,
+          passportNumber: profilePassportNumber.trim() || undefined,
+          bankName: profileBankName.trim() || undefined,
+          bankIban: profileBankIban.trim().toUpperCase() || undefined,
+          payoutCurrency: profilePayoutCurrency,
+          notes: profileNotes.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setIsEditProfileOpen(false);
+        await fetchPortalData();
+        alert("✓ Ваши личные данные и реквизиты успешно сохранены!");
+      } else {
+        alert(json.error || "Ошибка сохранения профиля");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Ошибка сети при сохранении профиля");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Generate and copy owner access link
@@ -597,6 +664,18 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
               <span>+ Внести расход на авто</span>
             </button>
 
+            {/* Owner Edit Profile Action */}
+            {userRole === "OWNER" && selectedOwner && (
+              <button
+                onClick={handleOpenEditProfile}
+                className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white rounded-xl text-xs font-bold border border-slate-700 transition active:scale-95 shadow-md"
+                title="Редактировать контакты, реквизиты банка и IBAN"
+              >
+                <Edit3 className="w-4 h-4 text-amber-400" />
+                <span>Мои реквизиты и профиль</span>
+              </button>
+            )}
+
             {/* Payout to Investor - Executive only */}
             {userRole !== "OWNER" && selectedOwner && (
               <button
@@ -729,53 +808,77 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
 
       {/* 2. INVESTOR PASSPORT & REQUISITES BANNER */}
       {selectedOwner && (
-        <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center space-x-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center font-black text-slate-950 text-base shadow">
+        <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-xs shadow-lg">
+          <div className="flex items-center space-x-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center font-black text-slate-950 text-base shadow-md shrink-0">
               {selectedOwner.fullName.charAt(0)}
             </div>
             <div>
-              <span className="font-extrabold text-white text-sm block">
-                {selectedOwner.fullName}
-              </span>
-              <p className="text-slate-400 text-[11px]">
-                Тел: {selectedOwner.phone} {selectedOwner.email && `• ${selectedOwner.email}`}
+              <div className="flex items-center space-x-2">
+                <span className="font-extrabold text-white text-sm sm:text-base">
+                  {selectedOwner.fullName}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-bold text-[10px] border border-emerald-500/30">
+                  Владелец
+                </span>
+              </div>
+              <p className="text-slate-300 text-[11px] sm:text-xs mt-0.5 flex flex-wrap items-center gap-x-2">
+                <span>📞 {selectedOwner.phone}</span>
+                {selectedOwner.whatsapp && (
+                  <span className="text-emerald-400">• WA: {selectedOwner.whatsapp}</span>
+                )}
+                {selectedOwner.email && <span>• ✉️ {selectedOwner.email}</span>}
+                {selectedOwner.passportNumber && (
+                  <span className="text-slate-400">• ID: {selectedOwner.passportNumber}</span>
+                )}
               </p>
             </div>
           </div>
 
-          <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex flex-wrap items-center gap-4">
-            <div>
-              <span className="text-[10px] text-slate-500 block">Банк для выплат:</span>
-              <span className="font-bold text-white">{selectedOwner.bankName || "TBC Bank / Bank of Georgia"}</span>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex flex-wrap items-center gap-3 sm:gap-4">
+              <div>
+                <span className="text-[10px] text-slate-500 block">Банк для выплат:</span>
+                <span className="font-bold text-white">{selectedOwner.bankName || "TBC Bank / Bank of Georgia"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 block">IBAN / Счет:</span>
+                <span className="font-mono font-bold text-amber-300">
+                  {selectedOwner.bankIban || "Не указан"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 block">Основная валюта:</span>
+                <span className="font-bold text-emerald-400 font-mono">
+                  {selectedOwner.payoutCurrency === "USD" ? "$ USD" : "₾ GEL"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 block">GPS (10 ₾/мес):</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleGpsCharge(Boolean(selectedOwner.chargeGpsMonthly))}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition ${
+                    selectedOwner.chargeGpsMonthly !== false
+                      ? "bg-emerald-950 text-emerald-300 border-emerald-500/40"
+                      : "bg-slate-900 text-slate-500 border-slate-700 hover:text-slate-300"
+                  }`}
+                  title="Опция: взимать ли с владельца 10 лари в месяц за абонентскую плату GPS-трекера"
+                >
+                  {selectedOwner.chargeGpsMonthly !== false ? "✓ Вкл" : "✕ Откл"}
+                </button>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] text-slate-500 block">IBAN / Счет:</span>
-              <span className="font-mono font-bold text-amber-300">
-                {selectedOwner.bankIban || "GE... (уточняется)"}
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-500 block">Основная валюта:</span>
-              <span className="font-bold text-emerald-400 font-mono">
-                ₾ GEL (Грузинский Лари)
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-500 block">GPS-трекинг (10 ₾/авто):</span>
-              <button
-                type="button"
-                onClick={() => handleToggleGpsCharge(Boolean(selectedOwner.chargeGpsMonthly))}
-                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border transition ${
-                  selectedOwner.chargeGpsMonthly !== false
-                    ? "bg-emerald-950 text-emerald-300 border-emerald-500/40"
-                    : "bg-slate-900 text-slate-500 border-slate-700 hover:text-slate-300"
-                }`}
-                title="Опция: взимать ли с владельца 10 лари в месяц за абонентскую плату GPS-трекера"
-              >
-                {selectedOwner.chargeGpsMonthly !== false ? "✓ Включено (10 ₾/мес)" : "✕ Отключено"}
-              </button>
-            </div>
+
+            {/* Edit My Profile & Requisites Button */}
+            <button
+              onClick={handleOpenEditProfile}
+              className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black shadow-md transition active:scale-95 shrink-0"
+              title="Изменить контакты, телефон, банк и IBAN для выплат"
+            >
+              <Edit3 className="w-4 h-4 text-slate-950" />
+              <span>{userRole === "OWNER" ? "Редактировать мои данные" : "Редактировать данные"}</span>
+            </button>
           </div>
         </div>
       )}
@@ -2366,6 +2469,198 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
                 Закрыть
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDIT OWNER PROFILE & REQUISITES */}
+      {isEditProfileOpen && selectedOwner && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-4 my-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/30">
+                  Личные данные и реквизиты
+                </span>
+                <h3 className="text-lg font-black text-white mt-1">
+                  {userRole === "OWNER" ? "Редактирование моих данных" : `Редактирование данных: ${selectedOwner.fullName}`}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditProfileOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              {/* Personal Contacts */}
+              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                  1. Контактная информация:
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                      ФИО владельца *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profileFullName}
+                      onChange={(e) => setProfileFullName(e.target.value)}
+                      placeholder="Имя Фамилия"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white text-xs font-bold focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                      Основной телефон *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profilePhone}
+                      onChange={(e) => setProfilePhone(e.target.value)}
+                      placeholder="+995 500 00-00-00"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white text-xs font-medium focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                      WhatsApp для связи
+                    </label>
+                    <input
+                      type="text"
+                      value={profileWhatsapp}
+                      onChange={(e) => setProfileWhatsapp(e.target.value)}
+                      placeholder="+995..."
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white text-xs font-medium focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                      Электронная почта (Email)
+                    </label>
+                    <input
+                      type="email"
+                      value={profileEmail}
+                      onChange={(e) => setProfileEmail(e.target.value)}
+                      placeholder="investor@gmail.com"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white text-xs font-medium focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                    Паспорт / Номер ID (для договоров и актов)
+                  </label>
+                  <input
+                    type="text"
+                    value={profilePassportNumber}
+                    onChange={(e) => setProfilePassportNumber(e.target.value)}
+                    placeholder="Серия и номер паспорта / личный номер ID"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white text-xs font-medium focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              {/* Bank Requisites for Payouts */}
+              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                  2. Реквизиты для перечисления прибыли:
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                      Банк получателя
+                    </label>
+                    <select
+                      value={profileBankName}
+                      onChange={(e) => setProfileBankName(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white text-xs font-bold focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="TBC Bank">TBC Bank (Грузия)</option>
+                      <option value="Bank of Georgia">Bank of Georgia (BOG)</option>
+                      <option value="Liberty Bank">Liberty Bank</option>
+                      <option value="Basisbank">Basisbank</option>
+                      <option value="Cartu Bank">Cartu Bank</option>
+                      <option value="TeraBank">TeraBank</option>
+                      <option value="Другой зарубежный счет">Другой зарубежный счет</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                      Валюта выплаты прибыли
+                    </label>
+                    <select
+                      value={profilePayoutCurrency}
+                      onChange={(e) => setProfilePayoutCurrency(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white text-xs font-bold focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="GEL">₾ GEL (Грузинский Лари)</option>
+                      <option value="USD">$ USD (Доллары США)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                    IBAN номер счёта (например: GE29TB...)
+                  </label>
+                  <input
+                    type="text"
+                    value={profileBankIban}
+                    onChange={(e) => setProfileBankIban(e.target.value)}
+                    placeholder="GE..."
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-amber-300 font-mono text-xs font-bold uppercase focus:outline-none focus:border-amber-500"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Укажите IBAN вашего счета в грузинском банке для автоматического формирования выплат.
+                  </p>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                  Примечания к выплатам / пожелания:
+                </label>
+                <textarea
+                  rows={2}
+                  value={profileNotes}
+                  onChange={(e) => setProfileNotes(e.target.value)}
+                  placeholder="Например: Выплата на счет ИП или до 5 числа каждого месяца..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white text-xs font-medium focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditProfileOpen(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs transition"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl font-black text-xs shadow-lg transition active:scale-95"
+                >
+                  {isSubmitting ? "Сохранение..." : "💾 Сохранить изменения"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
