@@ -170,8 +170,8 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xl max-h-[92dvh] shadow-2xl overflow-hidden flex flex-col my-auto">
         {/* Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-rose-950/40 to-slate-900 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center space-x-3">

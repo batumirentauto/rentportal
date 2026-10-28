@@ -583,7 +583,7 @@ export const AdditionalDriversModal: React.FC<AdditionalDriversModalProps> = ({
       {/* Photo Preview Modal */}
       {previewPhotoUrl && (
         <div
-          className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in overflow-y-auto"
           onClick={() => setPreviewPhotoUrl(null)}
         >
           <div className="relative max-w-3xl max-h-[90vh]">

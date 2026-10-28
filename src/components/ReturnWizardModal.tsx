@@ -417,7 +417,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
       <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
         
         {/* Header */}
@@ -2295,8 +2295,8 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
         {/* Modal: Просмотр видео кругового осмотра при выдаче */}
         {showVideoModal && (
-          <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 space-y-3">
+          <div className="fixed inset-0 z-60 bg-black/90 flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-4 sm:p-5 space-y-3 my-auto max-h-[92dvh] overflow-y-auto">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <span className="font-bold text-white text-sm flex items-center space-x-2">
                   <Video className="w-4 h-4 text-purple-400" />

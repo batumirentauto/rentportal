@@ -1375,10 +1375,10 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
 
         {/* Modal: Прием оплаты долга */}
         {payingDebt && (
-          <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-60 bg-black/90 flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
             <form
               onSubmit={handlePayDebt}
-              className="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl animate-in fade-in"
+              className="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-4 shadow-2xl my-auto max-h-[92dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] animate-in fade-in"
             >
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <span className="font-bold text-white text-sm flex items-center space-x-2">

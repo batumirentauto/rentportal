@@ -187,8 +187,8 @@ export const AvailabilitySearchModal: React.FC<AvailabilitySearchModalProps> = (
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-2.5 sm:p-6 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+      <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[92dvh] flex flex-col">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">

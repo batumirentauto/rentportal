@@ -552,8 +552,8 @@ export const ManagerTasksSection: React.FC<ManagerTasksSectionProps> = ({
 
       {/* MODAL 1: Executive Creates New Task */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div className="bg-slate-900 border-2 border-indigo-500 text-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 my-auto animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-start sm:items-center justify-center p-2.5 sm:p-6 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border-2 border-indigo-500 text-white rounded-3xl max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center space-x-2">
@@ -736,8 +736,8 @@ export const ManagerTasksSection: React.FC<ManagerTasksSectionProps> = ({
 
       {/* MODAL 2: Manager Completes Task with Report */}
       {completingTask && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div className="bg-slate-900 border-2 border-emerald-500 text-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 my-auto animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-start sm:items-center justify-center p-2.5 sm:p-6 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border-2 border-emerald-500 text-white rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center space-x-2">
                 <div className="p-2 bg-emerald-600 rounded-xl text-white">

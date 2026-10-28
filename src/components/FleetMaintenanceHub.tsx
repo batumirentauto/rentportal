@@ -1230,9 +1230,9 @@ export const FleetMaintenanceHub: React.FC = () => {
 
       {/* MODAL 1: OIL CHANGE */}
       {isOilModalOpen && selectedCarForOil && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm -mx-1 px-1">
               <div>
                 <span className="text-xs text-amber-400 font-bold uppercase">Фиксация замены масла</span>
                 <h3 className="text-base font-black text-white mt-0.5">
@@ -1321,9 +1321,9 @@ export const FleetMaintenanceHub: React.FC = () => {
 
       {/* MODAL 2: REPORT MALFUNCTION / ISSUE */}
       {isIssueModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm -mx-1 px-1">
               <div>
                 <span className="text-xs text-red-400 font-bold uppercase">Заявка на диагностику и автосервис</span>
                 <h3 className="text-base font-black text-white mt-0.5">Фиксация неисправности узла/агрегата</h3>
@@ -1450,9 +1450,9 @@ export const FleetMaintenanceHub: React.FC = () => {
 
       {/* MODAL 3: RESOLVE ISSUE / REPAIR COMPLETION */}
       {isResolveModalOpen && resolvingIssue && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm -mx-1 px-1">
               <div>
                 <span className="text-xs text-emerald-400 font-bold uppercase">Акт устранения неисправности</span>
                 <h3 className="text-base font-black text-white mt-0.5">{resolvingIssue.title}</h3>
@@ -1509,9 +1509,9 @@ export const FleetMaintenanceHub: React.FC = () => {
 
       {/* MODAL 4: TECHNICAL CONDITION CHECKLIST */}
       {isChecklistModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 my-auto animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm -mx-1 px-1">
               <div>
                 <span className="text-xs text-amber-400 font-bold uppercase">Чек-лист технического состояния</span>
                 <h3 className="text-base font-black text-white mt-0.5">Комплексная ревизия автомобиля</h3>
@@ -1708,9 +1708,9 @@ export const FleetMaintenanceHub: React.FC = () => {
 
       {/* MODAL 5: PTI & INSURANCE UPDATE */}
       {isDocsModalOpen && docsCar && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 sticky top-0 bg-slate-900/95 backdrop-blur-sm z-10 -mx-1 px-1">
               <div>
                 <span className="text-xs text-purple-400 font-bold uppercase">Документы, Парковка & GPS</span>
                 <h3 className="text-base font-black text-white mt-0.5">

@@ -234,8 +234,8 @@ export const BookingHistoryModal: React.FC<BookingHistoryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-6xl max-h-[94vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-6xl my-auto max-h-[94vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
         
         {/* Modal Header */}
         <div className="p-4 sm:p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 sticky top-0 z-10 backdrop-blur-md">

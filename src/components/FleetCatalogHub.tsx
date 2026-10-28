@@ -1261,9 +1261,9 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
 
       {/* Modal: Смена фото автомобиля / Загрузка товарной карточки */}
       {photoModalCar && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-5 space-y-4 shadow-2xl animate-in fade-in">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-start sm:items-center justify-center p-2.5 sm:p-5 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl my-auto max-h-[92dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] animate-in fade-in">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm -mx-1 px-1">
               <div className="flex items-center space-x-2.5">
                 <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl">
                   <Camera className="w-5 h-5" />
@@ -1380,8 +1380,8 @@ export const FleetCatalogHub: React.FC<FleetCatalogHubProps> = ({
 
       {/* Modal: Просмотр скана техпаспорта */}
       {techPassportScanModalUrl && (
-        <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-3 sm:p-5">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-5 space-y-3 shadow-2xl animate-in fade-in">
+        <div className="fixed inset-0 z-60 bg-black/90 flex items-start sm:items-center justify-center p-2.5 sm:p-5 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-4 sm:p-5 space-y-3 shadow-2xl my-auto max-h-[92dvh] overflow-y-auto animate-in fade-in">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <span className="font-bold text-white text-sm flex items-center space-x-2">
                 <FileText className="w-4 h-4 text-amber-400" />

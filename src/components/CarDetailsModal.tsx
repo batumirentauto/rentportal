@@ -1998,8 +1998,8 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
 
       {/* Decommission Confirmation Modal */}
       {isArchiveConfirmOpen && (
-        <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-slate-900 border-2 border-rose-500/70 text-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-start sm:items-center justify-center p-2.5 sm:p-4 animate-in fade-in duration-150 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border-2 border-rose-500/70 text-white rounded-3xl max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92dvh] overflow-y-auto animate-in zoom-in-95">
             <div className="flex items-start space-x-3">
               <div className="p-3 bg-rose-500/20 border border-rose-500/40 rounded-2xl text-rose-400 shrink-0">
                 <Trash2 className="w-6 h-6" />
@@ -2069,8 +2069,8 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
 
       {/* Lightbox / Document Photo Preview Modal */}
       {previewModal && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[95vh]">
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-start sm:items-center justify-center p-2.5 sm:p-6 animate-in fade-in duration-200 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col my-auto max-h-[95vh]">
             {/* Header */}
             <div className="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
               <span className="font-bold text-sm text-white flex items-center space-x-2">

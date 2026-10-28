@@ -132,8 +132,8 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, 
   const customerPhone = booking.customer.phone || booking.customer.whatsapp || "—";
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:overflow-visible">
-      <div className="bg-white text-slate-900 rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[95vh] print:max-h-none print:shadow-none print:rounded-none print:w-full print:m-0">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-2.5 sm:p-4 print:p-0 print:bg-white print:overflow-visible overscroll-contain [-webkit-overflow-scrolling:touch]">
+      <div className="bg-white text-slate-900 rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col my-auto max-h-[95vh] print:max-h-none print:shadow-none print:rounded-none print:w-full print:m-0">
         
         {/* Top Control Bar (Hidden on print) */}
         <div className="bg-slate-900 text-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 print:hidden shrink-0">

@@ -719,8 +719,8 @@ export const LoyalClientMobileApp: React.FC = () => {
 
       {/* FAST 1-CLICK BOOKING MODAL */}
       {selectedCar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92dvh]">
             {/* Modal Header */}
             <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/70">
               <div className="flex items-center space-x-2">
@@ -881,8 +881,8 @@ export const LoyalClientMobileApp: React.FC = () => {
 
       {/* BOOKING SUCCESS MODAL */}
       {bookingSuccessData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-emerald-500/60 w-full max-w-md rounded-2xl p-6 text-center space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="bg-slate-900 border border-emerald-500/60 w-full max-w-md rounded-2xl p-4 sm:p-6 text-center space-y-4 shadow-2xl my-auto max-h-[92dvh] overflow-y-auto">
             <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 flex items-center justify-center mx-auto shadow-lg">
               <CheckCircle2 className="w-8 h-8" />
             </div>
