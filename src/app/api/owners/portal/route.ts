@@ -17,11 +17,26 @@ export async function GET(request: Request) {
       orderBy: { fullName: "asc" },
     });
 
+    const fleetCars = await prisma.car.findMany({
+      where: { isArchived: false },
+      select: {
+        id: true,
+        brand: true,
+        model: true,
+        plateNumber: true,
+        ownerId: true,
+        defaultOwnerDailyRate: true,
+        city: { select: { code: true, nameRu: true } },
+      },
+      orderBy: [{ brand: "asc" }, { model: "asc" }, { plateNumber: "asc" }],
+    });
+
     if (allOwners.length === 0) {
       return NextResponse.json({
         success: true,
         owners: [],
         selectedOwner: null,
+        fleetCars,
       });
     }
 
@@ -239,6 +254,7 @@ export async function GET(request: Request) {
         date: e.date,
         managerName: e.managerName,
       })),
+      fleetCars,
     });
   } catch (error: any) {
     if (error?.digest?.startsWith?.("NEXT_")) {
@@ -317,6 +333,101 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, ownerId, carId, category, amount, currency = "GEL", description, receiptPhotoUrl, date, expenseId, paymentMethod = "BANK_TRANSFER", notes } = body;
+
+    // 0. Создание нового личного кабинета владельца (инвестора) и привязка авто
+    if (action === "CREATE_OWNER") {
+      const { fullName, phone, email, whatsapp, bankName, bankIban, notes, carIds, defaultOwnerDailyRate = 25 } = body;
+      if (!fullName || !phone) {
+        return NextResponse.json(
+          { success: false, error: "Укажите имя и телефон владельца" },
+          { status: 400 }
+        );
+      }
+
+      const newOwner = await prisma.carOwner.create({
+        data: {
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          email: email ? email.trim() : null,
+          whatsapp: whatsapp ? whatsapp.trim() : phone.trim(),
+          bankName: bankName ? bankName.trim() : null,
+          bankIban: bankIban ? bankIban.trim() : null,
+          notes: notes ? notes.trim() : null,
+        },
+      });
+
+      // Привязываем выбранные автомобили
+      if (Array.isArray(carIds) && carIds.length > 0) {
+        await prisma.car.updateMany({
+          where: { id: { in: carIds } },
+          data: {
+            ownerId: newOwner.id,
+            defaultOwnerDailyRate: Number(defaultOwnerDailyRate) || 25,
+          },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Личный кабинет инвестора «${newOwner.fullName}» успешно создан! Привязано авто: ${carIds?.length || 0}`,
+        owner: newOwner,
+      });
+    }
+
+    // 0.5. Обновление списка привязанных автомобилей инвестора
+    if (action === "UPDATE_OWNER_CARS") {
+      const { targetOwnerId, carIds, defaultOwnerDailyRate } = body;
+      const oId = targetOwnerId || ownerId;
+      if (!oId) {
+        return NextResponse.json({ success: false, error: "ownerId required" }, { status: 400 });
+      }
+
+      // Отвязываем автомобили, которые сняты с этого владельца
+      await prisma.car.updateMany({
+        where: {
+          ownerId: oId,
+          id: { notIn: Array.isArray(carIds) ? carIds : [] },
+        },
+        data: { ownerId: null },
+      });
+
+      // Привязываем выбранные автомобили
+      if (Array.isArray(carIds) && carIds.length > 0) {
+        const updateData: any = { ownerId: oId };
+        if (defaultOwnerDailyRate) {
+          updateData.defaultOwnerDailyRate = Number(defaultOwnerDailyRate);
+        }
+        await prisma.car.updateMany({
+          where: { id: { in: carIds } },
+          data: updateData,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Автомобили инвестора успешно обновлены! Привязано авто: ${carIds?.length || 0}`,
+      });
+    }
+
+    // 0.6. Удаление владельца
+    if (action === "DELETE_OWNER") {
+      const oId = body.targetOwnerId || ownerId;
+      if (!oId) {
+        return NextResponse.json({ success: false, error: "ownerId required" }, { status: 400 });
+      }
+      // Отвязать автомобили
+      await prisma.car.updateMany({
+        where: { ownerId: oId },
+        data: { ownerId: null },
+      });
+      await prisma.carOwner.delete({
+        where: { id: oId },
+      });
+      return NextResponse.json({
+        success: true,
+        message: "Кабинет инвестора удален. Все его автомобили отвязаны.",
+      });
+    }
 
     // 1. Добавление расхода владельцем на свой автомобиль (ТО, ремонт, КАСКО, шины)
     if (action === "ADD_EXPENSE") {

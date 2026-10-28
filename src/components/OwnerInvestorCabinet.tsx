@@ -31,6 +31,14 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Sparkles,
+  UserPlus,
+  Share2,
+  Copy,
+  Search,
+  ExternalLink,
+  CheckSquare,
+  Square,
+  Lock,
 } from "lucide-react";
 import { getCityTheme } from "./FleetTimelineGrid";
 
@@ -46,10 +54,18 @@ const EXPENSE_CATEGORIES: { id: string; label: string; icon: string; desc: strin
   { id: "OTHER", label: "Прочие расходы инвестора", icon: "📦", desc: "Аксессуары, ключи, эвакуатор, парковка" },
 ];
 
-export const OwnerInvestorCabinet: React.FC = () => {
+interface OwnerInvestorCabinetProps {
+  initialOwnerId?: string | null;
+  userRole?: "EXECUTIVE" | "MANAGER" | "OWNER";
+}
+
+export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
+  initialOwnerId,
+  userRole = "EXECUTIVE",
+}) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedOwnerId, setSelectedOwnerId] = useState<string>("");
+  const [selectedOwnerId, setSelectedOwnerId] = useState<string>(initialOwnerId || "");
   const [period, setPeriod] = useState<string>("thisMonth"); // "thisMonth", "30days", "all"
   const [activeTab, setActiveTab] = useState<"cars" | "expenses" | "bookings" | "payouts">("cars");
 
@@ -61,6 +77,29 @@ export const OwnerInvestorCabinet: React.FC = () => {
   const [expenseDate, setExpenseDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [expenseDescription, setExpenseDescription] = useState<string>("");
   const [expenseReceiptUrl, setExpenseReceiptUrl] = useState<string>("");
+
+  // Modal: Add New Owner (Investor)
+  const [isAddOwnerOpen, setIsAddOwnerOpen] = useState<boolean>(false);
+  const [newOwnerFullName, setNewOwnerFullName] = useState<string>("");
+  const [newOwnerPhone, setNewOwnerPhone] = useState<string>("");
+  const [newOwnerEmail, setNewOwnerEmail] = useState<string>("");
+  const [newOwnerWhatsapp, setNewOwnerWhatsapp] = useState<string>("");
+  const [newOwnerBankName, setNewOwnerBankName] = useState<string>("TBC Bank");
+  const [newOwnerBankIban, setNewOwnerBankIban] = useState<string>("");
+  const [newOwnerNotes, setNewOwnerNotes] = useState<string>("");
+  const [newOwnerDailyRate, setNewOwnerDailyRate] = useState<number>(25);
+  const [newOwnerCarIds, setNewOwnerCarIds] = useState<string[]>([]);
+  const [newOwnerCarSearch, setNewOwnerCarSearch] = useState<string>("");
+
+  // Modal: Manage Attached Cars for Current Owner
+  const [isManageCarsOpen, setIsManageCarsOpen] = useState<boolean>(false);
+  const [manageCarIds, setManageCarIds] = useState<string[]>([]);
+  const [manageDailyRate, setManageDailyRate] = useState<number>(25);
+  const [manageCarSearch, setManageCarSearch] = useState<string>("");
+
+  // Modal: Share Owner Access Link
+  const [isShareLinkOpen, setIsShareLinkOpen] = useState<boolean>(false);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
   // Modal: Edit Car Base Rate
   const [editingCarRate, setEditingCarRate] = useState<any | null>(null);
@@ -79,11 +118,18 @@ export const OwnerInvestorCabinet: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  // Sync initialOwnerId
+  useEffect(() => {
+    if (initialOwnerId && initialOwnerId !== selectedOwnerId) {
+      setSelectedOwnerId(initialOwnerId);
+    }
+  }, [initialOwnerId]);
+
   const fetchPortalData = async (ownerId?: string) => {
     setLoading(true);
     try {
-      const idToFetch = ownerId || selectedOwnerId;
-      const url = `/api/owners/portal?ownerId=${idToFetch || ""}&period=${period}`;
+      const idToFetch = ownerId || selectedOwnerId || initialOwnerId || "";
+      const url = `/api/owners/portal?ownerId=${idToFetch}&period=${period}`;
       const res = await fetch(url);
       const json = await res.json();
       if (json.success) {
@@ -308,6 +354,150 @@ export const OwnerInvestorCabinet: React.FC = () => {
     window.print();
   };
 
+  // Generate and copy owner access link
+  const getOwnerShareUrl = (ownerId?: string) => {
+    const id = ownerId || selectedOwner?.id;
+    if (!id || typeof window === "undefined") return "";
+    return `${window.location.origin}/?role=owner&ownerId=${id}`;
+  };
+
+  const handleCopyLink = () => {
+    const url = getOwnerShareUrl();
+    if (url && typeof window !== "undefined") {
+      navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 3000);
+    }
+  };
+
+  // Open modal to manage cars for selected owner
+  const handleOpenManageCars = () => {
+    if (!selectedOwner) return;
+    const currentAttachedIds = (data?.fleetCars || [])
+      .filter((c: any) => c.ownerId === selectedOwner.id)
+      .map((c: any) => c.id);
+    setManageCarIds(currentAttachedIds);
+    setManageDailyRate(cars?.[0]?.defaultOwnerDailyRate || 25);
+    setManageCarSearch("");
+    setIsManageCarsOpen(true);
+  };
+
+  // Create new owner
+  const handleCreateOwner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOwnerFullName.trim() || !newOwnerPhone.trim()) {
+      alert("Пожалуйста, укажите имя и телефон владельца");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/owners/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CREATE_OWNER",
+          fullName: newOwnerFullName,
+          phone: newOwnerPhone,
+          email: newOwnerEmail,
+          whatsapp: newOwnerWhatsapp || newOwnerPhone,
+          bankName: newOwnerBankName,
+          bankIban: newOwnerBankIban,
+          notes: newOwnerNotes,
+          defaultOwnerDailyRate: Number(newOwnerDailyRate) || 25,
+          carIds: newOwnerCarIds,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setIsAddOwnerOpen(false);
+        const createdId = json.owner.id;
+        setNewOwnerFullName("");
+        setNewOwnerPhone("");
+        setNewOwnerEmail("");
+        setNewOwnerWhatsapp("");
+        setNewOwnerBankIban("");
+        setNewOwnerNotes("");
+        setNewOwnerCarIds([]);
+        setSelectedOwnerId(createdId);
+        await fetchPortalData(createdId);
+        setIsShareLinkOpen(true);
+      } else {
+        alert(json.error || "Ошибка создания кабинета владельца");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Ошибка при сохранении");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Save updated cars for selected owner
+  const handleSaveOwnerCars = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOwner?.id) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/owners/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "UPDATE_OWNER_CARS",
+          targetOwnerId: selectedOwner.id,
+          carIds: manageCarIds,
+          defaultOwnerDailyRate: Number(manageDailyRate) || 25,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setIsManageCarsOpen(false);
+        await fetchPortalData();
+        alert(json.message || "Автомобили инвестора успешно обновлены!");
+      } else {
+        alert(json.error || "Ошибка привязки автомобилей");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Ошибка сети");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Delete owner
+  const handleDeleteOwner = async () => {
+    if (!selectedOwner?.id) return;
+    if (
+      !confirm(
+        `Вы уверены, что хотите удалить личный кабинет «${selectedOwner.fullName}»?\nВсе привязанные автомобили останутся в общем автопарке и будут отвязаны.`
+      )
+    ) {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/owners/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "DELETE_OWNER",
+          targetOwnerId: selectedOwner.id,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSelectedOwnerId("");
+        await fetchPortalData();
+      } else {
+        alert(json.error || "Ошибка удаления");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (loading && !data) {
     return (
       <div className="py-24 text-center text-slate-400">
@@ -334,35 +524,76 @@ export const OwnerInvestorCabinet: React.FC = () => {
               </span>
             </div>
             <h2 className="text-2xl font-black text-white mt-1 tracking-tight flex items-center space-x-2">
-              <span>{selectedOwner?.fullName}</span>
+              <span>{selectedOwner?.fullName || "Инвестор не выбран"}</span>
             </h2>
           </div>
 
           {/* Action buttons */}
           <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
-            {/* Primary Action: Add Expense */}
+            {/* Executive: Create New Investor */}
+            {userRole !== "OWNER" && (
+              <button
+                onClick={() => {
+                  setNewOwnerCarIds([]);
+                  setIsAddOwnerOpen(true);
+                }}
+                className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white rounded-xl text-xs font-black shadow-lg transition active:scale-95"
+                title="Создать новый личный кабинет владельца авто"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>+ Новый инвестор</span>
+              </button>
+            )}
+
+            {/* Executive: Attach / Manage Cars */}
+            {userRole !== "OWNER" && selectedOwner && (
+              <button
+                onClick={handleOpenManageCars}
+                className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-xs font-black shadow-lg transition active:scale-95"
+                title="Выбрать и привязать автомобили к этому инвестору"
+              >
+                <Car className="w-4 h-4" />
+                <span>🚗 Привязать авто</span>
+              </button>
+            )}
+
+            {/* Executive: Share Isolated Link to Investor */}
+            {userRole !== "OWNER" && selectedOwner && (
+              <button
+                onClick={() => setIsShareLinkOpen(true)}
+                className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black shadow-lg transition active:scale-95"
+                title="Получить ссылку с изолированным доступом для инвестора"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>🔗 Ссылка инвестору</span>
+              </button>
+            )}
+
+            {/* Primary Action: Add Expense (Available for both Executive and Owner!) */}
             <button
               onClick={() => {
                 setExpenseCarId(cars?.[0]?.id || "");
                 setIsAddExpenseOpen(true);
               }}
-              className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-rose-600 via-amber-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white rounded-xl text-xs font-extrabold shadow-lg transition active:scale-95"
+              className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-gradient-to-r from-rose-600 via-amber-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white rounded-xl text-xs font-extrabold shadow-lg transition active:scale-95"
             >
               <Wrench className="w-4 h-4" />
               <span>+ Внести расход на авто</span>
             </button>
 
-            {/* Payout to Investor */}
-            <button
-              onClick={() => {
-                setPayoutAmount(metrics?.pendingBalanceUSD || 500);
-                setIsRecordPayoutOpen(true);
-              }}
-              className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg transition"
-            >
-              <CreditCard className="w-4 h-4" />
-              <span>+ Выплатить инвестору</span>
-            </button>
+            {/* Payout to Investor - Executive only */}
+            {userRole !== "OWNER" && selectedOwner && (
+              <button
+                onClick={() => {
+                  setPayoutAmount(metrics?.pendingBalanceUSD || 500);
+                  setIsRecordPayoutOpen(true);
+                }}
+                className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg transition"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>+ Выплатить инвестору</span>
+              </button>
+            )}
 
             {/* Print Act / PDF */}
             <button
@@ -382,28 +613,75 @@ export const OwnerInvestorCabinet: React.FC = () => {
             >
               <RefreshCw className="w-4 h-4" />
             </button>
+
+            {/* Executive: Delete Owner button */}
+            {userRole !== "OWNER" && selectedOwner && (
+              <button
+                onClick={handleDeleteOwner}
+                className="p-2.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded-xl transition border border-rose-800/40"
+                title="Удалить личный кабинет инвестора (автомобили останутся)"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
         {/* Owner Selector & Period Switcher */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-          {/* Owner Switcher */}
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-              Выберите владельца автомобиля:
-            </span>
-            <select
-              value={selectedOwnerId}
-              onChange={(e) => handleSelectOwner(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white font-bold text-xs focus:outline-none focus:border-amber-500"
-            >
-              {owners?.map((o: any) => (
-                <option key={o.id} value={o.id}>
-                  {o.fullName} • {o.carsCount} авто ({o.cities?.join(", ")}) • {o.phone}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Owner Switcher: hidden in OWNER mode */}
+          {userRole === "OWNER" ? (
+            <div className="bg-slate-950 p-3.5 rounded-xl border border-emerald-500/30 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-black text-lg">
+                  👤
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block">
+                    Ваш личный кабинет инвестора:
+                  </span>
+                  <h3 className="font-extrabold text-white text-sm">
+                    {selectedOwner?.fullName}
+                  </h3>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 block">Ваш автопарк:</span>
+                <span className="text-xs font-black text-amber-400 font-mono">
+                  {cars?.length || 0} автомобилей
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                  Выберите владельца автомобиля:
+                </span>
+                <button
+                  onClick={() => {
+                    setNewOwnerCarIds([]);
+                    setIsAddOwnerOpen(true);
+                  }}
+                  className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center space-x-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Создать нового</span>
+                </button>
+              </div>
+              <select
+                value={selectedOwnerId}
+                onChange={(e) => handleSelectOwner(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white font-bold text-xs focus:outline-none focus:border-amber-500"
+              >
+                {owners?.map((o: any) => (
+                  <option key={o.id} value={o.id}>
+                    {o.fullName} • {o.carsCount} авто ({o.cities?.join(", ")}) • {o.phone}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Period Filter */}
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
@@ -642,29 +920,64 @@ export const OwnerInvestorCabinet: React.FC = () => {
                 Полная статистика по каждой машине: выручка от аренд, затраты на обслуживание и чистый результат
               </p>
             </div>
-            <button
-              onClick={() => {
-                setExpenseCarId(cars?.[0]?.id || "");
-                setIsAddExpenseOpen(true);
-              }}
-              className="flex items-center space-x-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-slate-700 rounded-xl text-xs font-bold self-start sm:self-auto"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Записать расход на авто</span>
-            </button>
+            <div className="flex items-center space-x-2 self-start sm:self-auto">
+              {userRole !== "OWNER" && selectedOwner && (
+                <button
+                  onClick={handleOpenManageCars}
+                  className="flex items-center space-x-1 px-3 py-1.5 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 rounded-xl text-xs font-bold transition shadow"
+                >
+                  <Car className="w-3.5 h-3.5" />
+                  <span>Привязать / отвязать авто</span>
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setExpenseCarId(cars?.[0]?.id || "");
+                  setIsAddExpenseOpen(true);
+                }}
+                className="flex items-center space-x-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-slate-700 rounded-xl text-xs font-bold transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Записать расход на авто</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cars?.map((car: any) => {
-              const cityTheme = getCityTheme(car.cityCode);
-              const isRented = car.status === "RENTED";
+            {(!cars || cars.length === 0) ? (
+              <div className="col-span-full py-12 px-6 text-center bg-slate-950/60 border border-dashed border-slate-800 rounded-2xl space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 mx-auto flex items-center justify-center">
+                  <Car className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white">К этому кабинету пока не привязаны автомобили</h4>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
+                    {userRole !== "OWNER"
+                      ? "Нажмите кнопку «Привязать авто», чтобы выбрать автомобили из общего парка и закрепить их за этим инвестором."
+                      : "В вашем кабинете пока нет закрепленных машин. Обратитесь к управляющему парком для подключения."}
+                  </p>
+                </div>
+                {userRole !== "OWNER" && selectedOwner && (
+                  <button
+                    onClick={handleOpenManageCars}
+                    className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-xs font-bold shadow-lg transition"
+                  >
+                    <Car className="w-4 h-4" />
+                    <span>Привязать автомобили сейчас</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              cars.map((car: any) => {
+                const cityTheme = getCityTheme(car.cityCode);
+                const isRented = car.status === "RENTED";
 
-              return (
-                <div
-                  key={car.id}
-                  className={`bg-slate-900 border rounded-2xl p-4 shadow-xl space-y-3 relative overflow-hidden transition-all ${
-                    isRented
-                      ? "border-emerald-500/60 bg-emerald-950/10"
+                return (
+                  <div
+                    key={car.id}
+                    className={`bg-slate-900 border rounded-2xl p-4 shadow-xl space-y-3 relative overflow-hidden transition-all ${
+                      isRented
+                        ? "border-emerald-500/60 bg-emerald-950/10"
                       : "border-slate-800 hover:border-slate-700"
                   }`}
                 >
@@ -802,23 +1115,25 @@ export const OwnerInvestorCabinet: React.FC = () => {
                           <Wrench className="w-3 h-3 text-rose-400" />
                           <span>Расход</span>
                         </button>
-                        <button
-                          onClick={() => {
-                            setEditingCarRate(car);
-                            setNewCarBaseRate(car.defaultOwnerDailyRate || 25);
-                          }}
-                          className="flex items-center space-x-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-bold transition border border-slate-700"
-                          title="Изменить базовую суточную ставку инвестора для этого авто"
-                        >
-                          <Edit3 className="w-3 h-3 text-amber-400" />
-                          <span>Ставка</span>
-                        </button>
+                        {userRole !== "OWNER" && (
+                          <button
+                            onClick={() => {
+                              setEditingCarRate(car);
+                              setNewCarBaseRate(car.defaultOwnerDailyRate || 25);
+                            }}
+                            className="flex items-center space-x-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-bold transition border border-slate-700"
+                            title="Изменить базовую суточную ставку инвестора для этого авто"
+                          >
+                            <Edit3 className="w-3 h-3 text-amber-400" />
+                            <span>Ставка</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </div>
       )}
@@ -1581,6 +1896,460 @@ export const OwnerInvestorCabinet: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CREATE NEW OWNER (INVESTOR) CABINET */}
+      {isAddOwnerOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl space-y-5 my-8">
+            <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
+                  Личный кабинет владельца
+                </span>
+                <h3 className="text-lg font-black text-white mt-1">
+                  Создать личный кабинет инвестора
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Заполните данные владельца и отметьте автомобили, принадлежащие ему
+                </p>
+              </div>
+              <button
+                onClick={() => setIsAddOwnerOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateOwner} className="space-y-4 text-xs">
+              {/* Personal info */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    ФИО владельца *
+                  </label>
+                  <input
+                    type="text"
+                    value={newOwnerFullName}
+                    onChange={(e) => setNewOwnerFullName(e.target.value)}
+                    placeholder="Георгий Беридзе"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    Номер телефона *
+                  </label>
+                  <input
+                    type="text"
+                    value={newOwnerPhone}
+                    onChange={(e) => {
+                      setNewOwnerPhone(e.target.value);
+                      if (!newOwnerWhatsapp) setNewOwnerWhatsapp(e.target.value);
+                    }}
+                    placeholder="+995 555 12 34 56"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    WhatsApp (для отправки ссылки и отчетов)
+                  </label>
+                  <input
+                    type="text"
+                    value={newOwnerWhatsapp}
+                    onChange={(e) => setNewOwnerWhatsapp(e.target.value)}
+                    placeholder="+995 555 12 34 56"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    Email (опционально)
+                  </label>
+                  <input
+                    type="email"
+                    value={newOwnerEmail}
+                    onChange={(e) => setNewOwnerEmail(e.target.value)}
+                    placeholder="investor@example.com"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Bank Requisites */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    Банк для выплат
+                  </label>
+                  <input
+                    type="text"
+                    value={newOwnerBankName}
+                    onChange={(e) => setNewOwnerBankName(e.target.value)}
+                    placeholder="TBC Bank / Bank of Georgia"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    Номер счета / IBAN инвестора
+                  </label>
+                  <input
+                    type="text"
+                    value={newOwnerBankIban}
+                    onChange={(e) => setNewOwnerBankIban(e.target.value)}
+                    placeholder="GE29TB7000000000000000"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Base Daily Rate & Notes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    Ставка инвестору по умолчанию (₾ GEL / сутки)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newOwnerDailyRate}
+                    onChange={(e) => setNewOwnerDailyRate(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-amber-400 font-mono font-bold focus:outline-none focus:border-emerald-500"
+                  />
+                  <span className="text-[10px] text-slate-500 block mt-1">
+                    Сумма, начисляемая владельцу за каждый день фактической аренды его авто
+                  </span>
+                </div>
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    Примечание / Условия договора
+                  </label>
+                  <input
+                    type="text"
+                    value={newOwnerNotes}
+                    onChange={(e) => setNewOwnerNotes(e.target.value)}
+                    placeholder="Договор управления от 01.11, комиссия 20%..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Cars selection checklist */}
+              <div className="border border-slate-800 rounded-xl p-3 bg-slate-950/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white text-xs flex items-center space-x-1.5">
+                    <Car className="w-4 h-4 text-emerald-400" />
+                    <span>Привязать автомобили к этому владельцу ({newOwnerCarIds.length} выбрано):</span>
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Поиск по марке/номеру..."
+                    value={newOwnerCarSearch}
+                    onChange={(e) => setNewOwnerCarSearch(e.target.value)}
+                    className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white text-[11px] focus:outline-none focus:border-emerald-500 w-44"
+                  />
+                </div>
+
+                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 no-scrollbar">
+                  {data?.fleetCars
+                    ?.filter((c: any) => {
+                      if (!newOwnerCarSearch.trim()) return true;
+                      const q = newOwnerCarSearch.toLowerCase();
+                      return (
+                        c.brand.toLowerCase().includes(q) ||
+                        c.model.toLowerCase().includes(q) ||
+                        c.plateNumber.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((car: any) => {
+                      const isSelected = newOwnerCarIds.includes(car.id);
+                      return (
+                        <div
+                          key={car.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setNewOwnerCarIds(newOwnerCarIds.filter((id) => id !== car.id));
+                            } else {
+                              setNewOwnerCarIds([...newOwnerCarIds, car.id]);
+                            }
+                          }}
+                          className={`flex items-center justify-between p-2 rounded-xl border cursor-pointer transition select-none ${
+                            isSelected
+                              ? "bg-emerald-950/50 border-emerald-500/60 text-white"
+                              : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2.5">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border ${
+                              isSelected ? "bg-emerald-500 border-emerald-500 text-slate-950" : "border-slate-600 bg-slate-800"
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span className="font-bold text-xs">{car.brand} {car.model}</span>
+                            <span className="font-mono text-[11px] text-amber-400 font-bold px-1.5 py-0.5 bg-slate-950 rounded border border-slate-800">
+                              {car.plateNumber}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-[10px]">
+                            <span className="text-slate-400">{car.city?.nameRu || "Батуми"}</span>
+                            {car.ownerId && (
+                              <span className="text-amber-300/80 bg-amber-950/50 px-1.5 py-0.5 rounded border border-amber-500/30">
+                                уже закреплена
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAddOwnerOpen(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white rounded-xl font-black shadow-lg transition"
+                >
+                  {isSubmitting ? "Создание..." : "Создать кабинет и привязать авто"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: MANAGE CARS FOR EXISTING OWNER */}
+      {isManageCarsOpen && selectedOwner && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl space-y-5 my-8">
+            <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-indigo-400 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-500/30">
+                  Привязка автопарка
+                </span>
+                <h3 className="text-lg font-black text-white mt-1">
+                  Автомобили инвестора: {selectedOwner.fullName}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Отметьте галочками автомобили, принадлежащие этому инвестору. Они будут отображаться в его личном кабинете.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsManageCarsOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveOwnerCars} className="space-y-4 text-xs">
+              <div className="flex items-center justify-between gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div>
+                  <label className="text-slate-300 font-bold block mb-0.5">
+                    Базовая ставка владельца (₾ / день):
+                  </label>
+                  <span className="text-[10px] text-slate-500">
+                    Применится ко всем привязанным машинам инвестора
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  min="1"
+                  value={manageDailyRate}
+                  onChange={(e) => setManageDailyRate(Number(e.target.value))}
+                  className="w-28 bg-slate-900 border border-slate-700 rounded-xl p-2 text-amber-400 font-mono font-black text-center focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">
+                    Список авто ({manageCarIds.length} выбрано из {data?.fleetCars?.length || 0}):
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Поиск по авто..."
+                    value={manageCarSearch}
+                    onChange={(e) => setManageCarSearch(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-white text-[11px] focus:outline-none focus:border-indigo-500 w-48"
+                  />
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 no-scrollbar">
+                  {data?.fleetCars
+                    ?.filter((c: any) => {
+                      if (!manageCarSearch.trim()) return true;
+                      const q = manageCarSearch.toLowerCase();
+                      return (
+                        c.brand.toLowerCase().includes(q) ||
+                        c.model.toLowerCase().includes(q) ||
+                        c.plateNumber.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((car: any) => {
+                      const isSelected = manageCarIds.includes(car.id);
+                      const isCurrentlyOtherOwner = car.ownerId && car.ownerId !== selectedOwner.id;
+
+                      return (
+                        <div
+                          key={car.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setManageCarIds(manageCarIds.filter((id) => id !== car.id));
+                            } else {
+                              setManageCarIds([...manageCarIds, car.id]);
+                            }
+                          }}
+                          className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition select-none ${
+                            isSelected
+                              ? "bg-indigo-950/40 border-indigo-500/60 text-white"
+                              : "bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700"
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2.5">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border ${
+                              isSelected ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-600 bg-slate-800"
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span className="font-bold text-xs">{car.brand} {car.model}</span>
+                            <span className="font-mono text-[11px] text-amber-400 font-bold px-1.5 py-0.5 bg-slate-900 rounded border border-slate-800">
+                              {car.plateNumber}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-[10px]">
+                            <span className="text-slate-400">{car.city?.nameRu || "Батуми"}</span>
+                            {isCurrentlyOtherOwner && (
+                              <span className="text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30">
+                                перепривязка
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsManageCarsOpen(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-black shadow-lg transition"
+                >
+                  {isSubmitting ? "Сохранение..." : "Сохранить привязку авто"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SHARE INVESTOR ACCESS LINK */}
+      {isShareLinkOpen && selectedOwner && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/30">
+                  Изолированный доступ инвестора
+                </span>
+                <h3 className="text-lg font-black text-white mt-1">
+                  Доступ для {selectedOwner.fullName}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsShareLinkOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-200 space-y-1">
+              <p className="font-bold flex items-center space-x-1">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Безопасный изолированный режим:</span>
+              </p>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Инвестор видит <strong>исключительно свои автомобили</strong> ({cars?.length || 0} шт.), занятость, начисления и историю выплат. Доступ к чужим авто, CRM, кассе, отчетам и руководству компании полностью закрыт.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-slate-300 font-bold block mb-1.5 text-xs">
+                Персональная ссылка на личный кабинет:
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={getOwnerShareUrl()}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-amber-300 font-mono text-xs select-all focus:outline-none"
+                />
+                <button
+                  onClick={handleCopyLink}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center space-x-1.5 shrink-0 shadow-md ${
+                    copiedLink
+                      ? "bg-emerald-600 text-white"
+                      : "bg-amber-500 hover:bg-amber-400 text-slate-950"
+                  }`}
+                >
+                  {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedLink ? "Скопировано!" : "Копировать"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* WhatsApp direct sending */}
+            {selectedOwner.phone && (
+              <div className="pt-2">
+                <a
+                  href={`https://wa.me/${selectedOwner.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                    `Здравствуйте, ${selectedOwner.fullName}! Ваш личный кабинет инвестора в автопрокате готов. Здесь вы можете в реальном времени отслеживать занятость ваших автомобилей, начисления и выплаты: ${getOwnerShareUrl()}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-2 transition shadow-lg"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Отправить ссылку в WhatsApp владельцу</span>
+                </a>
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end border-t border-slate-800">
+              <button
+                onClick={() => setIsShareLinkOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs transition"
+              >
+                Закрыть
+              </button>
+            </div>
           </div>
         </div>
       )}

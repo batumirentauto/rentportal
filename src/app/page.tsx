@@ -41,7 +41,8 @@ export default function Home() {
   const [stopBlockedCars, setStopBlockedCars] = useState<any[]>([]);
   const [overdueBookings, setOverdueBookings] = useState<any[]>([]);
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
-  const [userRole, setUserRole] = useState<"EXECUTIVE" | "MANAGER">("EXECUTIVE");
+  const [userRole, setUserRole] = useState<"EXECUTIVE" | "MANAGER" | "OWNER">("EXECUTIVE");
+  const [ownerIdFromUrl, setOwnerIdFromUrl] = useState<string | null>(null);
 
   // Check role and city from URL query param or localStorage
   useEffect(() => {
@@ -49,10 +50,20 @@ export default function Home() {
       const params = new URLSearchParams(window.location.search);
       const urlRole = params.get("role")?.toUpperCase();
       const urlCity = params.get("city")?.toUpperCase();
+      const urlOwnerId = params.get("ownerId");
+
       if (urlCity && ["TBS", "BUS", "KUT"].includes(urlCity)) {
         setSelectedCity(urlCity);
       }
-      if (urlRole === "MANAGER") {
+
+      if (urlOwnerId) {
+        setOwnerIdFromUrl(urlOwnerId);
+      }
+
+      if (urlRole === "OWNER") {
+        setUserRole("OWNER");
+        setActiveTab("owners");
+      } else if (urlRole === "MANAGER") {
         setUserRole("MANAGER");
         localStorage.setItem("rentportal_role", "MANAGER");
       } else if (urlRole === "EXECUTIVE" || urlRole === "ADMIN") {
@@ -67,15 +78,23 @@ export default function Home() {
     }
   }, []);
 
-  const handleSwitchRole = (newRole: "EXECUTIVE" | "MANAGER") => {
+  const handleSwitchRole = (newRole: "EXECUTIVE" | "MANAGER" | "OWNER") => {
     setUserRole(newRole);
     if (typeof window !== "undefined") {
-      localStorage.setItem("rentportal_role", newRole);
       const url = new URL(window.location.href);
       if (newRole === "MANAGER") {
         url.searchParams.set("role", "manager");
+        url.searchParams.delete("ownerId");
+        localStorage.setItem("rentportal_role", "MANAGER");
+      } else if (newRole === "OWNER") {
+        url.searchParams.set("role", "owner");
+        if (ownerIdFromUrl) {
+          url.searchParams.set("ownerId", ownerIdFromUrl);
+        }
       } else {
         url.searchParams.delete("role");
+        url.searchParams.delete("ownerId");
+        localStorage.setItem("rentportal_role", "EXECUTIVE");
       }
       window.history.replaceState({}, "", url.toString());
     }
@@ -84,15 +103,21 @@ export default function Home() {
       if (restrictedTabs.includes(activeTab)) {
         setActiveTab("handover");
       }
+    } else if (newRole === "OWNER") {
+      setActiveTab("owners");
     }
   };
 
-  // Guard activeTab if in MANAGER role
+  // Guard activeTab if in MANAGER or OWNER role
   useEffect(() => {
     if (userRole === "MANAGER") {
       const restrictedTabs = ["mobileapp", "owners", "reports", "executive", "team"];
       if (restrictedTabs.includes(activeTab)) {
         setActiveTab("handover");
+      }
+    } else if (userRole === "OWNER") {
+      if (activeTab !== "owners") {
+        setActiveTab("owners");
       }
     }
   }, [userRole, activeTab]);
@@ -292,7 +317,12 @@ export default function Home() {
 
             {activeTab === "techpassports" && <TechPassportFinesRegistry />}
 
-            {activeTab === "owners" && <OwnerInvestorCabinet />}
+            {activeTab === "owners" && (
+              <OwnerInvestorCabinet
+                initialOwnerId={ownerIdFromUrl}
+                userRole={userRole}
+              />
+            )}
 
             {activeTab === "crm" && (
               <CustomerCrmHub
@@ -322,6 +352,7 @@ export default function Home() {
             {activeTab === "team" && (
               <TeamAccessHub
                 onSwitchToOwner={(ownerId) => {
+                  setOwnerIdFromUrl(ownerId);
                   setActiveTab("owners");
                 }}
                 onSwitchToRoleTab={(tab: any) => {
