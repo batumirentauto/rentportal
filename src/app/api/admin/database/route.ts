@@ -64,6 +64,71 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const contentType = request.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      if (body.action === "CLEAN_MOCK_DATA") {
+        await prisma.expense.deleteMany();
+        await prisma.payment.deleteMany();
+        await prisma.ownerPayout.deleteMany();
+        await prisma.managerTask.deleteMany();
+        await prisma.chatMessage.deleteMany();
+        await prisma.financialAccount.updateMany({
+          data: { currentBalance: 0, initialBalance: 0 },
+        });
+        await prisma.financialAccount.deleteMany({
+          where: {
+            OR: [
+              { name: { contains: "Георгий Беридзе" } },
+              { name: { contains: "Зураб Абашидзе" } },
+              { name: { contains: "Николоз Мамулашвили" } },
+              { name: { contains: "Ираклий Чавчавадзе" } },
+              { name: { contains: "Леван Гаприндашвили" } },
+            ],
+          },
+        });
+        await prisma.user.deleteMany({
+          where: {
+            fullName: {
+              in: [
+                "Георгий Беридзе",
+                "Зураб Абашидзе (Менеджер 2)",
+                "Николоз Мамулашвили",
+                "Ираклий Чавчавадзе (Менеджер 2)",
+                "Леван Гаприндашвили",
+                "Ираклий Беридзе",
+                "Ника Кварацхелия",
+                "Давид Гоциридзе",
+                "Леван Махарадзе",
+                "Георгий Церетели",
+                "Зураб Абашидзе",
+              ],
+            },
+          },
+        });
+        await prisma.carOwner.deleteMany({
+          where: {
+            fullName: {
+              in: [
+                "Ираклий Беридзе",
+                "Ника Кварацхелия",
+                "Давид Гоциридзе",
+                "Леван Махарадзе",
+                "Георгий Церетели",
+                "Зураб Абашидзе",
+              ],
+            },
+            cars: { none: {} },
+          },
+        });
+        return NextResponse.json({
+          success: true,
+          message: "Все тестовые расходы удалены, балансы счетов успешно обнулены!",
+        });
+      }
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
 

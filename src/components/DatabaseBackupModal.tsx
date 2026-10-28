@@ -35,6 +35,33 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCleaningVideos, setIsCleaningVideos] = useState<boolean>(false);
   const [cleanupVideosResult, setCleanupVideosResult] = useState<any>(null);
+  const [isCleaningMock, setIsCleaningMock] = useState<boolean>(false);
+
+  const handleCleanMockData = async () => {
+    if (!confirm("Вы действительно хотите удалить все тестовые расходы и обнулить балансы расчетных счетов? Все автомобили и пользователи останутся.")) {
+      return;
+    }
+    try {
+      setIsCleaningMock(true);
+      const res = await fetch("/api/admin/database", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "CLEAN_MOCK_DATA" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message);
+        fetchStatus();
+        if (onDataRestored) onDataRestored();
+      } else {
+        setErrorMessage(data.error || "Ошибка очистки данных");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Ошибка соединения");
+    } finally {
+      setIsCleaningMock(false);
+    }
+  };
 
   const handleCleanVideos = async () => {
     try {
@@ -280,6 +307,43 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                   ✓ Удалено файлов: {cleanupVideosResult.deletedFilesCount} (освобождено: {cleanupVideosResult.freedMB} МБ)
                 </span>
               )}
+            </div>
+          </div>
+
+          {/* Reset Mock / Demo Data */}
+          <div className="bg-slate-950 p-4 rounded-xl border border-rose-500/30 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-rose-300 flex items-center space-x-1.5">
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                <span>Очистка демонстрационных и тестовых данных:</span>
+              </h4>
+              <span className="text-[10px] bg-rose-950/60 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold">
+                Сброс демо
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Удаляет тестовые расходы компании, тестовые кассы и обнуляет балансы банковских счетов до 0. Все реальные автомобили и клиенты сохраняются.
+            </p>
+
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={handleCleanMockData}
+                disabled={isCleaningMock}
+                className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 font-bold text-xs rounded-xl flex items-center space-x-1.5 transition active:scale-95 disabled:opacity-50"
+              >
+                {isCleaningMock ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Очистка данных...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Очистить тестовые расходы и обнулить счета</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 

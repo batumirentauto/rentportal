@@ -336,6 +336,50 @@ function ensureSchema(dbFilePath: string) {
       }
     } catch {}
 
+    // 6. Clean mock data migration (automatic one-time on persistent storage or boot)
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS "_MigrationFlags" ("id" TEXT PRIMARY KEY, "executedAt" DATETIME DEFAULT CURRENT_TIMESTAMP);`);
+      const flag = db.prepare(`SELECT id FROM "_MigrationFlags" WHERE id = 'clean_mock_data_v1'`).get();
+      if (!flag) {
+        console.log("[Database] Running one-time cleanup of mock data...");
+
+        // Delete mock demo expenses
+        db.exec(`DELETE FROM Expense;`);
+
+        // Reset account balances to 0 for all company accounts
+        db.exec(`UPDATE FinancialAccount SET currentBalance = 0, initialBalance = 0;`);
+
+        // Remove fake manager cash accounts
+        db.exec(`
+          DELETE FROM FinancialAccount WHERE name LIKE '%Георгий Беридзе%' OR name LIKE '%Зураб Абашидзе%' OR name LIKE '%Николоз Мамулашвили%' OR name LIKE '%Ираклий Чавчавадзе%' OR name LIKE '%Леван Гаприндашвили%';
+        `);
+
+        // Delete fake demo users (keeping real users like Руководитель, Евгений, Бачо, and active owners)
+        db.exec(`
+          DELETE FROM User WHERE fullName IN ('Георгий Беридзе', 'Зураб Абашидзе (Менеджер 2)', 'Николоз Мамулашвили', 'Ираклий Чавчавадзе (Менеджер 2)', 'Леван Гаприндашвили', 'Ираклий Беридзе', 'Ника Кварацхелия', 'Давид Гоциридзе', 'Леван Махарадзе', 'Георгий Церетели', 'Зураб Абашидзе');
+        `);
+
+        // Delete fake demo car owners with 0 cars
+        db.exec(`
+          DELETE FROM CarOwner WHERE fullName IN ('Ираклий Беридзе', 'Ника Кварацхелия', 'Давид Гоциридзе', 'Леван Махарадзе', 'Георгий Церетели', 'Зураб Абашидзе')
+          AND id NOT IN (SELECT DISTINCT ownerId FROM Car WHERE ownerId IS NOT NULL);
+        `);
+
+        // Delete mock tasks, chats, payouts, payments
+        db.exec(`
+          DELETE FROM ManagerTask;
+          DELETE FROM ChatMessage;
+          DELETE FROM OwnerPayout;
+          DELETE FROM Payment;
+        `);
+
+        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('clean_mock_data_v1')`).run();
+        console.log("[Database] Mock data cleanup successfully executed!");
+      }
+    } catch (cleanErr) {
+      console.warn("[Database] Mock data cleanup notice:", cleanErr);
+    }
+
     db.close();
   } catch (e) {
     console.warn("[Database] Schema check/migration notice:", e);
