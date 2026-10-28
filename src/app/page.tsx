@@ -41,6 +41,57 @@ export default function Home() {
   const [stopBlockedCars, setStopBlockedCars] = useState<any[]>([]);
   const [overdueBookings, setOverdueBookings] = useState<any[]>([]);
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
+  const [userRole, setUserRole] = useState<"EXECUTIVE" | "MANAGER">("EXECUTIVE");
+
+  // Check role from URL query param or localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlRole = params.get("role")?.toUpperCase();
+      if (urlRole === "MANAGER") {
+        setUserRole("MANAGER");
+        localStorage.setItem("rentportal_role", "MANAGER");
+      } else if (urlRole === "EXECUTIVE" || urlRole === "ADMIN") {
+        setUserRole("EXECUTIVE");
+        localStorage.setItem("rentportal_role", "EXECUTIVE");
+      } else {
+        const savedRole = localStorage.getItem("rentportal_role");
+        if (savedRole === "MANAGER") {
+          setUserRole("MANAGER");
+        }
+      }
+    }
+  }, []);
+
+  const handleSwitchRole = (newRole: "EXECUTIVE" | "MANAGER") => {
+    setUserRole(newRole);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rentportal_role", newRole);
+      const url = new URL(window.location.href);
+      if (newRole === "MANAGER") {
+        url.searchParams.set("role", "manager");
+      } else {
+        url.searchParams.delete("role");
+      }
+      window.history.replaceState({}, "", url.toString());
+    }
+    if (newRole === "MANAGER") {
+      const restrictedTabs = ["mobileapp", "owners", "reports", "executive", "team"];
+      if (restrictedTabs.includes(activeTab)) {
+        setActiveTab("handover");
+      }
+    }
+  };
+
+  // Guard activeTab if in MANAGER role
+  useEffect(() => {
+    if (userRole === "MANAGER") {
+      const restrictedTabs = ["mobileapp", "owners", "reports", "executive", "team"];
+      if (restrictedTabs.includes(activeTab)) {
+        setActiveTab("handover");
+      }
+    }
+  }, [userRole, activeTab]);
 
   // Modals
   const [contractBooking, setContractBooking] = useState<any | null>(null);
@@ -187,6 +238,8 @@ export default function Home() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isSimulating={isSimulating}
+        userRole={userRole}
+        onSwitchRole={handleSwitchRole}
       />
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-6">

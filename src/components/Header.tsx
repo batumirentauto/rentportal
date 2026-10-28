@@ -13,6 +13,8 @@ interface HeaderProps {
   activeTab: "timeline" | "catalog" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats";
   setActiveTab: (tab: "timeline" | "catalog" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats") => void;
   isSimulating: boolean;
+  userRole?: "EXECUTIVE" | "MANAGER";
+  onSwitchRole?: (role: "EXECUTIVE" | "MANAGER") => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -27,6 +29,8 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
   isSimulating,
+  userRole = "EXECUTIVE",
+  onSwitchRole,
 }) => {
   React.useEffect(() => {
     const updateHeaderHeight = () => {
@@ -159,14 +163,16 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-900 animate-pulse" />
             </button>
 
-            {/* Database & Backup Button */}
-            <button
-              onClick={onOpenBackup}
-              title="Сохранность данных, статус постоянного диска и бэкап базы данных"
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-slate-700 transition-colors shadow-sm shrink-0"
-            >
-              <Database className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
-            </button>
+            {/* Database & Backup Button - hidden for manager */}
+            {userRole !== "MANAGER" && onOpenBackup && (
+              <button
+                onClick={onOpenBackup}
+                title="Сохранность данных, статус постоянного диска и бэкап базы данных"
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-slate-700 transition-colors shadow-sm shrink-0"
+              >
+                <Database className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+              </button>
+            )}
 
             {/* Notification Bell */}
             <button
@@ -181,6 +187,43 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               )}
             </button>
+
+            {/* Role Persona Badge / Switcher */}
+            <div className="flex items-center shrink-0">
+              {userRole === "MANAGER" ? (
+                <button
+                  onClick={() => {
+                    const pin = prompt("Введите PIN-код руководителя для входа в полный режим (по умолчанию 7777):");
+                    if (pin === "7777" || pin === "admin") {
+                      if (onSwitchRole) onSwitchRole("EXECUTIVE");
+                    } else if (pin !== null) {
+                      alert("Неверный PIN-код доступа");
+                    }
+                  }}
+                  title="Режим менеджера выдачи (ограничен). Нажмите для входа руководителя"
+                  className="flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-blue-950/90 border border-blue-500/50 text-blue-300 hover:bg-blue-900/80 transition text-xs font-bold"
+                >
+                  <span>💼</span>
+                  <span className="hidden sm:inline">Менеджер выдачи</span>
+                  <span className="text-[9px] bg-blue-500/20 text-blue-300 px-1 py-0.2 rounded font-mono">
+                    Ограничен
+                  </span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (confirm("Переключить интерфейс в режим 'Менеджер выдачи' (с ограниченными правами без VIP-приложения, инвесторов, руководства и отчетов)?")) {
+                      if (onSwitchRole) onSwitchRole("MANAGER");
+                    }
+                  }}
+                  title="Режим руководителя (полный доступ). Нажмите, чтобы протестировать режим менеджера"
+                  className="flex items-center space-x-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-indigo-950/60 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-900/60 transition text-xs font-bold"
+                >
+                  <span>👔</span>
+                  <span className="hidden sm:inline">Руководитель</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -280,16 +323,19 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">(утро & день)</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("mobileapp")}
-            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
-              activeTab === "mobileapp"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black shadow-lg"
-                : "text-amber-400 hover:text-amber-200 hover:bg-amber-950/40 border border-amber-500/30"
-            }`}
-          >
-            <span>📱 VIP Приложение</span>
-          </button>
+          {/* VIP Mobile App - hidden for manager */}
+          {userRole !== "MANAGER" && (
+            <button
+              onClick={() => setActiveTab("mobileapp")}
+              className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
+                activeTab === "mobileapp"
+                  ? "bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black shadow-lg"
+                  : "text-amber-400 hover:text-amber-200 hover:bg-amber-950/40 border border-amber-500/30"
+              }`}
+            >
+              <span>📱 VIP Приложение</span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab("techpassports")}
@@ -302,16 +348,19 @@ export const Header: React.FC<HeaderProps> = ({
             <span>📑 Техпаспорта & Штрафы</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("owners")}
-            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
-              activeTab === "owners"
-                ? "bg-emerald-500 text-slate-950 font-black shadow-lg"
-                : "text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50 border border-emerald-500/20"
-            }`}
-          >
-            <span>💼 Кабинет инвесторов</span>
-          </button>
+          {/* Owners / Investors Cabinet - hidden for manager */}
+          {userRole !== "MANAGER" && (
+            <button
+              onClick={() => setActiveTab("owners")}
+              className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
+                activeTab === "owners"
+                  ? "bg-emerald-500 text-slate-950 font-black shadow-lg"
+                  : "text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50 border border-emerald-500/20"
+              }`}
+            >
+              <span>💼 Кабинет инвесторов</span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab("crm")}
@@ -357,38 +406,47 @@ export const Header: React.FC<HeaderProps> = ({
             <span>💰 Касса смены</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("reports")}
-            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
-              activeTab === "reports"
-                ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow-lg"
-                : "text-amber-400 hover:text-amber-200 hover:bg-amber-950/40 border border-amber-500/30"
-            }`}
-          >
-            <span>📊 Отчетность</span>
-          </button>
+          {/* Reports - hidden for manager */}
+          {userRole !== "MANAGER" && (
+            <button
+              onClick={() => setActiveTab("reports")}
+              className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
+                activeTab === "reports"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow-lg"
+                  : "text-amber-400 hover:text-amber-200 hover:bg-amber-950/40 border border-amber-500/30"
+              }`}
+            >
+              <span>📊 Отчетность</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab("executive")}
-            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
-              activeTab === "executive"
-                ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/50 shadow-md"
-                : "text-indigo-400 hover:text-indigo-200 hover:bg-indigo-950/40 border border-indigo-500/20"
-            }`}
-          >
-            <span>👔 Руководство</span>
-          </button>
+          {/* Executive - hidden for manager */}
+          {userRole !== "MANAGER" && (
+            <button
+              onClick={() => setActiveTab("executive")}
+              className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
+                activeTab === "executive"
+                  ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/50 shadow-md"
+                  : "text-indigo-400 hover:text-indigo-200 hover:bg-indigo-950/40 border border-indigo-500/20"
+              }`}
+            >
+              <span>👔 Руководство</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab("team")}
-            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
-              activeTab === "team"
-                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black shadow-lg"
-                : "text-purple-300 hover:text-white hover:bg-purple-950/40 border border-purple-500/30"
-            }`}
-          >
-            <span>👥 Команда</span>
-          </button>
+          {/* Team access management - hidden for manager */}
+          {userRole !== "MANAGER" && (
+            <button
+              onClick={() => setActiveTab("team")}
+              className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
+                activeTab === "team"
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black shadow-lg"
+                  : "text-purple-300 hover:text-white hover:bg-purple-950/40 border border-purple-500/30"
+              }`}
+            >
+              <span>👥 Команда</span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab("chats")}

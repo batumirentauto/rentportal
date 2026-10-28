@@ -73,6 +73,17 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
 
   // Active Simulated Persona
   const [simulatedPersona, setSimulatedPersona] = useState<string>("EXECUTIVE");
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
+
+  const handleCopyManagerLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (typeof window !== "undefined") {
+      const url = `${window.location.origin}/?role=manager`;
+      navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 3000);
+    }
+  };
 
   const fetchTeamData = async () => {
     setLoading(true);
@@ -300,30 +311,40 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
             </button>
 
             {/* Manager */}
-            <button
+            <div
               onClick={() => {
                 setSimulatedPersona("MANAGER");
                 if (onSwitchToRoleTab) onSwitchToRoleTab("handover");
               }}
-              className={`p-3 rounded-xl border text-left transition flex items-center space-x-3 ${
+              className={`p-3 rounded-xl border text-left transition flex flex-col justify-between space-y-2 cursor-pointer ${
                 simulatedPersona === "MANAGER"
                   ? "bg-blue-950/70 border-blue-500 shadow-md ring-1 ring-blue-500"
                   : "bg-slate-900 border-slate-800 hover:border-slate-700"
               }`}
             >
-              <span className="text-2xl">💼</span>
-              <div>
-                <div className="flex items-center space-x-1">
-                  <span className="font-bold text-xs text-white">Менеджер выдачи</span>
-                  {simulatedPersona === "MANAGER" && (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
-                  )}
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">💼</span>
+                <div>
+                  <div className="flex items-center space-x-1">
+                    <span className="font-bold text-xs text-white">Менеджер выдачи</span>
+                    {simulatedPersona === "MANAGER" && (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-400 block">
+                    План выдач, прием, мойки 20/10₾
+                  </span>
                 </div>
-                <span className="text-[10px] text-slate-400 block">
-                  План выдач, прием, мойки 20/10₾
-                </span>
               </div>
-            </button>
+              <button
+                type="button"
+                onClick={handleCopyManagerLink}
+                title="Скопировать ссылку для отправки менеджеру"
+                className="w-full text-center py-1 px-2 rounded-lg bg-blue-900/60 hover:bg-blue-800/80 text-blue-200 border border-blue-500/30 text-[10px] font-bold transition flex items-center justify-center space-x-1"
+              >
+                <span>{copiedLink ? "✓ Ссылка скопирована!" : "🔗 Скопировать ссылку для менеджера"}</span>
+              </button>
+            </div>
 
             {/* Car Owner */}
             <button
