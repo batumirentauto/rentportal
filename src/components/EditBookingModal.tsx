@@ -20,7 +20,9 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Download,
 } from "lucide-react";
+import { downloadDocument, downloadAllCustomerDocuments } from "@/lib/downloadDocument";
 import { AdditionalDriversModal } from "./AdditionalDriversModal";
 import { BookingRefundModal } from "./BookingRefundModal";
 import { BookingExtensionModal } from "./BookingExtensionModal";
@@ -435,6 +437,117 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 {booking.customer?.instagram && <span className="text-pink-400">@{booking.customer.instagram}</span>}
               </div>
             </div>
+
+            {/* Customer Documents badges with Download options */}
+            {booking.customer && (
+              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 text-xs">
+                <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                  <span className="text-[10px] text-slate-400">Документы:</span>
+                  {booking.customer.passportPhotoUrl ? (
+                    <div className="inline-flex items-center rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 overflow-hidden shadow-sm">
+                      <a
+                        href={booking.customer.passportPhotoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-1.5 py-0.5 hover:bg-blue-500/30 transition flex items-center space-x-1"
+                        title="Открыть фото паспорта в новом окне"
+                      >
+                        <span>✓ Паспорт</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => downloadDocument(
+                          booking.customer.passportPhotoUrl,
+                          `Паспорт_${booking.customer.fullName?.replace(/\s+/g, "_")}_Бронь_${booking.bookingNumber}`
+                        )}
+                        className="px-1.5 py-0.5 bg-blue-600/40 hover:bg-blue-600 text-white border-l border-blue-500/30 transition flex items-center"
+                        title="Скачать фото паспорта"
+                      >
+                        <Download className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-500 border border-slate-800">
+                      Паспорт —
+                    </span>
+                  )}
+
+                  {booking.customer.driverLicensePhotoUrl ? (
+                    <div className="inline-flex items-center rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 overflow-hidden shadow-sm">
+                      <a
+                        href={booking.customer.driverLicensePhotoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-1.5 py-0.5 hover:bg-purple-500/30 transition flex items-center space-x-1"
+                        title="Открыть лицевую сторону прав в новом окне"
+                      >
+                        <span>✓ Права (лицо)</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => downloadDocument(
+                          booking.customer.driverLicensePhotoUrl,
+                          `Права_Лицо_${booking.customer.fullName?.replace(/\s+/g, "_")}_Бронь_${booking.bookingNumber}`
+                        )}
+                        className="px-1.5 py-0.5 bg-purple-600/40 hover:bg-purple-600 text-white border-l border-purple-500/30 transition flex items-center"
+                        title="Скачать фото прав (лицо)"
+                      >
+                        <Download className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-500 border border-slate-800">
+                      Права (лицо) —
+                    </span>
+                  )}
+
+                  {booking.customer.driverLicenseBackPhotoUrl ? (
+                    <div className="inline-flex items-center rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 overflow-hidden shadow-sm">
+                      <a
+                        href={booking.customer.driverLicenseBackPhotoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-1.5 py-0.5 hover:bg-cyan-500/30 transition flex items-center space-x-1"
+                        title="Открыть оборотную сторону прав в новом окне"
+                      >
+                        <span>✓ Права (оборот)</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => downloadDocument(
+                          booking.customer.driverLicenseBackPhotoUrl,
+                          `Права_Оборот_${booking.customer.fullName?.replace(/\s+/g, "_")}_Бронь_${booking.bookingNumber}`
+                        )}
+                        className="px-1.5 py-0.5 bg-cyan-600/40 hover:bg-cyan-600 text-white border-l border-cyan-500/30 transition flex items-center"
+                        title="Скачать фото прав (оборот)"
+                      >
+                        <Download className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-500 border border-slate-800">
+                      Права (оборот) —
+                    </span>
+                  )}
+                </div>
+
+                {(booking.customer.passportPhotoUrl || booking.customer.driverLicensePhotoUrl || booking.customer.driverLicenseBackPhotoUrl) && (
+                  <button
+                    type="button"
+                    onClick={() => downloadAllCustomerDocuments(
+                      booking.customer,
+                      booking.bookingNumber,
+                      booking.additionalDrivers
+                    )}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 flex items-center space-x-1 transition shadow-sm active:scale-95"
+                    title="Скачать все прикрепленные документы клиента на устройство"
+                  >
+                    <Download className="w-3 h-3 text-emerald-400" />
+                    <span>📥 Скачать все документы</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="text-[10px] text-slate-400 font-semibold block mb-1">

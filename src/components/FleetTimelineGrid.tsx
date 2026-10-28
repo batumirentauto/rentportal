@@ -39,7 +39,9 @@ import {
   Maximize2,
   Minimize2,
   Coins,
+  Download,
 } from "lucide-react";
+import { downloadDocument, downloadAllCustomerDocuments } from "@/lib/downloadDocument";
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
 import { StopUnblockModal } from "./StopUnblockModal";
@@ -1617,15 +1619,28 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                   <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                     <span className="text-[10px] text-slate-400">Документы:</span>
                     {selectedBooking.customer.passportPhotoUrl ? (
-                      <a
-                        href={selectedBooking.customer.passportPhotoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:underline"
-                        title="Открыть фото паспорта"
-                      >
-                        ✓ Паспорт
-                      </a>
+                      <div className="inline-flex items-center rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 overflow-hidden shadow-sm">
+                        <a
+                          href={selectedBooking.customer.passportPhotoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-1.5 py-0.5 hover:bg-blue-500/30 transition flex items-center space-x-1"
+                          title="Открыть фото паспорта в новом окне"
+                        >
+                          <span>✓ Паспорт</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => downloadDocument(
+                            selectedBooking.customer.passportPhotoUrl,
+                            `Паспорт_${selectedBooking.customer.fullName?.replace(/\s+/g, "_")}_Бронь_${selectedBooking.bookingNumber}`
+                          )}
+                          className="px-1.5 py-0.5 bg-blue-600/40 hover:bg-blue-600 text-white border-l border-blue-500/30 transition flex items-center"
+                          title="Скачать фото паспорта"
+                        >
+                          <Download className="w-3 h-3" />
+                        </button>
+                      </div>
                     ) : (
                       <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-500 border border-slate-800">
                         Паспорт —
@@ -1633,15 +1648,28 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                     )}
 
                     {selectedBooking.customer.driverLicensePhotoUrl ? (
-                      <a
-                        href={selectedBooking.customer.driverLicensePhotoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:underline"
-                        title="Открыть лицевую сторону прав"
-                      >
-                        ✓ Права (лицо)
-                      </a>
+                      <div className="inline-flex items-center rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 overflow-hidden shadow-sm">
+                        <a
+                          href={selectedBooking.customer.driverLicensePhotoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-1.5 py-0.5 hover:bg-purple-500/30 transition flex items-center space-x-1"
+                          title="Открыть лицевую сторону прав в новом окне"
+                        >
+                          <span>✓ Права (лицо)</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => downloadDocument(
+                            selectedBooking.customer.driverLicensePhotoUrl,
+                            `Права_Лицо_${selectedBooking.customer.fullName?.replace(/\s+/g, "_")}_Бронь_${selectedBooking.bookingNumber}`
+                          )}
+                          className="px-1.5 py-0.5 bg-purple-600/40 hover:bg-purple-600 text-white border-l border-purple-500/30 transition flex items-center"
+                          title="Скачать фото прав (лицо)"
+                        >
+                          <Download className="w-3 h-3" />
+                        </button>
+                      </div>
                     ) : (
                       <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-500 border border-slate-800">
                         Права (лицо) —
@@ -1649,15 +1677,28 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                     )}
 
                     {selectedBooking.customer.driverLicenseBackPhotoUrl ? (
-                      <a
-                        href={selectedBooking.customer.driverLicenseBackPhotoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:underline"
-                        title="Открыть оборотную сторону прав"
-                      >
-                        ✓ Права (оборот)
-                      </a>
+                      <div className="inline-flex items-center rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 overflow-hidden shadow-sm">
+                        <a
+                          href={selectedBooking.customer.driverLicenseBackPhotoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-1.5 py-0.5 hover:bg-cyan-500/30 transition flex items-center space-x-1"
+                          title="Открыть оборотную сторону прав в новом окне"
+                        >
+                          <span>✓ Права (оборот)</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => downloadDocument(
+                            selectedBooking.customer.driverLicenseBackPhotoUrl,
+                            `Права_Оборот_${selectedBooking.customer.fullName?.replace(/\s+/g, "_")}_Бронь_${selectedBooking.bookingNumber}`
+                          )}
+                          className="px-1.5 py-0.5 bg-cyan-600/40 hover:bg-cyan-600 text-white border-l border-cyan-500/30 transition flex items-center"
+                          title="Скачать фото прав (оборот)"
+                        >
+                          <Download className="w-3 h-3" />
+                        </button>
+                      </div>
                     ) : (
                       <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-500 border border-slate-800">
                         Права (оборот) —
@@ -1665,15 +1706,69 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsDocsUploadModalOpen(true)}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gradient-to-r from-amber-500/20 to-purple-500/20 hover:from-amber-500/30 hover:to-purple-500/30 text-amber-300 border border-amber-500/40 flex items-center space-x-1 transition shadow-sm active:scale-95"
-                  >
-                    <Sparkles className="w-3 h-3 text-amber-400" />
-                    <span>🪪 Загрузить / Распознать</span>
-                  </button>
+                  <div className="flex items-center space-x-1.5">
+                    {(selectedBooking.customer.passportPhotoUrl || selectedBooking.customer.driverLicensePhotoUrl || selectedBooking.customer.driverLicenseBackPhotoUrl) && (
+                      <button
+                        type="button"
+                        onClick={() => downloadAllCustomerDocuments(
+                          selectedBooking.customer,
+                          selectedBooking.bookingNumber,
+                          selectedBooking.additionalDrivers
+                        )}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 flex items-center space-x-1 transition shadow-sm active:scale-95"
+                        title="Скачать все прикрепленные документы клиента на устройство в один клик"
+                      >
+                        <Download className="w-3 h-3 text-emerald-400" />
+                        <span>📥 Скачать все</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setIsDocsUploadModalOpen(true)}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gradient-to-r from-amber-500/20 to-purple-500/20 hover:from-amber-500/30 hover:to-purple-500/30 text-amber-300 border border-amber-500/40 flex items-center space-x-1 transition shadow-sm active:scale-95"
+                    >
+                      <Sparkles className="w-3 h-3 text-amber-400" />
+                      <span>🪪 Загрузить / Распознать</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Additional Drivers Documents (if any) */}
+                {selectedBooking.additionalDrivers && selectedBooking.additionalDrivers.length > 0 && (
+                  <div className="pt-2 border-t border-slate-800/60 space-y-1">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Документы второго водителя:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedBooking.additionalDrivers.map((driver: any, idx: number) => (
+                        <div key={idx} className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-800 flex items-center space-x-2 text-[11px]">
+                          <span className="font-bold text-slate-200">{driver.fullName}</span>
+                          {driver.licensePhotoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => downloadDocument(driver.licensePhotoUrl, `Права_Лицо_${driver.fullName?.replace(/\s+/g, "_")}`)}
+                              className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/40 text-[10px] font-bold flex items-center space-x-1"
+                              title="Скачать права дополнительного водителя (лицо)"
+                            >
+                              <span>Права (лицо)</span>
+                              <Download className="w-2.5 h-2.5 text-purple-300" />
+                            </button>
+                          )}
+                          {driver.licenseBackPhotoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => downloadDocument(driver.licenseBackPhotoUrl, `Права_Оборот_${driver.fullName?.replace(/\s+/g, "_")}`)}
+                              className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/40 text-[10px] font-bold flex items-center space-x-1"
+                              title="Скачать права дополнительного водителя (оборот)"
+                            >
+                              <span>Права (оборот)</span>
+                              <Download className="w-2.5 h-2.5 text-cyan-300" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Dates & Place */}

@@ -17,7 +17,9 @@ import {
   RotateCcw,
   AlertTriangle,
   X,
+  Download,
 } from "lucide-react";
+import { downloadDocument, downloadAllCustomerDocuments } from "@/lib/downloadDocument";
 import { ReturnWizardModal } from "./ReturnWizardModal";
 import { ManagerTasksSection } from "./ManagerTasksSection";
 
@@ -389,6 +391,70 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
                           <p className="text-slate-400 pl-5 text-[10px]">
                             Паспорт: {booking.customer.passportNumber} | Права: {booking.customer.driverLicenseNumber}
                           </p>
+
+                          {/* Client Documents with Download options */}
+                          {(booking.customer.passportPhotoUrl || booking.customer.driverLicensePhotoUrl || booking.customer.driverLicenseBackPhotoUrl) && (
+                            <div className="pt-1.5 pl-5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-1.5 text-[10px]">
+                              <div className="flex items-center space-x-1 flex-wrap gap-y-1">
+                                {booking.customer.passportPhotoUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadDocument(
+                                      booking.customer.passportPhotoUrl,
+                                      `Паспорт_${booking.customer.fullName?.replace(/\s+/g, "_")}_Бронь_${booking.bookingNumber}`
+                                    )}
+                                    className="px-1.5 py-0.5 rounded font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30 transition flex items-center space-x-1"
+                                    title="Скачать фото паспорта"
+                                  >
+                                    <span>Паспорт</span>
+                                    <Download className="w-2.5 h-2.5" />
+                                  </button>
+                                )}
+                                {booking.customer.driverLicensePhotoUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadDocument(
+                                      booking.customer.driverLicensePhotoUrl,
+                                      `Права_Лицо_${booking.customer.fullName?.replace(/\s+/g, "_")}_Бронь_${booking.bookingNumber}`
+                                    )}
+                                    className="px-1.5 py-0.5 rounded font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 transition flex items-center space-x-1"
+                                    title="Скачать фото прав (лицо)"
+                                  >
+                                    <span>Права (лицо)</span>
+                                    <Download className="w-2.5 h-2.5" />
+                                  </button>
+                                )}
+                                {booking.customer.driverLicenseBackPhotoUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadDocument(
+                                      booking.customer.driverLicenseBackPhotoUrl,
+                                      `Права_Оборот_${booking.customer.fullName?.replace(/\s+/g, "_")}_Бронь_${booking.bookingNumber}`
+                                    )}
+                                    className="px-1.5 py-0.5 rounded font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition flex items-center space-x-1"
+                                    title="Скачать фото прав (оборот)"
+                                  >
+                                    <span>Права (оборот)</span>
+                                    <Download className="w-2.5 h-2.5" />
+                                  </button>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => downloadAllCustomerDocuments(
+                                  booking.customer,
+                                  booking.bookingNumber,
+                                  booking.additionalDrivers
+                                )}
+                                className="px-2 py-0.5 rounded font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900 transition flex items-center space-x-1"
+                                title="Скачать все документы клиента"
+                              >
+                                <Download className="w-2.5 h-2.5 text-emerald-400" />
+                                <span>📥 Все документы</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
 

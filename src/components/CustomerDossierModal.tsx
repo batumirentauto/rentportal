@@ -22,7 +22,9 @@ import {
   Clock,
   Car,
   Coins,
+  Download,
 } from "lucide-react";
+import { downloadDocument, downloadAllCustomerDocuments } from "@/lib/downloadDocument";
 
 interface CustomerDossierModalProps {
   isOpen: boolean;
@@ -503,30 +505,49 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  disabled={isRecognizing || (!passportPhotoUrl && !driverLicensePhotoUrl && !driverLicenseBackPhotoUrl)}
-                  onClick={handleRunAiOcr}
-                  className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 transition shrink-0 ${
-                    isRecognizing
-                      ? "bg-amber-600 text-white cursor-wait"
-                      : !passportPhotoUrl && !driverLicensePhotoUrl && !driverLicenseBackPhotoUrl
-                      ? "bg-slate-800 text-slate-500 cursor-not-allowed"
-                      : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-md active:scale-95"
-                  }`}
-                >
-                  {isRecognizing ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Считывание ИИ...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>✨ Считать через ИИ</span>
-                    </>
+                <div className="flex items-center space-x-2">
+                  {(passportPhotoUrl || driverLicensePhotoUrl || driverLicenseBackPhotoUrl) && (
+                    <button
+                      type="button"
+                      onClick={() => downloadAllCustomerDocuments({
+                        fullName,
+                        passportPhotoUrl,
+                        driverLicensePhotoUrl,
+                        driverLicenseBackPhotoUrl,
+                      })}
+                      className="px-3 py-1.5 rounded-xl font-bold text-xs bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 flex items-center space-x-1.5 transition shadow-sm active:scale-95 shrink-0"
+                      title="Скачать все прикрепленные документы клиента"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>📥 Скачать все</span>
+                    </button>
                   )}
-                </button>
+
+                  <button
+                    type="button"
+                    disabled={isRecognizing || (!passportPhotoUrl && !driverLicensePhotoUrl && !driverLicenseBackPhotoUrl)}
+                    onClick={handleRunAiOcr}
+                    className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 transition shrink-0 ${
+                      isRecognizing
+                        ? "bg-amber-600 text-white cursor-wait"
+                        : !passportPhotoUrl && !driverLicensePhotoUrl && !driverLicenseBackPhotoUrl
+                        ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                        : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-md active:scale-95"
+                    }`}
+                  >
+                    {isRecognizing ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Считывание ИИ...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>✨ Считать через ИИ</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Grid of 3 document slots */}
@@ -570,19 +591,30 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
                       </div>
 
                       <div className="flex items-center justify-between text-[11px]">
-                        <label className="text-blue-400 hover:text-blue-300 font-bold cursor-pointer">
-                          <span>Заменить</span>
-                          <input
-                            type="file"
-                            accept="image/*,.pdf"
-                            className="hidden"
-                            disabled={uploadingSlot === "passport"}
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) handleUploadFile(f, "passport");
-                            }}
-                          />
-                        </label>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => downloadDocument(passportPhotoUrl, `Паспорт_${fullName?.replace(/\s+/g, "_")}`)}
+                            className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center space-x-1"
+                            title="Скачать фото паспорта"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Скачать</span>
+                          </button>
+                          <label className="text-blue-400 hover:text-blue-300 font-bold cursor-pointer">
+                            <span>Заменить</span>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="hidden"
+                              disabled={uploadingSlot === "passport"}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadFile(f, "passport");
+                              }}
+                            />
+                          </label>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setPassportPhotoUrl(null)}
@@ -659,19 +691,30 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
                       </div>
 
                       <div className="flex items-center justify-between text-[11px]">
-                        <label className="text-purple-400 hover:text-purple-300 font-bold cursor-pointer">
-                          <span>Заменить</span>
-                          <input
-                            type="file"
-                            accept="image/*,.pdf"
-                            className="hidden"
-                            disabled={uploadingSlot === "licenseFront"}
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) handleUploadFile(f, "licenseFront");
-                            }}
-                          />
-                        </label>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => downloadDocument(driverLicensePhotoUrl, `Права_Лицо_${fullName?.replace(/\s+/g, "_")}`)}
+                            className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center space-x-1"
+                            title="Скачать фото прав (лицо)"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Скачать</span>
+                          </button>
+                          <label className="text-purple-400 hover:text-purple-300 font-bold cursor-pointer">
+                            <span>Заменить</span>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="hidden"
+                              disabled={uploadingSlot === "licenseFront"}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadFile(f, "licenseFront");
+                              }}
+                            />
+                          </label>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setDriverLicensePhotoUrl(null)}
@@ -748,19 +791,30 @@ export const CustomerDossierModal: React.FC<CustomerDossierModalProps> = ({
                       </div>
 
                       <div className="flex items-center justify-between text-[11px]">
-                        <label className="text-cyan-400 hover:text-cyan-300 font-bold cursor-pointer">
-                          <span>Заменить</span>
-                          <input
-                            type="file"
-                            accept="image/*,.pdf"
-                            className="hidden"
-                            disabled={uploadingSlot === "licenseBack"}
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) handleUploadFile(f, "licenseBack");
-                            }}
-                          />
-                        </label>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => downloadDocument(driverLicenseBackPhotoUrl, `Права_Оборот_${fullName?.replace(/\s+/g, "_")}`)}
+                            className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center space-x-1"
+                            title="Скачать фото прав (оборот)"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Скачать</span>
+                          </button>
+                          <label className="text-cyan-400 hover:text-cyan-300 font-bold cursor-pointer">
+                            <span>Заменить</span>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="hidden"
+                              disabled={uploadingSlot === "licenseBack"}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadFile(f, "licenseBack");
+                              }}
+                            />
+                          </label>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setDriverLicenseBackPhotoUrl(null)}

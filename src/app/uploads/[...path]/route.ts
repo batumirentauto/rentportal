@@ -25,8 +25,9 @@ export async function GET(
 
     const url = new URL(request.url);
     const isDownload = url.searchParams.get("download") === "1";
+    const customFileName = url.searchParams.get("filename");
     const rawFileName = pathSegments[pathSegments.length - 1] || "file";
-    const displayFileName = rawFileName.replace(/^[a-zA-Z0-9_-]+-\d{10,}-/, "") || rawFileName;
+    const displayFileName = customFileName || rawFileName.replace(/^[a-zA-Z0-9_-]+-\d{10,}-/, "") || rawFileName;
 
     // Support HTTP Range requests (crucial for iOS Safari / Mobile video playback)
     if (range && !isDownload) {
@@ -63,7 +64,8 @@ export async function GET(
     };
 
     if (isDownload) {
-      headers["Content-Disposition"] = `attachment; filename="${encodeURIComponent(displayFileName)}"`;
+      const safeFileName = displayFileName.replace(/["\r\n]/g, "_");
+      headers["Content-Disposition"] = `attachment; filename="${encodeURIComponent(safeFileName)}"; filename*=UTF-8''${encodeURIComponent(safeFileName)}`;
     }
 
     return new NextResponse(fileBuffer, {
