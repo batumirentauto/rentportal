@@ -81,6 +81,30 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
   const [editOwnerId, setEditOwnerId] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("ACTIVE");
   const [editCopiedLink, setEditCopiedLink] = useState<boolean>(false);
+  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+
+  const handleCopyUserPersonalLink = (u: TeamUser) => {
+    if (typeof window === "undefined") return;
+    let url = window.location.origin;
+
+    if (u.role === "OWNER") {
+      url = `${window.location.origin}/?role=owner${u.ownerId ? `&ownerId=${u.ownerId}` : ""}`;
+    } else if (u.role === "MANAGER") {
+      const cityParam = u.cityCode && u.cityCode !== "ALL" ? `&city=${u.cityCode}` : "";
+      url = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(u.fullName)}`;
+    } else if (u.role === "TECHNICIAN") {
+      const cityParam = u.cityCode && u.cityCode !== "ALL" ? `&city=${u.cityCode}` : "";
+      url = `${window.location.origin}/?role=manager${cityParam}`;
+    } else {
+      url = `${window.location.origin}/?role=executive`;
+    }
+
+    navigator.clipboard.writeText(url);
+    setCopiedUserId(u.id);
+    setTimeout(() => {
+      setCopiedUserId((prev) => (prev === u.id ? null : prev));
+    }, 2500);
+  };
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -680,31 +704,42 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end space-x-1.5">
-                          {u.role === "MANAGER" && (
-                            <button
-                              onClick={() => {
-                                const cityParam = u.cityCode && u.cityCode !== "ALL" ? `&city=${u.cityCode}` : "";
-                                const url = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(u.fullName)}`;
-                                navigator.clipboard.writeText(url);
-                                alert(`✓ Персональная ссылка для входа менеджера «${u.fullName}» скопирована!\n\n${url}\n\nОтправьте её менеджеру в Telegram или WhatsApp.`);
-                              }}
-                              className="px-2 py-1 bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-500/40 rounded-lg text-[11px] font-bold transition flex items-center space-x-1"
-                              title="Скопировать ссылку для входа менеджера с ограниченным доступом"
-                            >
-                              <Key className="w-3 h-3 text-blue-400" />
-                              <span className="hidden xl:inline">Ссылка</span>
-                            </button>
-                          )}
+                          {/* Direct copy personal access link from team list */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyUserPersonalLink(u);
+                            }}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 shrink-0 border ${
+                              copiedUserId === u.id
+                                ? "bg-emerald-600 text-white border-emerald-500 shadow-md ring-1 ring-emerald-400"
+                                : "bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border-slate-700 hover:border-amber-500/50"
+                            }`}
+                            title={`Скопировать персональную ссылку доступа для «${u.fullName}»`}
+                          >
+                            {copiedUserId === u.id ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
+                                <span>Скопировано!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Key className="w-3.5 h-3.5 text-amber-400" />
+                                <span>Ссылка</span>
+                              </>
+                            )}
+                          </button>
 
                           {u.role === "OWNER" && u.ownerId && onSwitchToOwner && (
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 onSwitchToOwner(u.ownerId!);
                               }}
-                              className="px-2.5 py-1 bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-bold transition flex items-center space-x-1"
+                              className="px-2.5 py-1.5 bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-bold transition flex items-center space-x-1 shrink-0"
                               title="Войти в личный кабинет этого владельца"
                             >
-                              <ExternalLink className="w-3 h-3" />
+                              <ExternalLink className="w-3.5 h-3.5" />
                               <span>Кабинет</span>
                             </button>
                           )}
