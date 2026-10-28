@@ -177,6 +177,28 @@ export async function POST(request: Request) {
         );
       }
 
+      let finalOwnerId = ownerId || null;
+      if (role === "OWNER") {
+        let co = null;
+        if (finalOwnerId) {
+          co = await prisma.carOwner.findUnique({ where: { id: finalOwnerId } });
+        }
+        if (!co) {
+          co = await prisma.carOwner.findFirst({ where: { fullName: fullName.trim() } });
+        }
+        if (!co) {
+          co = await prisma.carOwner.create({
+            data: {
+              fullName: fullName.trim(),
+              phone: phone ? phone.trim() : "+995-500-00-00",
+              email: email ? email.trim() : null,
+              whatsapp: phone ? phone.trim() : null,
+            },
+          });
+        }
+        finalOwnerId = co.id;
+      }
+
       const updated = await prisma.user.update({
         where: { id: userId },
         data: {
@@ -187,7 +209,7 @@ export async function POST(request: Request) {
           role,
           status,
           cityId: cityId || null,
-          ownerId: ownerId || null,
+          ownerId: finalOwnerId,
         },
         include: {
           city: true,
@@ -280,17 +302,39 @@ export async function POST(request: Request) {
       );
     }
 
+    let finalOwnerId = ownerId || null;
+    if (role === "OWNER") {
+      let co = null;
+      if (finalOwnerId) {
+        co = await prisma.carOwner.findUnique({ where: { id: finalOwnerId } });
+      }
+      if (!co) {
+        co = await prisma.carOwner.findFirst({ where: { fullName: fullName.trim() } });
+      }
+      if (!co) {
+        co = await prisma.carOwner.create({
+          data: {
+            fullName: fullName.trim(),
+            phone: phone ? phone.trim() : "+995-500-00-00",
+            email: email ? email.trim() : null,
+            whatsapp: phone ? phone.trim() : null,
+          },
+        });
+      }
+      finalOwnerId = co.id;
+    }
+
     // 4. Создание нового пользователя
     const newUser = await prisma.user.create({
       data: {
-        fullName,
+        fullName: fullName.trim(),
         phone: phone || null,
         email: email || null,
         telegram: telegram || null,
         role,
         status,
         cityId: cityId || null,
-        ownerId: ownerId || null,
+        ownerId: finalOwnerId,
       },
       include: {
         city: true,

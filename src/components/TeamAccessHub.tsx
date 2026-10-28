@@ -228,6 +228,11 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
           const managerUrl = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(addedName)}`;
           navigator.clipboard.writeText(managerUrl);
           alert(`🎉 Менеджер «${addedName}» успешно добавлен!\n\nДля него автоматически открыта персональная наличная касса по филиалу.\n\nСсылка для доступа менеджера скопирована в буфер обмена:\n${managerUrl}\n\nОтправьте её менеджеру в Telegram или WhatsApp. Разделы (VIP-приложение, инвесторы, отчетность, руководство) для него будут полностью скрыты.`);
+        } else if (newRole === "OWNER" && typeof window !== "undefined") {
+          const ownerId = json.user?.ownerId;
+          const ownerUrl = `${window.location.origin}/?role=owner${ownerId ? `&ownerId=${ownerId}` : ""}`;
+          navigator.clipboard.writeText(ownerUrl);
+          alert(`🎉 Владелец авто (инвестор) «${addedName}» успешно добавлен в команду и личный кабинет инвесторов!\n\nПерсональная ссылка для инвестора скопирована в буфер обмена:\n${ownerUrl}\n\nТеперь вы можете перейти в «Кабинет инвесторов» и привязать к нему автомобили.`);
         }
       } else {
         alert(json.error || "Ошибка создания пользователя");

@@ -7,6 +7,38 @@ export async function GET(request: Request) {
     const ownerIdParam = searchParams.get("ownerId");
     const period = searchParams.get("period") || "thisMonth"; // "thisMonth", "30days", "all"
 
+    // 0. Auto-sync: Ensure any User with role "OWNER" has a corresponding CarOwner record
+    try {
+      const unlinkedOwnerUsers = await prisma.user.findMany({
+        where: {
+          role: "OWNER",
+          OR: [{ ownerId: null }, { ownerId: "" }],
+        },
+      });
+
+      for (const u of unlinkedOwnerUsers) {
+        let carOwner = await prisma.carOwner.findFirst({
+          where: { fullName: u.fullName.trim() },
+        });
+        if (!carOwner) {
+          carOwner = await prisma.carOwner.create({
+            data: {
+              fullName: u.fullName.trim(),
+              phone: u.phone ? u.phone.trim() : "+995-500-00-00",
+              email: u.email ? u.email.trim() : null,
+              whatsapp: u.phone ? u.phone.trim() : null,
+            },
+          });
+        }
+        await prisma.user.update({
+          where: { id: u.id },
+          data: { ownerId: carOwner.id },
+        });
+      }
+    } catch (syncErr) {
+      console.warn("Owner auto-sync warning:", syncErr);
+    }
+
     // 1. Fetch all owners for switcher
     const allOwners = await prisma.carOwner.findMany({
       include: {
@@ -365,6 +397,36 @@ export async function POST(request: Request) {
             defaultOwnerDailyRate: Number(defaultOwnerDailyRate) || 25,
           },
         });
+      }
+
+      // Синхронизируем пользователя в реестре Команды
+      try {
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { ownerId: newOwner.id },
+              { fullName: newOwner.fullName, role: "OWNER" },
+            ],
+          },
+        });
+        if (!existingUser) {
+          await prisma.user.create({
+            data: {
+              fullName: newOwner.fullName,
+              phone: newOwner.phone,
+              email: newOwner.email,
+              role: "OWNER",
+              ownerId: newOwner.id,
+            },
+          });
+        } else if (!existingUser.ownerId) {
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: { ownerId: newOwner.id },
+          });
+        }
+      } catch (userSyncErr) {
+        console.warn("User sync warning:", userSyncErr);
       }
 
       return NextResponse.json({

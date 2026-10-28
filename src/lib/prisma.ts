@@ -380,6 +380,32 @@ function ensureSchema(dbFilePath: string) {
       console.warn("[Database] Mock data cleanup notice:", cleanErr);
     }
 
+    // 7. Auto-sync: Any User with role = 'OWNER' who is missing a CarOwner record
+    try {
+      const unlinkedOwnerUsers = db.prepare(`
+        SELECT id, fullName, phone, email 
+        FROM "User" 
+        WHERE role = 'OWNER' AND (ownerId IS NULL OR ownerId = '')
+      `).all();
+
+      for (const u of unlinkedOwnerUsers) {
+        let existingCo = db.prepare(`SELECT id FROM "CarOwner" WHERE fullName = ?`).get(u.fullName);
+        let coId = existingCo ? existingCo.id : null;
+        if (!coId) {
+          const newId = "co_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+          db.prepare(`
+            INSERT INTO "CarOwner" (id, fullName, phone, email, whatsapp, createdAt, updatedAt)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          `).run(newId, u.fullName, u.phone || "+995-500-00-00", u.email || null, u.phone || null);
+          coId = newId;
+          console.log(`[Database] Auto-created CarOwner profile for team member "${u.fullName}"`);
+        }
+        db.prepare(`UPDATE "User" SET ownerId = ? WHERE id = ?`).run(coId, u.id);
+      }
+    } catch (autoSyncErr) {
+      console.warn("[Database] Owner auto-sync notice:", autoSyncErr);
+    }
+
     db.close();
   } catch (e) {
     console.warn("[Database] Schema check/migration notice:", e);
