@@ -127,11 +127,22 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
       const json = await res.json();
       if (json.success) {
         setIsAddUserOpen(false);
+        const addedName = newFullName;
+        const targetCity = cities.find((c) => c.id === newCityId);
+        const cityParam = targetCity?.code && targetCity.code !== "ALL" ? `&city=${targetCity.code}` : "";
         setNewFullName("");
         setNewPhone("");
         setNewEmail("");
         setNewTelegram("");
+        setNewCityId("");
+        setNewOwnerId("");
         await fetchTeamData();
+
+        if (newRole === "MANAGER" && typeof window !== "undefined") {
+          const managerUrl = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(addedName)}`;
+          navigator.clipboard.writeText(managerUrl);
+          alert(`🎉 Менеджер «${addedName}» успешно добавлен!\n\nДля него автоматически открыта персональная наличная касса по филиалу.\n\nСсылка для доступа менеджера скопирована в буфер обмена:\n${managerUrl}\n\nОтправьте её менеджеру в Telegram или WhatsApp. Разделы (VIP-приложение, инвесторы, отчетность, руководство) для него будут полностью скрыты.`);
+        }
       } else {
         alert(json.error || "Ошибка создания пользователя");
       }
@@ -603,6 +614,22 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end space-x-1.5">
+                          {u.role === "MANAGER" && (
+                            <button
+                              onClick={() => {
+                                const cityParam = u.cityCode && u.cityCode !== "ALL" ? `&city=${u.cityCode}` : "";
+                                const url = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(u.fullName)}`;
+                                navigator.clipboard.writeText(url);
+                                alert(`✓ Персональная ссылка для входа менеджера «${u.fullName}» скопирована!\n\n${url}\n\nОтправьте её менеджеру в Telegram или WhatsApp.`);
+                              }}
+                              className="px-2 py-1 bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-500/40 rounded-lg text-[11px] font-bold transition flex items-center space-x-1"
+                              title="Скопировать ссылку для входа менеджера с ограниченным доступом"
+                            >
+                              <Key className="w-3 h-3 text-blue-400" />
+                              <span className="hidden xl:inline">Ссылка</span>
+                            </button>
+                          )}
+
                           {u.role === "OWNER" && u.ownerId && onSwitchToOwner && (
                             <button
                               onClick={() => {
@@ -746,8 +773,48 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
 
               {/* City or Owner linking */}
               {newRole === "MANAGER" && (
-                <div className="bg-amber-950/40 border border-amber-500/30 p-2.5 rounded-xl text-[11px] text-amber-300 leading-relaxed">
-                  💡 <strong>Автоматическое открытие кассы:</strong> Для этого менеджера будет автоматически открыта отдельная персональная наличная касса. Даже если в городе уже работают другие менеджеры, у каждого из них будет своя касса и отдельный учёт в отчётности.
+                <div className="space-y-2">
+                  <div className="bg-slate-950 p-3 rounded-2xl border border-blue-500/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-blue-300 font-extrabold text-[11px] uppercase tracking-wider flex items-center space-x-1">
+                        <span>🛡️ Настроенный функционал менеджера:</span>
+                      </span>
+                      <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40">
+                        Ограниченный доступ
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800 space-y-0.5">
+                        <span className="text-emerald-400 font-bold block">✓ РАЗРЕШЕНО (В работе):</span>
+                        <div className="text-slate-300 space-y-0.5">
+                          <p>• 📅 Шахматка занятости</p>
+                          <p>• 📋 Выдачи & Прием ТС (акты)</p>
+                          <p>• 🚗 Каталог автопарка</p>
+                          <p>• 👥 Клиенты CRM</p>
+                          <p>• 💰 Касса смены & залоги</p>
+                          <p>• 🧼 Учет моек (20/10 ₾)</p>
+                          <p>• 🛠️ ТО & Сервис</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800 space-y-0.5">
+                        <span className="text-rose-400 font-bold block">⛔ СКРЫТО (Заблокировано):</span>
+                        <div className="text-slate-400 space-y-0.5">
+                          <p>• 🔒 VIP Приложение</p>
+                          <p>• 🔒 Кабинет инвесторов</p>
+                          <p>• 🔒 Финансовые отчеты</p>
+                          <p>• 🔒 Кабинет руководства</p>
+                          <p>• 🔒 Управление командой</p>
+                          <p>• 🔒 Бэкапы базы данных</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-amber-950/30 border border-amber-500/30 p-2.5 rounded-xl text-[11px] text-amber-300 leading-relaxed">
+                    💡 <strong>Автоматическая касса и ссылка:</strong> После создания для менеджера будет открыта персональная касса наличных в его городе и сгенерирована готовая ссылка для входа в систему.
+                  </div>
                 </div>
               )}
 

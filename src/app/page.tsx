@@ -43,11 +43,15 @@ export default function Home() {
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<"EXECUTIVE" | "MANAGER">("EXECUTIVE");
 
-  // Check role from URL query param or localStorage
+  // Check role and city from URL query param or localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const urlRole = params.get("role")?.toUpperCase();
+      const urlCity = params.get("city")?.toUpperCase();
+      if (urlCity && ["TBS", "BUS", "KUT"].includes(urlCity)) {
+        setSelectedCity(urlCity);
+      }
       if (urlRole === "MANAGER") {
         setUserRole("MANAGER");
         localStorage.setItem("rentportal_role", "MANAGER");
