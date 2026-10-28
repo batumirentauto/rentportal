@@ -168,6 +168,76 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: "Пользователь удалён" });
     }
 
+    // 2.5. Полное редактирование карточки сотрудника
+    if (action === "UPDATE_USER" && userId) {
+      if (!fullName || !fullName.trim()) {
+        return NextResponse.json(
+          { success: false, error: "Имя сотрудника / владельца обязательно" },
+          { status: 400 }
+        );
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          fullName: fullName.trim(),
+          phone: phone ? phone.trim() : null,
+          email: email ? email.trim() : null,
+          telegram: telegram ? telegram.trim().replace(/^@/, "") : null,
+          role,
+          status,
+          cityId: cityId || null,
+          ownerId: ownerId || null,
+        },
+        include: {
+          city: true,
+          owner: true,
+        },
+      });
+
+      // Если сотруднику назначена роль менеджера и у него еще нет кассы — создаем
+      if (role === "MANAGER") {
+        const existingCash = await prisma.financialAccount.findFirst({
+          where: { userId },
+        });
+        if (!existingCash) {
+          const cityName = updated.city?.nameRu || "Грузия";
+          await prisma.financialAccount.create({
+            data: {
+              name: `Касса нал: ${updated.fullName} (${cityName})`,
+              type: "CASH",
+              currency: "GEL",
+              bankName: "NONE",
+              cityId: updated.cityId || undefined,
+              userId: updated.id,
+              managerResponsible: updated.fullName,
+              isManagerCash: true,
+              initialBalance: 0,
+              currentBalance: 0,
+            },
+          });
+        }
+      }
+
+      // Если это владелец (инвестор) и у него есть связанный CarOwner, синхронизируем имя и телефон
+      if (updated.ownerId) {
+        await prisma.carOwner.update({
+          where: { id: updated.ownerId },
+          data: {
+            fullName: updated.fullName,
+            phone: updated.phone || undefined,
+            email: updated.email || undefined,
+          },
+        }).catch(() => {});
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Данные сотрудника «${updated.fullName}» успешно сохранены!`,
+        user: updated,
+      });
+    }
+
     // 3. Обновление роли
     if (action === "UPDATE_ROLE" && userId) {
       const updated = await prisma.user.update({

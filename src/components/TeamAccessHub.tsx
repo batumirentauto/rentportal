@@ -69,7 +69,69 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
   const [newRole, setNewRole] = useState<string>("MANAGER");
   const [newCityId, setNewCityId] = useState<string>("");
   const [newOwnerId, setNewOwnerId] = useState<string>("");
+
+  // Modal: Edit user card
+  const [editingUser, setEditingUser] = useState<TeamUser | null>(null);
+  const [editFullName, setEditFullName] = useState<string>("");
+  const [editPhone, setEditPhone] = useState<string>("");
+  const [editEmail, setEditEmail] = useState<string>("");
+  const [editTelegram, setEditTelegram] = useState<string>("");
+  const [editRole, setEditRole] = useState<string>("MANAGER");
+  const [editCityId, setEditCityId] = useState<string>("");
+  const [editOwnerId, setEditOwnerId] = useState<string>("");
+  const [editStatus, setEditStatus] = useState<string>("ACTIVE");
+  const [editCopiedLink, setEditCopiedLink] = useState<boolean>(false);
+
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const handleOpenEditUser = (user: TeamUser) => {
+    setEditingUser(user);
+    setEditFullName(user.fullName || "");
+    setEditPhone(user.phone || "");
+    setEditEmail(user.email || "");
+    setEditTelegram(user.telegram || "");
+    setEditRole(user.role || "MANAGER");
+    setEditCityId(user.cityId || "");
+    setEditOwnerId(user.ownerId || "");
+    setEditStatus(user.status || "ACTIVE");
+    setEditCopiedLink(false);
+  };
+
+  const handleSaveEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser || !editFullName.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "UPDATE_USER",
+          userId: editingUser.id,
+          fullName: editFullName,
+          phone: editPhone,
+          email: editEmail,
+          telegram: editTelegram,
+          role: editRole,
+          cityId: editCityId || undefined,
+          ownerId: editRole === "OWNER" ? editOwnerId || undefined : undefined,
+          status: editStatus,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setEditingUser(null);
+        await fetchTeamData();
+      } else {
+        alert(json.error || "Ошибка сохранения данных пользователя");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Ошибка сети при сохранении");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Active Simulated Persona
   const [simulatedPersona, setSimulatedPersona] = useState<string>("EXECUTIVE");
@@ -535,12 +597,16 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
                     <tr key={u.id} className="hover:bg-slate-800/40 transition">
                       {/* Name & Contacts */}
                       <td className="py-3 px-4">
-                        <div className="flex items-center space-x-2.5">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-700 to-slate-800 flex items-center justify-center font-black text-white text-xs border border-slate-700">
+                        <div
+                          onClick={() => handleOpenEditUser(u)}
+                          className="flex items-center space-x-2.5 cursor-pointer group"
+                          title="Нажмите, чтобы редактировать карточку сотрудника"
+                        >
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-700 to-slate-800 group-hover:from-amber-500 group-hover:to-orange-500 flex items-center justify-center font-black text-white group-hover:text-slate-950 text-xs border border-slate-700 group-hover:border-amber-400 transition shadow">
                             {u.fullName.charAt(0)}
                           </div>
                           <div>
-                            <span className="font-bold text-white text-xs block">
+                            <span className="font-bold text-white group-hover:text-amber-400 text-xs block transition">
                               {u.fullName}
                             </span>
                             <span className="text-[11px] text-slate-400 block font-mono">
@@ -644,9 +710,9 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
                           )}
 
                           <button
-                            onClick={() => handleUpdateRole(u.id, u.role)}
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition"
-                            title="Сменить роль"
+                            onClick={() => handleOpenEditUser(u)}
+                            className="p-1.5 bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 rounded-lg transition"
+                            title="Редактировать карточку сотрудника"
                           >
                             <Edit3 className="w-3.5 h-3.5 text-amber-400" />
                           </button>
@@ -871,6 +937,249 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
                 >
                   {isSubmitting ? "Создание..." : "Создать участника"}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 6. MODAL: EDIT USER CARD */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-3">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-slate-950 font-black text-lg shadow">
+                  {editFullName.charAt(0) || "U"}
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded">
+                      Карточка сотрудника
+                    </span>
+                  </div>
+                  <h3 className="font-extrabold text-base text-white mt-0.5">
+                    {editFullName || "Редактирование"}
+                  </h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingUser(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditUser} className="space-y-4 text-xs">
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">
+                  ФИО сотрудника или инвестора *
+                </label>
+                <input
+                  type="text"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="Имя Фамилия"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-bold focus:outline-none focus:border-amber-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    Телефон (WhatsApp):
+                  </label>
+                  <input
+                    type="text"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="+995 5..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    Telegram username:
+                  </label>
+                  <input
+                    type="text"
+                    value={editTelegram}
+                    onChange={(e) => setEditTelegram(e.target.value)}
+                    placeholder="@username"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">
+                  Email (опционально):
+                </label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* Role selection */}
+              <div>
+                <label className="text-slate-300 font-bold block mb-1.5">
+                  Роль и права доступа в системе:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "EXECUTIVE", label: "👔 Руководитель", desc: "Полный доступ, отчеты, мультикасса" },
+                    { id: "MANAGER", label: "💼 Менеджер филиала", desc: "Выдачи, прием авто, касса смены, мойки" },
+                    { id: "OWNER", label: "🚗 Владелец авто", desc: "Изолированный кабинет инвестора" },
+                    { id: "TECHNICIAN", label: "🔧 Механик / СТО", desc: "Журнал ТО, масло, техпаспорта" },
+                  ].map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setEditRole(r.id)}
+                      className={`p-2.5 rounded-xl border text-left transition ${
+                        editRole === r.id
+                          ? "bg-amber-950/60 border-amber-500 text-white shadow ring-1 ring-amber-500/50"
+                          : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700"
+                      }`}
+                    >
+                      <span className="font-bold text-xs block text-slate-200">
+                        {r.label}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block">
+                        {r.desc}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* City selector */}
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">
+                  Основной филиал / Город работы:
+                </label>
+                <select
+                  value={editCityId}
+                  onChange={(e) => setEditCityId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-medium focus:outline-none focus:border-amber-500"
+                >
+                  <option value="">Все филиалы (Грузия)</option>
+                  {cities.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nameRu} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Owner linking */}
+              {editRole === "OWNER" && (
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    Связанный профиль инвестора (реестр авто):
+                  </label>
+                  <select
+                    value={editOwnerId}
+                    onChange={(e) => setEditOwnerId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-medium focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="">-- Выберите профиль владельца --</option>
+                    {owners.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.fullName} ({o.carsCount} авто) • {o.phone}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Manager quick link button and info */}
+              {editRole === "MANAGER" && (
+                <div className="bg-blue-950/30 border border-blue-500/30 p-3 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-blue-300 font-bold">
+                      💼 Персональная ссылка для менеджера:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetCity = cities.find((c) => c.id === editCityId);
+                        const cityParam = targetCity?.code && targetCity.code !== "ALL" ? `&city=${targetCity.code}` : "";
+                        const url = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(editFullName)}`;
+                        navigator.clipboard.writeText(url);
+                        setEditCopiedLink(true);
+                        setTimeout(() => setEditCopiedLink(false), 3000);
+                      }}
+                      className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-[11px] transition shadow"
+                    >
+                      {editCopiedLink ? "✓ Скопировано!" : "Скопировать ссылку"}
+                    </button>
+                  </div>
+                  {editingUser.cashAccountName && (
+                    <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                      <span>Привязанная касса: {editingUser.cashAccountName}</span>
+                      <span className="font-mono font-bold text-amber-400">
+                        {editingUser.cashBalanceGEL || 0} ₾
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Status */}
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">
+                  Статус аккаунта:
+                </label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-medium focus:outline-none focus:border-amber-500"
+                >
+                  <option value="ACTIVE">✓ Активен (доступ разрешен)</option>
+                  <option value="SUSPENDED">⛔ Заблокирован (доступ приостановлен)</option>
+                </select>
+              </div>
+
+              {/* Footer Buttons */}
+              <div className="pt-2 flex items-center justify-between border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`Вы уверены, что хотите удалить сотрудника «${editingUser.fullName}»?`)) {
+                      handleDeleteUser(editingUser.id, editingUser.fullName);
+                      setEditingUser(null);
+                    }
+                  }}
+                  className="px-3 py-2 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-xl font-bold transition flex items-center space-x-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Удалить</span>
+                </button>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingUser(null)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl font-black shadow-lg transition"
+                  >
+                    {isSubmitting ? "Сохранение..." : "Сохранить изменения"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
