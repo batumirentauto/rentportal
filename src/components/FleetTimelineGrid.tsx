@@ -40,8 +40,10 @@ import {
   Minimize2,
   Coins,
   Download,
+  Printer,
 } from "lucide-react";
 import { downloadDocument, downloadAllCustomerDocuments } from "@/lib/downloadDocument";
+import { ContractModal } from "./ContractModal";
 import { NewBookingModal } from "./NewBookingModal";
 import { ShareOfferModal } from "./ShareOfferModal";
 import { StopUnblockModal } from "./StopUnblockModal";
@@ -141,7 +143,16 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
   const [isExtensionModalOpen, setIsExtensionModalOpen] = useState<boolean>(false);
   const [isCarSwapModalOpen, setIsCarSwapModalOpen] = useState<boolean>(false);
   const [isAdditionalDriversModalOpen, setIsAdditionalDriversModalOpen] = useState<boolean>(false);
+  const [internalContractBooking, setInternalContractBooking] = useState<any | null>(null);
   const [copiedPopupPhone, setCopiedPopupPhone] = useState<boolean>(false);
+
+  const handleOpenContract = (booking: any) => {
+    if (onOpenContract) {
+      onOpenContract(booking);
+    } else {
+      setInternalContractBooking(booking);
+    }
+  };
 
   const handleCopyPopupPhone = (text: string) => {
     if (!text) return;
@@ -2167,6 +2178,43 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 </button>
               )}
 
+              {/* 📄 Договор аренды автомобиля к печати (A4 / PDF) */}
+              <div className="bg-gradient-to-r from-amber-950/40 via-slate-950 to-amber-950/30 p-3 rounded-xl border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start space-x-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h4 className="text-xs font-black text-white">Договор аренды автомобиля</h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        {selectedBooking.contractLanguage === "GE"
+                          ? "🇬🇪 ქართული"
+                          : selectedBooking.contractLanguage === "EN"
+                          ? "🇬🇧 English"
+                          : "🇷🇺 Русский"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Готов к просмотру и моментальной печати (A4 / PDF)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 self-end sm:self-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleOpenContract(selectedBooking);
+                    }}
+                    className="flex items-center space-x-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg shadow-amber-950/40 transition active:scale-95"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Печать договора (A4 / PDF)</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Secondary Actions Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <button
@@ -2209,19 +2257,16 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                   <span>Возврат денег</span>
                 </button>
 
-                {onOpenContract && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenContract(selectedBooking);
-                      setSelectedBooking(null);
-                    }}
-                    className="flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Договор</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenContract(selectedBooking);
+                  }}
+                  className="flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition"
+                >
+                  <FileText className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Договор</span>
+                </button>
 
                 <button
                   type="button"
@@ -2541,6 +2586,14 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
       )}
 
 
+
+      {/* Printable Contract Modal */}
+      {internalContractBooking && (
+        <ContractModal
+          booking={internalContractBooking}
+          onClose={() => setInternalContractBooking(null)}
+        />
+      )}
 
     </div>
   );

@@ -229,6 +229,7 @@ export async function POST(request: Request) {
         extrasTotal: Number(extrasTotal || 0),
         totalAmount: Number(totalAmount),
         depositAmount: body.depositAmount !== undefined ? Number(body.depositAmount) : 0,
+        contractLanguage: body.contractLanguage || "RU",
         source: body.source || source || "WHATSAPP",
         currency: currency || "GEL",
         ownerDailyRate: effectiveOwnerDailyRate,
@@ -241,6 +242,7 @@ export async function POST(request: Request) {
               create: body.additionalDrivers.slice(0, 4).map((d: any) => ({
                 fullName: d.fullName?.trim() || "Дополнительный водитель",
                 licenseNumber: d.licenseNumber?.trim() || null,
+                licenseExpiryDate: d.licenseExpiryDate?.trim() || null,
                 phone: d.phone?.trim() || null,
                 birthDate: d.birthDate?.trim() || null,
                 licensePhotoUrl: d.licensePhotoUrl || null,

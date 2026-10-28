@@ -152,6 +152,9 @@ export async function PATCH(
     if (body.depositAmount !== undefined) {
       bookingUpdateData.depositAmount = Number(body.depositAmount);
     }
+    if (body.contractLanguage !== undefined) {
+      bookingUpdateData.contractLanguage = body.contractLanguage;
+    }
     if (body.source !== undefined) {
       bookingUpdateData.source = body.source;
     }

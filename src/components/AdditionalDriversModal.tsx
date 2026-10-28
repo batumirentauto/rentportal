@@ -21,6 +21,7 @@ interface AdditionalDriver {
   id: string;
   fullName: string;
   licenseNumber?: string | null;
+  licenseExpiryDate?: string | null;
   phone?: string | null;
   birthDate?: string | null;
   licensePhotoUrl?: string | null;
@@ -50,6 +51,7 @@ export const AdditionalDriversModal: React.FC<AdditionalDriversModalProps> = ({
   // New driver form state
   const [fullName, setFullName] = useState<string>("");
   const [licenseNumber, setLicenseNumber] = useState<string>("");
+  const [licenseExpiryDate, setLicenseExpiryDate] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [birthDate, setBirthDate] = useState<string>("");
   const [licensePhotoUrl, setLicensePhotoUrl] = useState<string>("");
@@ -91,6 +93,7 @@ export const AdditionalDriversModal: React.FC<AdditionalDriversModalProps> = ({
   const resetForm = () => {
     setFullName("");
     setLicenseNumber("");
+    setLicenseExpiryDate("");
     setPhone("");
     setBirthDate("");
     setLicensePhotoUrl("");
@@ -156,6 +159,7 @@ export const AdditionalDriversModal: React.FC<AdditionalDriversModalProps> = ({
         body: JSON.stringify({
           fullName: fullName.trim(),
           licenseNumber: licenseNumber.trim() || undefined,
+          licenseExpiryDate: licenseExpiryDate.trim() || undefined,
           phone: phone.trim() || undefined,
           birthDate: birthDate.trim() || undefined,
           licensePhotoUrl: licensePhotoUrl || undefined,
@@ -313,6 +317,19 @@ export const AdditionalDriversModal: React.FC<AdditionalDriversModalProps> = ({
                   placeholder="№ прав (например: 99XX 123456)"
                   value={licenseNumber}
                   onChange={(e) => setLicenseNumber(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">
+                  Срок действия прав:
+                </label>
+                <input
+                  type="text"
+                  placeholder="до 2030 г. (ДД.ММ.ГГГГ)"
+                  value={licenseExpiryDate}
+                  onChange={(e) => setLicenseExpiryDate(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -498,6 +515,11 @@ export const AdditionalDriversModal: React.FC<AdditionalDriversModalProps> = ({
                       {d.licenseNumber && (
                         <span>
                           Удостоверение: <strong className="font-mono text-slate-300">{d.licenseNumber}</strong>
+                        </span>
+                      )}
+                      {d.licenseExpiryDate && (
+                        <span>
+                          Срок: <strong className="font-mono text-slate-300">{d.licenseExpiryDate}</strong>
                         </span>
                       )}
                       {d.phone && <span>Тел: {d.phone}</span>}

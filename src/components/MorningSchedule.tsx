@@ -554,10 +554,19 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
                         {/* Contract button */}
                         <button
                           onClick={() => onOpenContract(booking)}
-                          className="w-full flex items-center justify-center space-x-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold border border-slate-700 transition"
+                          className="w-full flex items-center justify-between py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold border border-amber-500/30 transition shadow"
                         >
-                          <FileText className="w-4 h-4 text-amber-400" />
-                          <span>Договор (Печать)</span>
+                          <span className="flex items-center space-x-1.5">
+                            <FileText className="w-4 h-4 text-amber-400" />
+                            <span>Договор аренды (A4 / PDF)</span>
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                            {booking.contractLanguage === "GE"
+                              ? "🇬🇪 GE"
+                              : booking.contractLanguage === "EN"
+                              ? "🇬🇧 EN"
+                              : "🇷🇺 RU"}
+                          </span>
                         </button>
 
                         {/* Handover Wizard Button */}

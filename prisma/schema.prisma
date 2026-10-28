@@ -211,6 +211,7 @@ model Booking {
   extrasTotal         Float           @default(0) // Доп. оборудование
   totalAmount         Float           // Общая сумма к оплате
   depositAmount       Float           @default(0) // Залог/депозит (по умолчанию 0 GEL)
+  contractLanguage    String?         @default("RU") // Язык договора: "RU", "GE", "EN"
   source              String?         @default("WHATSAPP") // Источник заявки: "WHATSAPP", "TELEGRAM", "INSTAGRAM", "PHONE", "WEBSITE"
   currency            String          @default("GEL") // Базовая валюта расчёта: GEL / USD / EUR
   ownerDailyRate      Float?          // Фиксированная/скорректированная ставка владельца за день
@@ -676,6 +677,7 @@ model AdditionalDriver {
   booking             Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   fullName            String
   licenseNumber       String?
+  licenseExpiryDate   String?  // Срок действия ВУ водителя
   phone               String?
   birthDate           String?
   licensePhotoUrl     String?  // Фото лицевой стороны прав

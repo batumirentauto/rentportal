@@ -241,9 +241,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [acknowledgedBlacklist, setAcknowledgedBlacklist] = useState<boolean>(false);
 
   // Additional Drivers (до 4х с фото прав)
+  const [contractLanguage, setContractLanguage] = useState<"RU" | "GE" | "EN">("RU");
   const [additionalDrivers, setAdditionalDrivers] = useState<Array<{
     fullName: string;
     licenseNumber: string;
+    licenseExpiryDate?: string;
     phone: string;
     licensePhotoUrl: string;
     licenseBackPhotoUrl: string;
@@ -253,7 +255,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     if (additionalDrivers.length >= 4) return;
     setAdditionalDrivers((prev) => [
       ...prev,
-      { fullName: "", licenseNumber: "", phone: "", licensePhotoUrl: "", licenseBackPhotoUrl: "" },
+      { fullName: "", licenseNumber: "", licenseExpiryDate: "", phone: "", licensePhotoUrl: "", licenseBackPhotoUrl: "" },
     ]);
   };
 
@@ -684,6 +686,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           extrasTotal: 0,
           totalAmount,
           depositAmount: Number(depositAmount),
+          contractLanguage,
           source: bookingSource,
           currency: "GEL",
           ownerDailyRate,
@@ -1309,7 +1312,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                       <div>
                         <label className="text-[10px] text-slate-400 block mb-0.5">ФИО водителя *:</label>
                         <input
@@ -1328,6 +1331,16 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                           value={driver.licenseNumber}
                           onChange={(e) => handleUpdateAdditionalDriver(idx, "licenseNumber", e.target.value)}
                           placeholder="99XX 123456"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Срок действия прав:</label>
+                        <input
+                          type="text"
+                          value={driver.licenseExpiryDate || ""}
+                          onChange={(e) => handleUpdateAdditionalDriver(idx, "licenseExpiryDate", e.target.value)}
+                          placeholder="до 2030 г."
                           className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
                         />
                       </div>
@@ -1429,6 +1442,61 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* 📄 ЯЗЫК ДОГОВОРА АРЕНДЫ (ДЛЯ АВТОГЕНЕРАЦИИ И ПЕЧАТИ) */}
+          <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-200 flex items-center space-x-1.5 text-xs">
+                <FileText className="w-4 h-4 text-amber-400" />
+                <span>Язык контракта к печати (A4 / PDF):</span>
+              </span>
+              <span className="text-[11px] text-amber-400/90 font-medium">
+                Генерируется в карточке бронирования
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setContractLanguage("RU")}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 border ${
+                  contractLanguage === "RU"
+                    ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black ring-2 ring-amber-500/30"
+                    : "bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-500 hover:text-white"
+                }`}
+              >
+                <span className="text-base">🇷🇺</span>
+                <span>Русский (RU)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setContractLanguage("GE")}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 border ${
+                  contractLanguage === "GE"
+                    ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black ring-2 ring-amber-500/30"
+                    : "bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-500 hover:text-white"
+                }`}
+              >
+                <span className="text-base">🇬🇪</span>
+                <span>ქართული (GE)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setContractLanguage("EN")}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 border ${
+                  contractLanguage === "EN"
+                    ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black ring-2 ring-amber-500/30"
+                    : "bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-500 hover:text-white"
+                }`}
+              >
+                <span className="text-base">🇬🇧</span>
+                <span>English (EN)</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 italic">
+              💡 При создании брони контракт на выбранном языке будет сразу готов к просмотру и печати в 1 клик.
+            </p>
           </div>
 
           {/* Dates & Duration & Times */}

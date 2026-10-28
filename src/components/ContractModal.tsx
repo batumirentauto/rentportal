@@ -6,15 +6,18 @@ import { X, Printer, FileText, Globe, Check, Edit3 } from "lucide-react";
 interface ContractModalProps {
   booking: any;
   onClose: () => void;
+  initialLang?: "RU" | "GE" | "EN";
 }
 
 type Language = "RU" | "GE" | "EN";
 
-export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }) => {
-  const [lang, setLang] = useState<Language>("RU");
+export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, initialLang }) => {
+  const [lang, setLang] = useState<Language>(
+    initialLang || booking?.contractLanguage || "RU"
+  );
   const [paymentType, setPaymentType] = useState<"CASH" | "CARD" | "MIXED">("CASH");
   const [editableDeposit, setEditableDeposit] = useState<number>(
-    booking?.depositAmount || 300
+    booking?.depositAmount !== undefined ? Number(booking.depositAmount) : 300
   );
   const [editableDailyRate, setEditableDailyRate] = useState<number>(
     booking?.dailyRate || 100
@@ -26,16 +29,28 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
   const [secondDriverLicense, setSecondDriverLicense] = useState<string>("");
   const [showEditControls, setShowEditControls] = useState<boolean>(false);
 
+  const handleSelectLanguage = (newLang: Language) => {
+    setLang(newLang);
+    if (booking?.id) {
+      fetch(`/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contractLanguage: newLang }),
+      }).catch((e) => console.warn("Failed to persist contract language:", e));
+    }
+  };
+
   const additionalDriversList: any[] = booking?.additionalDrivers || [];
   const getExtraDriver = (idx: number) => {
     if (additionalDriversList[idx]) {
       return {
         name: additionalDriversList[idx].fullName,
         license: additionalDriversList[idx].licenseNumber || "—",
+        expiry: additionalDriversList[idx].licenseExpiryDate || "",
       };
     }
     if (idx === 0 && secondDriverName) {
-      return { name: secondDriverName, license: secondDriverLicense || "—" };
+      return { name: secondDriverName, license: secondDriverLicense || "—", expiry: "" };
     }
     return null;
   };
@@ -113,6 +128,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
   const customerName = booking.customer.fullName || "—";
   const customerPassport = `${booking.customer.passportNumber || "—"} (${booking.customer.passportCountry || "Международный"})`;
   const customerLicense = booking.customer.driverLicenseNumber || "—";
+  const customerExpiry = booking?.customer?.driverLicenseExpiry || "";
   const customerPhone = booking.customer.phone || booking.customer.whatsapp || "—";
 
   return (
@@ -136,7 +152,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
           {/* Language Switcher Tabs */}
           <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
             <button
-              onClick={() => setLang("RU")}
+              onClick={() => handleSelectLanguage("RU")}
               className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 ${
                 lang === "RU"
                   ? "bg-amber-500 text-slate-950 font-black shadow"
@@ -146,7 +162,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
               <span>🇷🇺 Русский</span>
             </button>
             <button
-              onClick={() => setLang("GE")}
+              onClick={() => handleSelectLanguage("GE")}
               className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 ${
                 lang === "GE"
                   ? "bg-amber-500 text-slate-950 font-black shadow"
@@ -156,7 +172,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
               <span>🇬🇪 ქართული</span>
             </button>
             <button
-              onClick={() => setLang("EN")}
+              onClick={() => handleSelectLanguage("EN")}
               className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 ${
                 lang === "EN"
                   ? "bg-amber-500 text-slate-950 font-black shadow"
@@ -465,16 +481,21 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
                       <td className="border border-slate-300 p-1 text-center font-bold">1.</td>
                       <td className="border border-slate-300 p-1 font-semibold">{customerName}</td>
                       <td className="border border-slate-300 p-1 font-mono">{customerLicense}</td>
-                      <td className="border border-slate-300 p-1">Действительно</td>
+                      <td className="border border-slate-300 p-1">
+                        {customerExpiry ? (customerExpiry.toLowerCase().startsWith("до") ? customerExpiry : `до ${customerExpiry}`) : "Действительно"}
+                      </td>
                     </tr>
                     {[0, 1, 2, 3].map((idx) => {
                       const d = getExtraDriver(idx);
+                      const dExpiry = d?.expiry
+                        ? (d.expiry.toLowerCase().startsWith("до") ? d.expiry : `до ${d.expiry}`)
+                        : (d ? "Действительно" : (idx === 0 ? "—" : "\u00A0"));
                       return (
                         <tr key={idx}>
                           <td className="border border-slate-300 p-1 text-center font-bold">{idx + 2}.</td>
                           <td className="border border-slate-300 p-1">{d?.name || (idx === 0 ? "—" : "\u00A0")}</td>
                           <td className="border border-slate-300 p-1 font-mono">{d?.license || (idx === 0 ? "—" : "\u00A0")}</td>
-                          <td className="border border-slate-300 p-1">{d ? "Действительно" : (idx === 0 ? "—" : "\u00A0")}</td>
+                          <td className="border border-slate-300 p-1">{dExpiry}</td>
                         </tr>
                       );
                     })}
@@ -496,9 +517,12 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
                   </div>
                   <div className="space-y-0.5 pl-2">
                     <p className="font-bold text-slate-800 uppercase text-[10px]">Арендатор:</p>
-                    <p>ФИО: <strong className="underline">{customerName}</strong></p>
-                    <p>Документ, удост. личность: <strong>{customerPassport}</strong></p>
-                    <p>Контакты: <strong className="font-mono">{customerPhone}</strong></p>
+                    <p>Фамилия, Имя: <strong className="underline">{customerName}</strong></p>
+                    <p>Паспорт: <strong>{customerPassport}</strong></p>
+                    {customerLicense && customerLicense !== "—" && (
+                      <p>Водительское удостоверение: <strong className="font-mono">{customerLicense}</strong></p>
+                    )}
+                    <p>Контактный телефон: <strong className="font-mono">{customerPhone}</strong></p>
                   </div>
                 </div>
               </div>
@@ -779,16 +803,21 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
                       <td className="border border-slate-300 p-1 text-center font-bold">1.</td>
                       <td className="border border-slate-300 p-1 font-semibold">{customerName}</td>
                       <td className="border border-slate-300 p-1 font-mono">{customerLicense}</td>
-                      <td className="border border-slate-300 p-1">მოქმედი</td>
+                      <td className="border border-slate-300 p-1">
+                        {customerExpiry ? `${customerExpiry}-მდე` : "მოქმედი"}
+                      </td>
                     </tr>
                     {[0, 1, 2, 3].map((idx) => {
                       const d = getExtraDriver(idx);
+                      const dExpiry = d?.expiry
+                        ? `${d.expiry}-მდე`
+                        : (d ? "მოქმედი" : (idx === 0 ? "—" : "\u00A0"));
                       return (
                         <tr key={idx}>
                           <td className="border border-slate-300 p-1 text-center font-bold">{idx + 2}.</td>
                           <td className="border border-slate-300 p-1">{d?.name || (idx === 0 ? "—" : "\u00A0")}</td>
                           <td className="border border-slate-300 p-1 font-mono">{d?.license || (idx === 0 ? "—" : "\u00A0")}</td>
-                          <td className="border border-slate-300 p-1">{d ? "მოქმედი" : (idx === 0 ? "—" : "\u00A0")}</td>
+                          <td className="border border-slate-300 p-1">{dExpiry}</td>
                         </tr>
                       );
                     })}
@@ -811,8 +840,11 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
                   <div className="space-y-0.5 pl-2">
                     <p className="font-bold text-slate-800 uppercase text-[10px]">მეიჯარე:</p>
                     <p>გვარი, სახელი: <strong className="underline">{customerName}</strong></p>
-                    <p>პირადობის დამადასტურებელი დოკუმენტი: <strong>{customerPassport}</strong></p>
-                    <p>კონტაქტი: <strong className="font-mono">{customerPhone}</strong></p>
+                    <p>პასპორტი: <strong>{customerPassport}</strong></p>
+                    {customerLicense && customerLicense !== "—" && (
+                      <p>მართვის მოწმობა: <strong className="font-mono">{customerLicense}</strong></p>
+                    )}
+                    <p>საკონტაქტო ტელეფონი: <strong className="font-mono">{customerPhone}</strong></p>
                   </div>
                 </div>
               </div>
@@ -1091,16 +1123,21 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
                       <td className="border border-slate-300 p-1 text-center font-bold">1.</td>
                       <td className="border border-slate-300 p-1 font-semibold">{customerName}</td>
                       <td className="border border-slate-300 p-1 font-mono">{customerLicense}</td>
-                      <td className="border border-slate-300 p-1">Valid</td>
+                      <td className="border border-slate-300 p-1">
+                        {customerExpiry ? `Until ${customerExpiry}` : "Valid"}
+                      </td>
                     </tr>
                     {[0, 1, 2, 3].map((idx) => {
                       const d = getExtraDriver(idx);
+                      const dExpiry = d?.expiry
+                        ? `Until ${d.expiry}`
+                        : (d ? "Valid" : (idx === 0 ? "—" : "\u00A0"));
                       return (
                         <tr key={idx}>
                           <td className="border border-slate-300 p-1 text-center font-bold">{idx + 2}.</td>
                           <td className="border border-slate-300 p-1">{d?.name || (idx === 0 ? "—" : "\u00A0")}</td>
                           <td className="border border-slate-300 p-1 font-mono">{d?.license || (idx === 0 ? "—" : "\u00A0")}</td>
-                          <td className="border border-slate-300 p-1">{d ? "Valid" : (idx === 0 ? "—" : "\u00A0")}</td>
+                          <td className="border border-slate-300 p-1">{dExpiry}</td>
                         </tr>
                       );
                     })}
@@ -1123,7 +1160,10 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose }
                   <div className="space-y-0.5 pl-2">
                     <p className="font-bold text-slate-800 uppercase text-[10px]">Renter:</p>
                     <p>Full Name: <strong className="underline">{customerName}</strong></p>
-                    <p>ID / Passport: <strong>{customerPassport}</strong></p>
+                    <p>Passport / ID: <strong>{customerPassport}</strong></p>
+                    {customerLicense && customerLicense !== "—" && (
+                      <p>Driver License: <strong className="font-mono">{customerLicense}</strong></p>
+                    )}
                     <p>Contacts: <strong className="font-mono">{customerPhone}</strong></p>
                   </div>
                 </div>

@@ -313,6 +313,18 @@ function ensureSchema(dbFilePath: string) {
       if (!bookingColNames.has("notes")) {
         db.exec("ALTER TABLE Booking ADD COLUMN notes TEXT");
       }
+      if (!bookingColNames.has("contractLanguage")) {
+        db.exec("ALTER TABLE Booking ADD COLUMN contractLanguage TEXT DEFAULT 'RU'");
+      }
+    } catch {}
+
+    // 3.1 Check AdditionalDriver table columns
+    try {
+      const driverColumns = db.prepare("PRAGMA table_info(AdditionalDriver)").all();
+      const driverColNames = new Set(driverColumns.map((c: any) => c.name));
+      if (!driverColNames.has("licenseExpiryDate")) {
+        db.exec("ALTER TABLE AdditionalDriver ADD COLUMN licenseExpiryDate TEXT");
+      }
     } catch {}
 
     // 4. Check Customer table columns

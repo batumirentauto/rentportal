@@ -32,6 +32,7 @@ export async function POST(
     const {
       fullName,
       licenseNumber,
+      licenseExpiryDate,
       phone,
       birthDate,
       licensePhotoUrl,
@@ -63,6 +64,7 @@ export async function POST(
         bookingId: id,
         fullName: fullName.trim(),
         licenseNumber: licenseNumber?.trim() || null,
+        licenseExpiryDate: licenseExpiryDate?.trim() || null,
         phone: phone?.trim() || null,
         birthDate: birthDate?.trim() || null,
         licensePhotoUrl: licensePhotoUrl || null,

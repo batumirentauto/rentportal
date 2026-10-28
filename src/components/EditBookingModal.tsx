@@ -21,8 +21,11 @@ import {
   Copy,
   Check,
   Download,
+  FileText,
+  Printer,
 } from "lucide-react";
 import { downloadDocument, downloadAllCustomerDocuments } from "@/lib/downloadDocument";
+import { ContractModal } from "./ContractModal";
 import { AdditionalDriversModal } from "./AdditionalDriversModal";
 import { BookingRefundModal } from "./BookingRefundModal";
 import { BookingExtensionModal } from "./BookingExtensionModal";
@@ -97,6 +100,10 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   const [depositAmount, setDepositAmount] = useState<number>(
     booking?.depositAmount !== undefined ? Number(booking.depositAmount) : 0
   );
+  const [contractLanguage, setContractLanguage] = useState<"RU" | "GE" | "EN">(
+    booking?.contractLanguage || "RU"
+  );
+  const [isContractOpen, setIsContractOpen] = useState<boolean>(false);
   const [totalAmount, setTotalAmount] = useState<number>(booking?.totalAmount || 195);
   const [ownerDailyRate, setOwnerDailyRate] = useState<number>(booking?.ownerDailyRate || 25);
   const [bookingSource, setBookingSource] = useState<string>(booking?.source || "WHATSAPP");
@@ -170,6 +177,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     setDeliveryFee(booking.deliveryFee || 0);
     setExtrasTotal(booking.extrasTotal || 0);
     setDepositAmount(booking.depositAmount !== undefined ? Number(booking.depositAmount) : 0);
+    setContractLanguage(booking.contractLanguage || "RU");
     setTotalAmount(booking.totalAmount || 0);
     setOwnerDailyRate(booking.ownerDailyRate || 25);
     setBookingSource(booking.source || "WHATSAPP");
@@ -334,6 +342,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         extrasTotal,
         totalAmount,
         depositAmount,
+        contractLanguage,
         source: bookingSource,
         ownerDailyRate,
         ownerTotalPayout: ownerDailyRate * rentalDays,
@@ -1056,6 +1065,74 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             </div>
           </div>
 
+          {/* 📄 ДОГОВОР АРЕНДЫ (ЯЗЫК И ПЕЧАТЬ A4/PDF) */}
+          <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-4 h-4 text-amber-400" />
+                <span className="font-bold text-white text-xs uppercase tracking-wide">
+                  Договор аренды автомобиля
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  № {booking.bookingNumber}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsContractOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-lg text-xs shadow-md transition active:scale-95 self-start sm:self-auto"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Печать / Просмотр договора</span>
+              </button>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-slate-400 block mb-1 font-semibold">
+                Язык контракта к печати:
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setContractLanguage("RU")}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 border ${
+                    contractLanguage === "RU"
+                      ? "bg-amber-500 text-slate-950 border-amber-400 shadow font-black"
+                      : "bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-500 hover:text-white"
+                  }`}
+                >
+                  <span>🇷🇺</span>
+                  <span>Русский</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContractLanguage("GE")}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 border ${
+                    contractLanguage === "GE"
+                      ? "bg-amber-500 text-slate-950 border-amber-400 shadow font-black"
+                      : "bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-500 hover:text-white"
+                  }`}
+                >
+                  <span>🇬🇪</span>
+                  <span>ქართული</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContractLanguage("EN")}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 border ${
+                    contractLanguage === "EN"
+                      ? "bg-amber-500 text-slate-950 border-amber-400 shadow font-black"
+                      : "bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-500 hover:text-white"
+                  }`}
+                >
+                  <span>🇬🇧</span>
+                  <span>English</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* 5. STATUS & MANAGER NOTES */}
           <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1195,6 +1272,22 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               }
               onClose();
             }}
+          />
+        )}
+
+        {/* Printable Contract Modal */}
+        {isContractOpen && (
+          <ContractModal
+            booking={{
+              ...booking,
+              dailyRate,
+              rentalDays,
+              totalAmount,
+              depositAmount,
+              contractLanguage,
+            }}
+            initialLang={contractLanguage}
+            onClose={() => setIsContractOpen(false)}
           />
         )}
       </div>

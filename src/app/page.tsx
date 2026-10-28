@@ -408,6 +408,7 @@ export default function Home() {
       {contractBooking && (
         <ContractModal
           booking={contractBooking}
+          initialLang={contractBooking.contractLanguage}
           onClose={() => setContractBooking(null)}
         />
       )}
