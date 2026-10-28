@@ -57,11 +57,13 @@ const EXPENSE_CATEGORIES: { id: string; label: string; icon: string; desc: strin
 interface OwnerInvestorCabinetProps {
   initialOwnerId?: string | null;
   userRole?: "EXECUTIVE" | "MANAGER" | "OWNER";
+  onSwitchToOwnerMode?: (ownerId: string) => void;
 }
 
 export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
   initialOwnerId,
   userRole = "EXECUTIVE",
+  onSwitchToOwnerMode,
 }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -129,7 +131,8 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
     setLoading(true);
     try {
       const idToFetch = ownerId || selectedOwnerId || initialOwnerId || "";
-      const url = `/api/owners/portal?ownerId=${idToFetch}&period=${period}`;
+      const roleQuery = userRole === "OWNER" ? "&role=owner" : "";
+      const url = `/api/owners/portal?ownerId=${idToFetch}&period=${period}${roleQuery}`;
       const res = await fetch(url);
       const json = await res.json();
       if (json.success) {
@@ -147,10 +150,11 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
 
   useEffect(() => {
     fetchPortalData();
-  }, [selectedOwnerId, period]);
+  }, [selectedOwnerId, period, userRole]);
 
   // Handle Owner Switcher
   const handleSelectOwner = (id: string) => {
+    if (userRole === "OWNER") return; // Locked in owner mode
     setSelectedOwnerId(id);
   };
 
@@ -566,6 +570,18 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
               >
                 <Share2 className="w-4 h-4" />
                 <span>🔗 Ссылка инвестору</span>
+              </button>
+            )}
+
+            {/* Executive: Test View as this Investor */}
+            {userRole !== "OWNER" && selectedOwner && onSwitchToOwnerMode && (
+              <button
+                onClick={() => onSwitchToOwnerMode(selectedOwner.id)}
+                className="flex items-center space-x-1.5 px-3 py-2.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold shadow-lg transition active:scale-95"
+                title="Протестировать изолированный личный кабинет от лица этого инвестора"
+              >
+                <Lock className="w-4 h-4 text-emerald-400" />
+                <span>👁️ Вид инвестора</span>
               </button>
             )}
 

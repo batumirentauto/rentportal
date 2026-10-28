@@ -5,6 +5,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const ownerIdParam = searchParams.get("ownerId");
+    const roleParam = searchParams.get("role")?.toLowerCase();
+    const isOwnerView = roleParam === "owner";
     const period = searchParams.get("period") || "thisMonth"; // "thisMonth", "30days", "all"
 
     // 0. Auto-sync: Ensure any User with role "OWNER" has a corresponding CarOwner record
@@ -236,9 +238,13 @@ export async function GET(request: Request) {
       (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
     );
 
+    const visibleOwners = isOwnerView
+      ? allOwners.filter((o) => o.id === selectedOwnerId)
+      : allOwners;
+
     return NextResponse.json({
       success: true,
-      owners: allOwners.map((o) => ({
+      owners: visibleOwners.map((o) => ({
         id: o.id,
         fullName: o.fullName,
         phone: o.phone,
@@ -286,7 +292,7 @@ export async function GET(request: Request) {
         date: e.date,
         managerName: e.managerName,
       })),
-      fleetCars,
+      fleetCars: isOwnerView ? [] : fleetCars,
     });
   } catch (error: any) {
     if (error?.digest?.startsWith?.("NEXT_")) {

@@ -88,7 +88,14 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
     let url = window.location.origin;
 
     if (u.role === "OWNER") {
-      url = `${window.location.origin}/?role=owner${u.ownerId ? `&ownerId=${u.ownerId}` : ""}`;
+      let targetOwnerId = u.ownerId;
+      if (!targetOwnerId) {
+        const found = owners.find(
+          (o) => o.fullName?.trim().toLowerCase() === u.fullName?.trim().toLowerCase()
+        );
+        if (found) targetOwnerId = found.id;
+      }
+      url = `${window.location.origin}/?role=owner${targetOwnerId ? `&ownerId=${targetOwnerId}` : ""}`;
     } else if (u.role === "MANAGER") {
       const cityParam = u.cityCode && u.cityCode !== "ALL" ? `&city=${u.cityCode}` : "";
       url = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(u.fullName)}`;
@@ -735,19 +742,25 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
                             )}
                           </button>
 
-                          {u.role === "OWNER" && u.ownerId && onSwitchToOwner && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onSwitchToOwner(u.ownerId!);
-                              }}
-                              className="px-2.5 py-1.5 bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-bold transition flex items-center space-x-1 shrink-0"
-                              title="Войти в личный кабинет этого владельца"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              <span>Кабинет</span>
-                            </button>
-                          )}
+                          {u.role === "OWNER" && onSwitchToOwner && (() => {
+                            const targetOwnerId = u.ownerId || owners.find(
+                              (o) => o.fullName?.trim().toLowerCase() === u.fullName?.trim().toLowerCase()
+                            )?.id;
+                            if (!targetOwnerId) return null;
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSwitchToOwner(targetOwnerId);
+                                }}
+                                className="px-2.5 py-1.5 bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-bold transition flex items-center space-x-1 shrink-0"
+                                title="Войти в изолированный личный кабинет этого владельца"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>Кабинет</span>
+                              </button>
+                            );
+                          })()}
 
                           <button
                             onClick={() => handleOpenEditUser(u)}
@@ -1170,6 +1183,39 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
                       </span>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Owner (Investor) quick link button and info */}
+              {editRole === "OWNER" && (
+                <div className="bg-emerald-950/30 border border-emerald-500/30 p-3 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-emerald-300 font-bold">
+                      🚗 Изолированная ссылка для инвестора:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        let targetOwnerId = editOwnerId || editingUser.ownerId;
+                        if (!targetOwnerId) {
+                          const found = owners.find(
+                            (o) => o.fullName?.trim().toLowerCase() === editFullName.trim().toLowerCase()
+                          );
+                          if (found) targetOwnerId = found.id;
+                        }
+                        const url = `${window.location.origin}/?role=owner${targetOwnerId ? `&ownerId=${targetOwnerId}` : ""}`;
+                        navigator.clipboard.writeText(url);
+                        setEditCopiedLink(true);
+                        setTimeout(() => setEditCopiedLink(false), 3000);
+                      }}
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-[11px] transition shadow"
+                    >
+                      {editCopiedLink ? "✓ Скопировано!" : "Скопировать ссылку"}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    По этой ссылке инвестор видит только свои автомобили, начисления и выплаты. Доступ к чужим авто и компании закрыт.
+                  </p>
                 </div>
               )}
 

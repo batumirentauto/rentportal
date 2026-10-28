@@ -63,6 +63,11 @@ export default function Home() {
       if (urlRole === "OWNER") {
         setUserRole("OWNER");
         setActiveTab("owners");
+        localStorage.setItem("rentportal_role", "OWNER");
+        if (urlOwnerId) {
+          localStorage.setItem("rentportal_ownerId", urlOwnerId);
+          setOwnerIdFromUrl(urlOwnerId);
+        }
       } else if (urlRole === "MANAGER") {
         setUserRole("MANAGER");
         localStorage.setItem("rentportal_role", "MANAGER");
@@ -71,7 +76,14 @@ export default function Home() {
         localStorage.setItem("rentportal_role", "EXECUTIVE");
       } else {
         const savedRole = localStorage.getItem("rentportal_role");
-        if (savedRole === "MANAGER") {
+        if (savedRole === "OWNER") {
+          setUserRole("OWNER");
+          setActiveTab("owners");
+          const savedOwnerId = localStorage.getItem("rentportal_ownerId");
+          if (savedOwnerId) {
+            setOwnerIdFromUrl(savedOwnerId);
+          }
+        } else if (savedRole === "MANAGER") {
           setUserRole("MANAGER");
         }
       }
@@ -86,15 +98,19 @@ export default function Home() {
         url.searchParams.set("role", "manager");
         url.searchParams.delete("ownerId");
         localStorage.setItem("rentportal_role", "MANAGER");
+        localStorage.removeItem("rentportal_ownerId");
       } else if (newRole === "OWNER") {
         url.searchParams.set("role", "owner");
         if (ownerIdFromUrl) {
           url.searchParams.set("ownerId", ownerIdFromUrl);
+          localStorage.setItem("rentportal_ownerId", ownerIdFromUrl);
         }
+        localStorage.setItem("rentportal_role", "OWNER");
       } else {
         url.searchParams.delete("role");
         url.searchParams.delete("ownerId");
         localStorage.setItem("rentportal_role", "EXECUTIVE");
+        localStorage.removeItem("rentportal_ownerId");
       }
       window.history.replaceState({}, "", url.toString());
     }
@@ -321,6 +337,19 @@ export default function Home() {
               <OwnerInvestorCabinet
                 initialOwnerId={ownerIdFromUrl}
                 userRole={userRole}
+                onSwitchToOwnerMode={(ownerId) => {
+                  setOwnerIdFromUrl(ownerId);
+                  setUserRole("OWNER");
+                  setActiveTab("owners");
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("rentportal_role", "OWNER");
+                    localStorage.setItem("rentportal_ownerId", ownerId);
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("role", "owner");
+                    url.searchParams.set("ownerId", ownerId);
+                    window.history.replaceState({}, "", url.toString());
+                  }
+                }}
               />
             )}
 
@@ -353,7 +382,16 @@ export default function Home() {
               <TeamAccessHub
                 onSwitchToOwner={(ownerId) => {
                   setOwnerIdFromUrl(ownerId);
+                  setUserRole("OWNER");
                   setActiveTab("owners");
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("rentportal_role", "OWNER");
+                    localStorage.setItem("rentportal_ownerId", ownerId);
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("role", "owner");
+                    url.searchParams.set("ownerId", ownerId);
+                    window.history.replaceState({}, "", url.toString());
+                  }
                 }}
                 onSwitchToRoleTab={(tab: any) => {
                   setActiveTab(tab);
