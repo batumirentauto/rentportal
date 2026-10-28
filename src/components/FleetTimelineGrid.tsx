@@ -1489,10 +1489,15 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
 
       {/* Booking Quick View Popup Modal */}
       {selectedBooking && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedBooking(null);
+          }}
+        >
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[90dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-start justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-800 sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm -mx-1 px-1 pt-0.5">
               <div className="space-y-1">
                 <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                   <span
