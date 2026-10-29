@@ -26,6 +26,7 @@ import { AiAssistantModal } from "@/components/AiAssistantModal";
 import { RecordExpenseModal } from "@/components/RecordExpenseModal";
 import { DatabaseBackupModal } from "@/components/DatabaseBackupModal";
 import { RefreshCw, MessageSquare } from "lucide-react";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 export default function Home() {
   const [selectedCity, setSelectedCity] = useState<string>("ALL");
@@ -283,7 +284,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <LanguageProvider>
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <Header
         selectedCity={selectedCity}
         onSelectCity={(city) => setSelectedCity(city)}
@@ -513,5 +515,6 @@ export default function Home() {
         }}
       />
     </div>
+    </LanguageProvider>
   );
 }

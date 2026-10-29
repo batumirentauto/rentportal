@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { MileageInput } from "./MileageInput";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   X,
   Camera,
@@ -43,6 +44,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
   onClose,
   onComplete,
 }) => {
+  const { language, t } = useLanguage();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -257,14 +259,14 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold px-2 py-0.5 rounded">
-                АКТ ПРИЁМА-ПЕРЕДАЧИ
+                {language === "ka" ? "მიღება-ჩაბარების აქტი" : "АКТ ПРИЁМА-ПЕРЕДАЧИ"}
               </span>
               <span className="font-mono text-sm text-slate-300">
                 {booking.bookingNumber}
               </span>
             </div>
             <h2 className="text-lg font-bold text-white mt-1">
-              Выдача: {car.brand || ""} {car.model || "Автомобиль"} {car.plateNumber ? `(${car.plateNumber})` : ""}
+              {language === "ka" ? "გაცემა" : "Выдача"}: {car.brand || ""} {car.model || "Автомобиль"} {car.plateNumber ? `(${car.plateNumber})` : ""}
             </h2>
           </div>
           <button
@@ -288,8 +290,8 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 : "border-transparent text-slate-400 hover:text-white"
             }`}
           >
-            <span className="sm:hidden">1. Авто</span>
-            <span className="hidden sm:inline">1. Авто & Данные</span>
+            <span className="sm:hidden">{language === "ka" ? "1. ავტო" : "1. Авто"}</span>
+            <span className="hidden sm:inline">{language === "ka" ? "1. ავტო & მონაცემები" : "1. Авто & Данные"}</span>
             {dashboardPhoto && (
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" title="Фото топлива прикреплено" />
             )}
@@ -306,8 +308,8 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 : "border-transparent text-slate-400 hover:text-white"
             }`}
           >
-            <span className="sm:hidden">2. Опции</span>
-            <span className="hidden sm:inline">2. Оборудование</span>
+            <span className="sm:hidden">{language === "ka" ? "2. ოფციები" : "2. Опции"}</span>
+            <span className="hidden sm:inline">{language === "ka" ? "2. აღჭურვილობა" : "2. Оборудование"}</span>
           </button>
 
           <button
@@ -321,8 +323,8 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 : "border-transparent text-slate-400 hover:text-white"
             }`}
           >
-            <span className="sm:hidden">3. Доки & Видео</span>
-            <span className="hidden sm:inline">3. Доки, Видео & Топливо</span>
+            <span className="sm:hidden">{language === "ka" ? "3. დოკუმენტები" : "3. Доки & Видео"}</span>
+            <span className="hidden sm:inline">{language === "ka" ? "3. დოკუმენტები & მედია" : "3. Доки, Видео & Топливо"}</span>
             {(contractPhoto || carBodyVideo) && (
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" title="Документы/видео прикреплены" />
             )}
@@ -337,8 +339,8 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 : "border-transparent text-slate-400 hover:text-white"
             }`}
           >
-            <span className="sm:hidden">4. Оплата</span>
-            <span className="hidden sm:inline">4. Оплата & Касса</span>
+            <span className="sm:hidden">{language === "ka" ? "4. გადახდა" : "4. Оплата"}</span>
+            <span className="hidden sm:inline">{language === "ka" ? "4. გადახდა & სალარო" : "4. Оплата & Касса"}</span>
           </button>
         </div>
 
@@ -1843,7 +1845,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
               className="flex items-center space-x-1.5 px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Назад</span>
+              <span>{language === "ka" ? "უკან" : "Назад"}</span>
             </button>
           ) : (
             <button
@@ -1851,7 +1853,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
               disabled={isSubmitting}
               className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition"
             >
-              Отмена
+              {language === "ka" ? "გაუქმება" : "Отмена"}
             </button>
           )}
 
@@ -1860,7 +1862,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
               onClick={() => setCurrentStep(currentStep + 1)}
               className="flex items-center space-x-1.5 px-5 py-2.5 text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl shadow-lg transition active:scale-95"
             >
-              <span>Далее</span>
+              <span>{language === "ka" ? "შემდეგი" : "Далее"}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
@@ -1870,11 +1872,11 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
               className="flex items-center space-x-2 px-6 py-2.5 text-xs font-extrabold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 rounded-xl shadow-lg transition active:scale-95 disabled:opacity-50"
             >
               {isSubmitting ? (
-                <span>Сохранение в базу...</span>
+                <span>{language === "ka" ? "ბაზაში შენახვა..." : "Сохранение в базу..."}</span>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Выдать авто и закрыть акт</span>
+                  <span>{language === "ka" ? "ავტომობილის გაცემა და აქტის დახურვა" : "Выдать авто и закрыть акт"}</span>
                 </>
               )}
             </button>

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { calculateExtraHoursFee } from "@/lib/extra-hours";
 import { getCarTankVolume, FUEL_PRICE_95_GEL, getFuelRate, calculateFuelShortage } from "@/lib/fuelSpecs";
 import { MileageInput } from "./MileageInput";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   X,
   CheckCircle2,
@@ -49,6 +50,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   onClose,
   onCompleted,
 }) => {
+  const { language, t } = useLanguage();
   const car = booking.car;
   const handoverReport = booking.handoverReport;
 
@@ -434,21 +436,21 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                Чек-лист возврата автомобиля
+                {language === "ka" ? "ავტომობილის დაბრუნების ჩეკ-ლისტი" : "Чек-лист возврата автомобиля"}
               </span>
               <span className="text-xs text-slate-400 font-mono">№ {booking.bookingNumber}</span>
               {hasDeposit ? (
                 <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-bold">
-                  С залогом ({depositAmount} ₾)
+                  {language === "ka" ? `დეპოზიტით (${depositAmount} ₾)` : `С залогом (${depositAmount} ₾)`}
                 </span>
               ) : (
                 <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded font-bold">
-                  Без залога (0 ₾)
+                  {language === "ka" ? "დეპოზიტის გარეშე (0 ₾)" : "Без залога (0 ₾)"}
                 </span>
               )}
             </div>
             <h2 className="text-base sm:text-lg font-black text-white mt-1">
-              Осмотр, штрафы & окончательный взаиморасчет
+              {language === "ka" ? "დათვალიერება, ჯარიმები და საბოლოო ანგარიშსწორება" : "Осмотр, штрафы & окончательный взаиморасчет"}
             </h2>
           </div>
           <button
@@ -2244,7 +2246,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 disabled={isSubmitting}
                 className="px-3.5 py-2.5 text-slate-400 hover:text-white rounded-xl text-xs font-bold"
               >
-                Отмена
+                {language === "ka" ? "გაუქმება" : "Отмена"}
               </button>
 
               {willStopBlock ? (
@@ -2258,7 +2260,9 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   >
                     <Check className="w-4 h-4 text-white" />
                     <span>
-                      {recordAsDebt ? "Принять БЕЗ СТОПа (с долгом)" : "Принять БЕЗ СТОПа"}
+                      {recordAsDebt 
+                        ? (language === "ka" ? "მიღება STOP-ის გარეშე (ვალით)" : "Принять БЕЗ СТОПа (с долгом)")
+                        : (language === "ka" ? "მიღება STOP-ის გარეშე" : "Принять БЕЗ СТОПа")}
                     </span>
                   </button>
 
@@ -2271,10 +2275,10 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     <Check className="w-4 h-4" />
                     <span>
                       {isSubmitting
-                        ? "Сохранение..."
+                        ? (language === "ka" ? "შენახვა..." : "Сохранение...")
                         : recordAsDebt
-                        ? `Принять авто со СТОПом (долг ${debtAmount !== "" ? debtAmount : finalBalanceAmount} ₾)`
-                        : "Принять авто и поставить на СТОП"}
+                        ? (language === "ka" ? `მიღება STOP-ით (ვალი ${debtAmount !== "" ? debtAmount : finalBalanceAmount} ₾)` : `Принять авто со СТОПом (долг ${debtAmount !== "" ? debtAmount : finalBalanceAmount} ₾)`)
+                        : (language === "ka" ? "ავტომობილის მიღება და STOP-ზე დაყენება" : "Принять авто и поставить на СТОП")}
                     </span>
                   </button>
                 </>
@@ -2291,10 +2295,10 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <Check className="w-4 h-4" />
                   <span>
                     {isSubmitting
-                      ? "Сохранение..."
+                      ? (language === "ka" ? "შენახვა..." : "Сохранение...")
                       : recordAsDebt
-                      ? `Завершить возврат с навешиванием долга (${debtAmount !== "" ? debtAmount : finalBalanceAmount} ₾)`
-                      : "Завершить возврат и закрыть бронь"}
+                      ? (language === "ka" ? `დაბრუნების დასრულება ვალის დაფიქსირებით (${debtAmount !== "" ? debtAmount : finalBalanceAmount} ₾)` : `Завершить возврат с навешиванием долга (${debtAmount !== "" ? debtAmount : finalBalanceAmount} ₾)`)
+                      : (language === "ka" ? "დაბრუნების დასრულება და ჯავშნის დახურვა" : "Завершить возврат и закрыть бронь")}
                   </span>
                 </button>
               )}

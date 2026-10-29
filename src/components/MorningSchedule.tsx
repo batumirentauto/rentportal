@@ -22,6 +22,7 @@ import {
 import { downloadDocument, downloadAllCustomerDocuments } from "@/lib/downloadDocument";
 import { ReturnWizardModal } from "./ReturnWizardModal";
 import { ManagerTasksSection } from "./ManagerTasksSection";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MorningScheduleProps {
   bookings: any[];
@@ -44,6 +45,7 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
   onDismissNotification,
   onRefreshData,
 }) => {
+  const { language, t } = useLanguage();
   const [selectedReturnBooking, setSelectedReturnBooking] = useState<any | null>(null);
   const [decisionLoadingId, setDecisionLoadingId] = useState<string | null>(null);
 
@@ -147,27 +149,43 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
-          <span className="text-slate-400 text-xs block font-medium">Выдач в плане:</span>
+          <span className="text-slate-400 text-xs block font-medium">
+            {language === "ka" ? "გაცემები გეგმაში:" : "Выдач в плане:"}
+          </span>
           <div className="text-2xl font-black text-white mt-1">{totalToday}</div>
-          <span className="text-[10px] text-slate-500">Запланировано на смену</span>
+          <span className="text-[10px] text-slate-500">
+            {language === "ka" ? "დაგეგმილია ცვლაში" : "Запланировано на смену"}
+          </span>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
-          <span className="text-slate-400 text-xs block font-medium">Требуют мойки:</span>
+          <span className="text-slate-400 text-xs block font-medium">
+            {language === "ka" ? "სარეცხია:" : "Требуют мойки:"}
+          </span>
           <div className="text-2xl font-black text-amber-400 mt-1">{needsWashCount}</div>
-          <span className="text-[10px] text-amber-500/80">Проверьте перед выдачей</span>
+          <span className="text-[10px] text-amber-500/80">
+            {language === "ka" ? "შეამოწმეთ გაცემამდე" : "Проверьте перед выдачей"}
+          </span>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
-          <span className="text-slate-400 text-xs block font-medium">Выдано клиентам:</span>
+          <span className="text-slate-400 text-xs block font-medium">
+            {language === "ka" ? "გაცემულია კლიენტებზე:" : "Выдано клиентам:"}
+          </span>
           <div className="text-2xl font-black text-emerald-400 mt-1">{activeCount}</div>
-          <span className="text-[10px] text-emerald-500/80">В поездке по Грузии</span>
+          <span className="text-[10px] text-emerald-500/80">
+            {language === "ka" ? "მოგზაურობაშია" : "В поездке по Грузии"}
+          </span>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
-          <span className="text-slate-400 text-xs block font-medium">Новых за день:</span>
+          <span className="text-slate-400 text-xs block font-medium">
+            {language === "ka" ? "ახალი დღის განმავლობაში:" : "Новых за день:"}
+          </span>
           <div className="text-2xl font-black text-rose-400 mt-1">{newDaytimeCount}</div>
-          <span className="text-[10px] text-rose-400/80">Поступили после 09:00</span>
+          <span className="text-[10px] text-rose-400/80">
+            {language === "ka" ? "შემოვიდა 09:00-ის შემდეგ" : "Поступили после 09:00"}
+          </span>
         </div>
       </div>
 
@@ -175,9 +193,9 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-extrabold text-base text-white flex items-center space-x-2">
-            <span>График выдач автомобилей</span>
+            <span>{language === "ka" ? "ავტომობილების გაცემის გრაფიკი" : "График выдач автомобилей"}</span>
             <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-normal">
-              {bookings.length} броней
+              {bookings.length} {language === "ka" ? "ჯავშანი" : "броней"}
             </span>
           </h3>
           <span className="text-xs text-slate-400">
@@ -560,7 +578,7 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
                         >
                           <span className="flex items-center space-x-1.5">
                             <FileText className="w-4 h-4 text-amber-400" />
-                            <span>Договор аренды (A4 / PDF)</span>
+                            <span>{language === "ka" ? "საიჯარო ხელშეკრულება (A4/PDF)" : "Договор аренды (A4 / PDF)"}</span>
                           </span>
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40">
                             {booking.contractLanguage === "GE"
@@ -578,20 +596,20 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
                             className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 transition active:scale-95"
                           >
                             <Key className="w-4 h-4" />
-                            <span>Выдать авто (Чек-лист)</span>
+                            <span>{language === "ka" ? "ავტომობილის გაცემა (აქტი)" : "Выдать авто (Чек-лист)"}</span>
                           </button>
                         ) : (
                           <div className="space-y-2">
                             <div className="w-full py-1.5 px-3 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-center text-xs font-bold text-emerald-400 flex items-center justify-center space-x-1.5">
                               <CheckCircle2 className="w-4 h-4" />
-                              <span>Выдан (В поездке)</span>
+                              <span>{language === "ka" ? "გაცემულია (მოგზაურობაში)" : "Выдан (В поездке)"}</span>
                             </div>
                             <button
                               onClick={() => setSelectedReturnBooking(booking)}
                               className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-950/40 transition active:scale-95"
                             >
                               <RotateCcw className="w-4 h-4" />
-                              <span>Принять возврат (Чек-лист)</span>
+                              <span>{language === "ka" ? "ავტომობილის მიღება (დაბრუნება)" : "Принять возврат (Чек-лист)"}</span>
                             </button>
                           </div>
                         )}

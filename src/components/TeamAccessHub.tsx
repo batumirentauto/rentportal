@@ -98,7 +98,11 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
       url = `${window.location.origin}/?role=owner${targetOwnerId ? `&ownerId=${targetOwnerId}` : ""}`;
     } else if (u.role === "MANAGER") {
       const cityParam = u.cityCode && u.cityCode !== "ALL" ? `&city=${u.cityCode}` : "";
-      url = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(u.fullName)}`;
+      const isGeorgian = (u.fullName || "").toLowerCase().includes("бачо") || 
+                         (u.fullName || "").toLowerCase().includes("bacho") || 
+                         (u.fullName || "").includes("ბაჩო");
+      const langParam = isGeorgian ? "&lang=ka" : "";
+      url = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(u.fullName)}${langParam}`;
     } else if (u.role === "TECHNICIAN") {
       const cityParam = u.cityCode && u.cityCode !== "ALL" ? `&city=${u.cityCode}` : "";
       url = `${window.location.origin}/?role=manager${cityParam}`;
@@ -1165,7 +1169,11 @@ export const TeamAccessHub: React.FC<TeamAccessHubProps> = ({
                       onClick={() => {
                         const targetCity = cities.find((c) => c.id === editCityId);
                         const cityParam = targetCity?.code && targetCity.code !== "ALL" ? `&city=${targetCity.code}` : "";
-                        const url = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(editFullName)}`;
+                        const isGeorgian = (editFullName || "").toLowerCase().includes("бачо") || 
+                                           (editFullName || "").toLowerCase().includes("bacho") || 
+                                           (editFullName || "").includes("ბაჩო");
+                        const langParam = isGeorgian ? "&lang=ka" : "";
+                        const url = `${window.location.origin}/?role=manager${cityParam}&user=${encodeURIComponent(editFullName)}${langParam}`;
                         navigator.clipboard.writeText(url);
                         setEditCopiedLink(true);
                         setTimeout(() => setEditCopiedLink(false), 3000);

@@ -1,5 +1,6 @@
 import React from "react";
-import { Car, Building2, Bell, RefreshCw, PlusCircle, CheckCircle2, Receipt, MessageSquare, Database, Lock } from "lucide-react";
+import { Car, Building2, Bell, RefreshCw, PlusCircle, CheckCircle2, Receipt, MessageSquare, Database, Lock, Globe } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface HeaderProps {
   selectedCity: string;
@@ -34,6 +35,8 @@ export const Header: React.FC<HeaderProps> = ({
   currentUserName,
   onSwitchRole,
 }) => {
+  const { language, setLanguage, t } = useLanguage();
+
   React.useEffect(() => {
     const updateHeaderHeight = () => {
       const el = document.getElementById("main-app-header");
@@ -80,8 +83,8 @@ export const Header: React.FC<HeaderProps> = ({
                     : "text-slate-300 hover:text-white"
                 }`}
               >
-                <span className="hidden xl:inline">Все города</span>
-                <span className="xl:hidden">Все</span>
+                <span className="hidden xl:inline">{language === "ka" ? "ყველა ქალაქი" : "Все города"}</span>
+                <span className="xl:hidden">{t("branchAll")}</span>
               </button>
               <button
                 onClick={() => onSelectCity("TBS")}
@@ -92,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <span>🏛️</span>
-                <span>Тбилиси</span>
+                <span>{t("branchTbilisi")}</span>
                 <span className="hidden xl:inline text-[10px] opacity-75">(TBS)</span>
               </button>
               <button
@@ -104,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <span>🌊</span>
-                <span>Батуми</span>
+                <span>{t("branchBatumi")}</span>
                 <span className="hidden xl:inline text-[10px] opacity-75">(BUS)</span>
               </button>
               <button
@@ -116,23 +119,23 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <span>🌿</span>
-                <span>Кутаиси</span>
+                <span>{t("branchKutaisi")}</span>
                 <span className="hidden xl:inline text-[10px] opacity-75">(KUT)</span>
               </button>
             </div>
           )}
 
-          {/* Actions: New Booking, Record Expense, Chat, Backup, Notifications */}
+          {/* Actions: New Booking, Record Expense, Chat, Backup, Notifications, Language, Profile */}
           <div className="flex items-center justify-between md:justify-end w-full md:w-auto gap-1.5 sm:gap-2 shrink-0">
             {/* Real New Booking Button - Sticky in Header */}
             {userRole !== "OWNER" && (
               <button
                 onClick={onOpenNewBooking}
-                title="Создать новую бронь автомобиля"
+                title={language === "ka" ? "ახალი ჯავშნის შექმნა" : "Создать новую бронь автомобиля"}
                 className="flex items-center space-x-1 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl font-black shadow-md border border-amber-300/40 shrink-0 active:scale-95 transition-all"
               >
                 <PlusCircle className="w-3.5 h-3.5 text-slate-950" />
-                <span>+ Бронь</span>
+                <span>{t("btnNewBooking")}</span>
               </button>
             )}
 
@@ -140,11 +143,11 @@ export const Header: React.FC<HeaderProps> = ({
             {userRole !== "OWNER" && (
               <button
                 onClick={onOpenRecordExpense}
-                title="Зафиксировать расход (топливо, мойка, ТО, парковка)"
+                title={language === "ka" ? "ხარჯის დაფიქსირება (საწვავი, რეცხვა, სერვისი)" : "Зафиксировать расход (топливо, мойка, ТО, парковка)"}
                 className="flex items-center space-x-1 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl font-bold shadow-md shrink-0 active:scale-95 transition-all"
               >
                 <Receipt className="w-3.5 h-3.5" />
-                <span>+ Расход</span>
+                <span>{t("btnNewExpense")}</span>
               </button>
             )}
 
@@ -187,6 +190,16 @@ export const Header: React.FC<HeaderProps> = ({
                 <Database className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
               </button>
             )}
+
+            {/* Language Switcher */}
+            <button
+              onClick={() => setLanguage(language === "ka" ? "ru" : "ka")}
+              className="flex items-center space-x-1 px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition active:scale-95 shadow-sm shrink-0"
+              title={language === "ka" ? "Switch to Russian / Переключить на русский" : "ქართულზე გადართვა / Switch to Georgian"}
+            >
+              <span className="text-sm">{language === "ka" ? "🇬🇪" : "🇷🇺"}</span>
+              <span className="font-mono text-[11px] font-black">{language === "ka" ? "KA" : "RU"}</span>
+            </button>
 
             {/* Notification Bell */}
             <button
@@ -275,7 +288,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "bg-slate-800/90 text-slate-300 hover:text-white border border-slate-700/60"
               }`}
             >
-              Все
+              {t("branchAll")}
             </button>
             <button
               onClick={() => onSelectCity("TBS")}
@@ -286,7 +299,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <span>🏛️</span>
-              <span>Тбилиси</span>
+              <span>{t("branchTbilisi")}</span>
             </button>
             <button
               onClick={() => onSelectCity("BUS")}
@@ -297,7 +310,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <span>🌊</span>
-              <span>Батуми</span>
+              <span>{t("branchBatumi")}</span>
             </button>
             <button
               onClick={() => onSelectCity("KUT")}
@@ -308,7 +321,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <span>🌿</span>
-              <span>Кутаиси</span>
+              <span>{t("branchKutaisi")}</span>
             </button>
           </div>
         )}
@@ -318,10 +331,10 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center justify-between pt-1 pb-2 border-t border-slate-800/60 mt-0.5">
             <div className="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm font-bold flex items-center space-x-2">
               <span>💼</span>
-              <span>Личный кабинет инвестора — Ваши автомобили, доходы и выплаты</span>
+              <span>{t("tabOwners")} — {language === "ka" ? "თქვენი ავტომობილები, შემოსავალი და გაცემები" : "Ваши автомобили, доходы и выплаты"}</span>
             </div>
             <span className="text-[11px] text-slate-400 hidden sm:inline">
-              Доступ ограничен: только ваши автомобили
+              {language === "ka" ? "წვდომა შეზღუდულია: მხოლოდ თქვენი ავტომობილები" : "Доступ ограничен: только ваши автомобили"}
             </span>
           </div>
         ) : (
@@ -334,8 +347,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-amber-400 hover:text-amber-300 hover:bg-slate-800/50 border border-amber-500/20"
               }`}
             >
-              <span>📅 Шахматка</span>
-              <span className="hidden sm:inline">занятости</span>
+              <span>📅 {t("tabTimeline")}</span>
             </button>
 
             <button
@@ -346,8 +358,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-amber-400 hover:text-amber-300 hover:bg-slate-800/50 border border-amber-500/20"
               }`}
             >
-              <span>🚗 Автопарк</span>
-              <span className="hidden sm:inline">(Каталог)</span>
+              <span>🚗 {t("tabCatalog")}</span>
             </button>
 
             <button
@@ -358,7 +369,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-amber-300 hover:text-white hover:bg-amber-950/40 border border-amber-500/40"
               }`}
             >
-              <span>🏷️ Тарифы & Цены</span>
+              <span>🏷️ {t("tabPricing")}</span>
             </button>
 
             <button
@@ -369,8 +380,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
               }`}
             >
-              <span>📋 Выдачи</span>
-              <span className="hidden sm:inline">(утро & день)</span>
+              <span>📋 {t("tabHandover")}</span>
             </button>
 
             {/* VIP Mobile App - hidden for manager */}
@@ -395,7 +405,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-red-400 hover:text-red-300 hover:bg-slate-800/50 border border-red-500/20"
               }`}
             >
-              <span>📑 Техпаспорта & Штрафы</span>
+              <span>📑 {language === "ka" ? "ტექპასპორტები & ჯარიმები" : "Техпаспорта & Штрафы"}</span>
             </button>
 
             {/* Owners / Investors Cabinet - hidden for manager */}
@@ -408,7 +418,7 @@ export const Header: React.FC<HeaderProps> = ({
                     : "text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50 border border-emerald-500/20"
                 }`}
               >
-                <span>💼 Кабинет инвесторов</span>
+                <span>💼 {t("tabOwners")}</span>
               </button>
             )}
 
@@ -420,7 +430,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-purple-400 hover:text-purple-200 hover:bg-purple-950/40 border border-purple-500/30"
               }`}
             >
-              <span>👥 Клиенты (CRM)</span>
+              <span>👥 {t("tabCrm")}</span>
             </button>
 
             <button
@@ -431,7 +441,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-rose-400 hover:text-rose-200 hover:bg-rose-950/40 border border-rose-500/30"
               }`}
             >
-              <span>🛠️ ТО & Сервис</span>
+              <span>🛠️ {t("tabMaintenance")}</span>
             </button>
 
             <button
@@ -442,7 +452,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
               }`}
             >
-              <span>🧼 Мойка</span>
+              <span>🧼 {t("tabWashing")}</span>
             </button>
 
             <button
@@ -453,7 +463,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
               }`}
             >
-              <span>💰 Касса смены</span>
+              <span>💰 {t("tabFinance")}</span>
             </button>
 
             {/* Reports - hidden for manager */}
@@ -466,7 +476,7 @@ export const Header: React.FC<HeaderProps> = ({
                     : "text-amber-400 hover:text-amber-200 hover:bg-amber-950/40 border border-amber-500/30"
                 }`}
               >
-                <span>📊 Отчетность</span>
+                <span>📊 {t("tabReports")}</span>
               </button>
             )}
 
@@ -480,7 +490,7 @@ export const Header: React.FC<HeaderProps> = ({
                     : "text-indigo-400 hover:text-indigo-200 hover:bg-indigo-950/40 border border-indigo-500/20"
                 }`}
               >
-                <span>👔 Руководство</span>
+                <span>👔 {t("tabExecutive")}</span>
               </button>
             )}
 
@@ -494,7 +504,7 @@ export const Header: React.FC<HeaderProps> = ({
                     : "text-purple-300 hover:text-white hover:bg-purple-950/40 border border-purple-500/30"
                 }`}
               >
-                <span>👥 Команда</span>
+                <span>👥 {t("tabTeam")}</span>
               </button>
             )}
 
@@ -506,7 +516,18 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-indigo-300 hover:text-white hover:bg-indigo-950/40 border border-indigo-500/30"
               }`}
             >
-              <span>💬 Мессенджер</span>
+              <span>💬 {t("tabChats")}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("knowledge")}
+              className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold flex items-center space-x-1.5 whitespace-nowrap transition-all shrink-0 ${
+                activeTab === "knowledge"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black shadow-lg"
+                  : "text-blue-300 hover:text-white hover:bg-blue-950/40 border border-blue-500/30"
+              }`}
+            >
+              <span>📚 {t("tabKnowledge")}</span>
             </button>
 
             <button

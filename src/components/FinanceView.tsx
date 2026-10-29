@@ -22,10 +22,12 @@ import {
 } from "lucide-react";
 import { RecordExpenseModal } from "./RecordExpenseModal";
 import { GoogleSheetsBackupBanner } from "./GoogleSheetsBackupBanner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type PeriodPreset = "today" | "yesterday" | "day_before" | "week" | "month" | "all" | "custom";
 
 export const FinanceView: React.FC = () => {
+  const { language, t } = useLanguage();
   const [activeFinanceTab, setActiveFinanceTab] = useState<"payments" | "expenses" | "manager_cash">("payments");
   const [financeData, setFinanceData] = useState<any>(null);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -327,7 +329,7 @@ export const FinanceView: React.FC = () => {
             title="Выплатить доход владельцу автомобиля (инвестору)"
           >
             <Coins className="w-4 h-4" />
-            <span>+ Выплата инвестору</span>
+            <span>{language === "ka" ? "+ ინვესტორის გაცემა" : "+ Выплата инвестору"}</span>
           </button>
 
           {/* Action: Record Expense Button */}
@@ -339,7 +341,7 @@ export const FinanceView: React.FC = () => {
             className="px-4 py-2.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-xl text-xs font-black shadow-lg shadow-rose-950 transition active:scale-95 flex items-center space-x-1.5"
           >
             <Receipt className="w-4 h-4" />
-            <span>+ Записать расход</span>
+            <span>{language === "ka" ? "+ ხარჯის ჩაწერა" : "+ Записать расход"}</span>
           </button>
 
           <button
@@ -365,10 +367,12 @@ export const FinanceView: React.FC = () => {
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Период отчёта кассы:
+                  {language === "ka" ? "სალაროს ანგარიშის პერიოდი:" : "Период отчёта кассы:"}
                 </span>
                 <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700 font-mono">
-                  {periodPreset === "today" ? "по умолчанию" : "фильтр активен"}
+                  {periodPreset === "today" 
+                    ? (language === "ka" ? "ნაგულისხმევი" : "по умолчанию") 
+                    : (language === "ka" ? "ფილტრი აქტიურია" : "фильтр активен")}
                 </span>
               </div>
               <h3 className="text-sm font-extrabold text-amber-400 mt-0.5 flex items-center space-x-1.5">
@@ -390,7 +394,7 @@ export const FinanceView: React.FC = () => {
                   : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
               }`}
             >
-              Сегодня
+              {t("today")}
             </button>
             <button
               onClick={() => {
@@ -403,7 +407,7 @@ export const FinanceView: React.FC = () => {
                   : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
               }`}
             >
-              Вчера
+              {t("yesterday")}
             </button>
             <button
               onClick={() => {
@@ -416,7 +420,7 @@ export const FinanceView: React.FC = () => {
                   : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
               }`}
             >
-              Позавчера
+              {t("dayBeforeYesterday")}
             </button>
             <button
               onClick={() => {
@@ -429,7 +433,7 @@ export const FinanceView: React.FC = () => {
                   : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
               }`}
             >
-              7 дней
+              {t("week")}
             </button>
             <button
               onClick={() => {
@@ -442,7 +446,7 @@ export const FinanceView: React.FC = () => {
                   : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
               }`}
             >
-              Этот месяц
+              {t("month")}
             </button>
             <button
               onClick={() => {
@@ -456,7 +460,7 @@ export const FinanceView: React.FC = () => {
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
-              <span>Выбрать дату...</span>
+              <span>{t("selectDate")}</span>
             </button>
             <button
               onClick={() => {
@@ -469,7 +473,7 @@ export const FinanceView: React.FC = () => {
                   : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
               }`}
             >
-              Всё время
+              {t("allTime")}
             </button>
           </div>
         </div>
@@ -531,7 +535,7 @@ export const FinanceView: React.FC = () => {
           }`}
         >
           <DollarSign className="w-4 h-4" />
-          <span>Поступления & Залоги ({payments.length})</span>
+          <span>{language === "ka" ? "შემოსავლები & დეპოზიტები" : "Поступления & Залоги"} ({payments.length})</span>
         </button>
 
         <button
@@ -543,7 +547,7 @@ export const FinanceView: React.FC = () => {
           }`}
         >
           <Receipt className="w-4 h-4" />
-          <span>Журнал расходов ({filteredExpenses.length})</span>
+          <span>{language === "ka" ? "ხარჯების ჟურნალი" : "Журнал расходов"} ({filteredExpenses.length})</span>
         </button>
 
         <button
@@ -555,7 +559,7 @@ export const FinanceView: React.FC = () => {
           }`}
         >
           <Coins className="w-4 h-4" />
-          <span>Кассы менеджеров ({managerCashAccounts.length})</span>
+          <span>{language === "ka" ? "მენეჯერების სალაროები" : "Кассы менеджеров"} ({managerCashAccounts.length})</span>
         </button>
       </div>
 
@@ -1016,7 +1020,9 @@ export const FinanceView: React.FC = () => {
                               </div>
 
                               <div className="flex justify-between items-baseline pt-1">
-                                <span className="text-[10px] text-slate-400">На руках в кассе:</span>
+                                <span className="text-[10px] text-slate-400">
+                                  {language === "ka" ? "ხელზე სალაროში:" : "На руках в кассе:"}
+                                </span>
                                 <span className="font-mono font-black text-emerald-400 text-sm">
                                   {acc.currentBalance} ₾
                                 </span>
