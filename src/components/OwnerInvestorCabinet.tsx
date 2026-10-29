@@ -1789,7 +1789,7 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
                 />
               </div>
 
-              <div className="pt-2 flex justify-end space-x-2 border-t border-slate-800">
+              <div className="pt-3 flex justify-end space-x-2 border-t border-slate-800 sticky bottom-0 bg-slate-900/95 backdrop-blur-sm -mx-4 sm:-mx-6 px-4 sm:px-6 pb-1 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsAddExpenseOpen(false)}
@@ -1800,7 +1800,7 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-xl font-bold shadow-lg transition"
+                  className="px-5 py-2 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-xl font-bold shadow-lg transition active:scale-95"
                 >
                   {isSubmitting ? "Сохранение..." : "Сохранить расход"}
                 </button>

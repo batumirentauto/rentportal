@@ -47,6 +47,23 @@ export async function POST(request: Request) {
       ? Boolean(requestedIsMonthlySettled) 
       : (status !== "ACCRUED");
 
+    // Если расход привязан к авто инвестора — автоматически связываем с владельцем
+    let resolvedOwnerId = ownerId || undefined;
+    let isOwnerExpense = Boolean(body.isOwnerExpense);
+    if (carId) {
+      const car = await prisma.car.findUnique({
+        where: { id: carId },
+        select: { ownerId: true },
+      });
+      if (car?.ownerId) {
+        resolvedOwnerId = resolvedOwnerId || car.ownerId;
+        isOwnerExpense = true;
+      }
+    }
+    if (resolvedOwnerId && category !== "OWNER_PAYOUT") {
+      isOwnerExpense = true;
+    }
+
     const expense = await prisma.expense.create({
       data: {
         accountId,
@@ -56,7 +73,8 @@ export async function POST(request: Request) {
         description,
         cityId: cityId || undefined,
         carId: carId || undefined,
-        ownerId: ownerId || undefined,
+        ownerId: resolvedOwnerId,
+        isOwnerExpense,
         managerName,
         status,
         isMonthlySettled,
