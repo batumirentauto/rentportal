@@ -916,7 +916,7 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
               {metrics?.totalOwnerEarningsUSD?.toLocaleString()} ₾
             </span>
             <div className="text-[11px] text-slate-400 mt-1">
-              за {metrics?.totalDaysRented || 0} дней аренды автопарка
+              за {metrics?.totalDaysRented || 0} дн. завершённых аренд
             </div>
           </div>
         </div>
@@ -966,7 +966,7 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
               {metrics?.netProfitInvestorGEL?.toLocaleString()} ₾
             </span>
             <div className="text-[11px] text-emerald-400 font-semibold mt-1">
-              Доход от аренды минус расходы на авто
+              Доход от завершённых аренд минус расходы на авто
             </div>
           </div>
         </div>
@@ -1027,7 +1027,7 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
           }`}
         >
           <Calendar className="w-4 h-4" />
-          <span>📅 Начисления по арендам ({bookings?.length || 0})</span>
+          <span>📅 Начисления по арендам ({bookings?.filter((b: any) => b.isCompleted)?.length || 0} / {bookings?.length || 0})</span>
         </button>
 
         <button
@@ -1453,11 +1453,11 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
                 Детализация поездок и начислений инвестору
               </h3>
               <p className="text-xs text-slate-400">
-                Прозрачный расчет по каждому дню аренды с возможностью корректировки ставки на длинные брони
+                Начисления производятся строго по факту возврата автомобиля (завершения поездки)
               </p>
             </div>
             <span className="text-xs text-slate-400">
-              Всего поездок: <strong className="text-white">{bookings?.length}</strong>
+              Завершено: <strong className="text-emerald-400">{bookings?.filter((b: any) => b.isCompleted)?.length || 0}</strong> из <strong className="text-white">{bookings?.length}</strong>
             </span>
           </div>
 
@@ -1528,8 +1528,28 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
                           )}
                         </td>
 
-                        <td className="py-3 px-3 text-right font-mono font-black text-emerald-400 text-sm">
-                          {b.ownerTotalPayout} ₾
+                        <td className="py-3 px-3 text-right font-mono font-black text-sm">
+                          {b.isCompleted ? (
+                            <div>
+                              <span className="text-emerald-400 block font-black text-sm">
+                                +{b.ownerTotalPayout} ₾
+                              </span>
+                              <span className="text-[10px] text-emerald-500/80 font-sans font-medium block">
+                                ✓ Авто возвращено
+                              </span>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-amber-400/90 block font-bold text-sm">
+                                {b.ownerTotalPayout} ₾
+                              </span>
+                              <span className="text-[10px] text-amber-500/80 font-sans font-medium block">
+                                {b.status === "ACTIVE"
+                                  ? "🚗 В поездке (расчёт при возврате)"
+                                  : "⏳ До выдачи (расчёт при возврате)"}
+                              </span>
+                            </div>
+                          )}
                         </td>
 
                         <td className="py-3 px-4 text-center">

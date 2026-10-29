@@ -156,10 +156,15 @@ export async function GET(request: Request) {
       let carDays = 0;
 
       periodBookings.forEach((b) => {
+        const isCompleted = b.status === "COMPLETED";
         const rate = b.ownerDailyRate || car.defaultOwnerDailyRate || 25;
         const payout = b.ownerTotalPayout || rate * b.rentalDays;
-        carEarnings += payout;
-        carDays += b.rentalDays;
+
+        // Начисление дохода инвестору и дней аренды производится ТОЛЬКО после фактического возврата авто (COMPLETED)!
+        if (isCompleted) {
+          carEarnings += payout;
+          carDays += b.rentalDays;
+        }
 
         ownerBookingsList.push({
           bookingId: b.id,
@@ -173,6 +178,7 @@ export async function GET(request: Request) {
           endDate: b.endDate,
           rentalDays: b.rentalDays,
           status: b.status,
+          isCompleted,
           pickupCity: b.pickupLocation?.city?.nameRu || "Грузия",
           defaultCarRate: car.defaultOwnerDailyRate,
           ownerDailyRate: rate,

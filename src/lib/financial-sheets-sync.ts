@@ -208,7 +208,9 @@ export async function syncAllFinancialDataToGoogleSheets(
     } else {
       totalRentalRevenueGEL += b.totalAmount || 0;
     }
-    totalOwnerPayouts += b.ownerTotalPayout || (b.ownerDailyRate || 0) * (b.rentalDays || 0);
+    if (b.status === "COMPLETED") {
+      totalOwnerPayouts += b.ownerTotalPayout || (b.ownerDailyRate || 0) * (b.rentalDays || 0);
+    }
   }
 
   let totalExpensesGEL = 0;
