@@ -883,18 +883,18 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                         >
                           <Download className="w-3.5 h-3.5" />
                         </a>
-                        <label className="cursor-pointer text-[10px] text-purple-300 hover:text-white bg-purple-500/20 hover:bg-purple-500/30 px-2 py-1 rounded-md transition">
+                        <div className="relative overflow-hidden cursor-pointer text-[10px] text-purple-300 hover:text-white bg-purple-500/20 hover:bg-purple-500/30 px-2 py-1 rounded-md transition flex items-center">
                           <input
                             type="file"
-                            accept="video/*"
-                            className="hidden"
+                            accept="video/*,video/mp4,video/quicktime,video/mov"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) handleReturnVideoUpload(file);
                             }}
                           />
                           <span>Сменить</span>
-                        </label>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setReturnVideoUrl("")}
@@ -907,11 +907,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <label className="cursor-pointer w-full py-2.5 px-3 bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-2 transition active:scale-95 shadow-sm">
+                  <div className="relative overflow-hidden cursor-pointer w-full py-2.5 px-3 bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-2 transition active:scale-95 shadow-sm">
                     <input
                       type="file"
-                      accept="video/*"
-                      className="hidden"
+                      accept="video/*,video/mp4,video/quicktime,video/mov"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handleReturnVideoUpload(file);
@@ -919,7 +919,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     />
                     <Video className="w-4 h-4 text-purple-400" />
                     <span>Снять на камеру / Загрузить видео возврата</span>
-                  </label>
+                  </div>
                 )}
               </div>
             </div>
@@ -1099,11 +1099,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2">
-                            <label className="cursor-pointer flex-1 py-2 px-3 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition active:scale-95">
+                            <div className="relative overflow-hidden cursor-pointer flex-1 py-2 px-3 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition active:scale-95">
                               <input
                                 type="file"
                                 accept="image/*"
-                                className="hidden"
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) handleDamagePhotoUpload(file);
@@ -1120,7 +1120,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                                   <span>Снять на камеру / Загрузить фото</span>
                                 </>
                               )}
-                            </label>
+                            </div>
                           </div>
                         )}
                         <input

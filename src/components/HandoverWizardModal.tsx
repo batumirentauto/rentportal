@@ -277,52 +277,69 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
 
         {/* Step Indicator */}
         <div className="grid grid-cols-4 border-b border-slate-800 text-center text-xs font-medium bg-slate-950/60">
-          <div
-            className={`py-2 px-1 border-b-2 transition-all truncate ${
+          <button
+            type="button"
+            onClick={() => setCurrentStep(1)}
+            className={`py-2 px-1 border-b-2 transition-all truncate flex items-center justify-center space-x-1 cursor-pointer ${
               currentStep === 1
-                ? "border-amber-500 text-amber-400 font-bold"
+                ? "border-amber-500 text-amber-400 font-bold bg-amber-500/10"
                 : currentStep > 1
-                ? "border-emerald-500 text-emerald-400"
-                : "border-transparent text-slate-500"
+                ? "border-emerald-500 text-emerald-400 hover:text-emerald-300"
+                : "border-transparent text-slate-400 hover:text-white"
             }`}
           >
             <span className="sm:hidden">1. Авто</span>
-            <span className="hidden sm:inline">1. Авто & Медиа</span>
-          </div>
-          <div
-            className={`py-2 px-1 border-b-2 transition-all truncate ${
+            <span className="hidden sm:inline">1. Авто & Данные</span>
+            {dashboardPhoto && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" title="Фото топлива прикреплено" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCurrentStep(2)}
+            className={`py-2 px-1 border-b-2 transition-all truncate flex items-center justify-center space-x-1 cursor-pointer ${
               currentStep === 2
-                ? "border-amber-500 text-amber-400 font-bold"
+                ? "border-amber-500 text-amber-400 font-bold bg-amber-500/10"
                 : currentStep > 2
-                ? "border-emerald-500 text-emerald-400"
-                : "border-transparent text-slate-500"
+                ? "border-emerald-500 text-emerald-400 hover:text-emerald-300"
+                : "border-transparent text-slate-400 hover:text-white"
             }`}
           >
             <span className="sm:hidden">2. Опции</span>
             <span className="hidden sm:inline">2. Оборудование</span>
-          </div>
-          <div
-            className={`py-2 px-1 border-b-2 transition-all truncate ${
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCurrentStep(3)}
+            className={`py-2 px-1 border-b-2 transition-all truncate flex items-center justify-center space-x-1 cursor-pointer ${
               currentStep === 3
-                ? "border-amber-500 text-amber-400 font-bold"
+                ? "border-amber-500 text-amber-400 font-bold bg-amber-500/10"
                 : currentStep > 3
-                ? "border-emerald-500 text-emerald-400"
-                : "border-transparent text-slate-500"
+                ? "border-emerald-500 text-emerald-400 hover:text-emerald-300"
+                : "border-transparent text-slate-400 hover:text-white"
             }`}
           >
-            <span className="sm:hidden">3. Доки</span>
-            <span className="hidden sm:inline">3. Договор & Доки</span>
-          </div>
-          <div
-            className={`py-2 px-1 border-b-2 transition-all truncate ${
+            <span className="sm:hidden">3. Доки & Видео</span>
+            <span className="hidden sm:inline">3. Доки, Видео & Топливо</span>
+            {(contractPhoto || carBodyVideo) && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" title="Документы/видео прикреплены" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCurrentStep(4)}
+            className={`py-2 px-1 border-b-2 transition-all truncate flex items-center justify-center space-x-1 cursor-pointer ${
               currentStep === 4
-                ? "border-amber-500 text-amber-400 font-bold"
-                : "border-transparent text-slate-500"
+                ? "border-amber-500 text-amber-400 font-bold bg-amber-500/10"
+                : "border-transparent text-slate-400 hover:text-white"
             }`}
           >
             <span className="sm:hidden">4. Оплата</span>
             <span className="hidden sm:inline">4. Оплата & Касса</span>
-          </div>
+          </button>
         </div>
 
         {/* Wizard Content */}
@@ -457,6 +474,71 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                         </span>
                       </button>
                     ))}
+                  </div>
+
+                  {/* Быстрое фото уровня топлива и одометра прямо в карточке топлива */}
+                  <div className="pt-2.5 mt-2.5 border-t border-slate-700/60">
+                    {uploadingSlots.dashboard ? (
+                      <div className="py-2 px-3 bg-slate-900/80 rounded-xl border border-slate-700 flex items-center justify-center space-x-2 text-xs text-amber-300">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                        <span>Загрузка фото топлива...</span>
+                      </div>
+                    ) : dashboardPhoto ? (
+                      <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-2 flex items-center justify-between gap-2">
+                        <div className="flex items-center space-x-2 min-w-0">
+                          <img
+                            src={dashboardPhoto}
+                            alt="Фото топлива"
+                            className="w-9 h-9 rounded-lg object-cover border border-emerald-500/40 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-emerald-400 block truncate">
+                              ✓ Фото топлива и одометра
+                            </span>
+                            <span className="text-[10px] text-slate-400 block">
+                              зафиксировано в акте
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-1.5 shrink-0">
+                          <div className="relative overflow-hidden cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-2 py-1 rounded-lg text-[11px] font-semibold border border-slate-700 flex items-center space-x-1">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, "dashboard");
+                              }}
+                            />
+                            <RefreshCw className="w-3 h-3 text-amber-400" />
+                            <span>Заменить</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setDashboardPhoto(null)}
+                            className="text-rose-400 hover:text-rose-300 p-1 hover:bg-rose-500/20 rounded-lg transition"
+                            title="Удалить фото"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative overflow-hidden cursor-pointer w-full py-2 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-2 shadow transition active:scale-95">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file, "dashboard");
+                          }}
+                        />
+                        <Camera className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>📸 Снять / Прикрепить фото топлива</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -695,15 +777,15 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Photo 1: Dashboard */}
+                  {/* Photo 1: Dashboard & Fuel */}
                   <div className={`p-3 rounded-xl border flex flex-col items-center text-center transition-all ${
                     dashboardPhoto ? "bg-slate-800/80 border-emerald-500/50" : "bg-slate-800/50 border-slate-700/80 hover:border-amber-500/50"
                   }`}>
                     <div className="flex items-center space-x-1.5 mb-1">
                       <Camera className={`w-4 h-4 ${dashboardPhoto ? "text-emerald-400" : "text-amber-400"}`} />
-                      <span className="text-xs font-bold text-slate-200">Панель приборов</span>
+                      <span className="text-xs font-bold text-slate-200">Фото топлива и одометра</span>
                     </div>
-                    <span className="text-[10px] text-slate-400 mb-2">одометр + уровень топлива</span>
+                    <span className="text-[10px] text-slate-400 mb-2">панель приборов + уровень бака</span>
 
                     {uploadingSlots.dashboard ? (
                       <div className="w-full py-4 flex flex-col items-center justify-center space-y-1.5 bg-slate-900/60 rounded-lg border border-slate-700">
@@ -740,7 +822,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                         </div>
                         <div className="w-full bg-emerald-950/60 border border-emerald-500/50 rounded-lg px-2 py-1 flex items-center justify-center space-x-1 text-emerald-400 text-xs font-semibold">
                           <Check className="w-3.5 h-3.5" />
-                          <span>Приборка зафиксирована</span>
+                          <span>Топливо и одометр ✓</span>
                         </div>
                         <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
                           <a
@@ -752,11 +834,11 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                             <Download className="w-3 h-3 text-amber-400" />
                             <span>Скачать</span>
                           </a>
-                          <label className="cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
+                          <div className="relative overflow-hidden cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
                             <input
                               type="file"
                               accept="image/*"
-                              className="hidden"
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) handleFileUpload(file, "dashboard");
@@ -764,7 +846,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                             />
                             <RefreshCw className="w-3 h-3 text-amber-400" />
                             <span>Заменить</span>
-                          </label>
+                          </div>
                           <button
                             type="button"
                             onClick={() => setDashboardPhoto(null)}
@@ -777,19 +859,19 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                       </div>
                     ) : (
                       <div className="w-full mt-auto space-y-1.5">
-                        <label className="cursor-pointer w-full py-2 px-3 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow transition active:scale-95">
+                        <div className="relative overflow-hidden cursor-pointer w-full py-2 px-3 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow transition active:scale-95">
                           <input
                             type="file"
                             accept="image/*"
-                            className="hidden"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) handleFileUpload(file, "dashboard");
                             }}
                           />
                           <Camera className="w-4 h-4 text-amber-400" />
-                          <span>Снять / Загрузить фото</span>
-                        </label>
+                          <span>Снять / Фото топлива</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -851,11 +933,11 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                             <Download className="w-3 h-3 text-blue-400" />
                             <span>Скачать</span>
                           </a>
-                          <label className="cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
+                          <div className="relative overflow-hidden cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
                             <input
                               type="file"
                               accept="image/*"
-                              className="hidden"
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) handleFileUpload(file, "techPassport");
@@ -863,7 +945,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                             />
                             <RefreshCw className="w-3 h-3 text-blue-400" />
                             <span>Заменить</span>
-                          </label>
+                          </div>
                           <button
                             type="button"
                             onClick={() => setTechPassportPhoto(null)}
@@ -876,19 +958,19 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                       </div>
                     ) : (
                       <div className="w-full mt-auto space-y-1.5">
-                        <label className="cursor-pointer w-full py-2 px-3 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow transition active:scale-95">
+                        <div className="relative overflow-hidden cursor-pointer w-full py-2 px-3 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow transition active:scale-95">
                           <input
                             type="file"
                             accept="image/*"
-                            className="hidden"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) handleFileUpload(file, "techPassport");
                             }}
                           />
                           <Camera className="w-4 h-4 text-blue-400" />
-                          <span>Снять / Загрузить фото</span>
-                        </label>
+                          <span>Снять / Фото техпаспорта</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -899,9 +981,9 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   }`}>
                     <div className="flex items-center space-x-1.5 mb-1">
                       <Video className={`w-4 h-4 ${carBodyVideo ? "text-emerald-400" : "text-rose-400"}`} />
-                      <span className="text-xs font-bold text-slate-200">Круговое видео кузова</span>
+                      <span className="text-xs font-bold text-slate-200">Видео осмотра автомобиля</span>
                     </div>
-                    <span className="text-[10px] text-slate-400 mb-2">царапины и сколы по кругу 360°</span>
+                    <span className="text-[10px] text-slate-400 mb-2">круговой осмотр кузова 360°</span>
 
                     {uploadingSlots.video ? (
                       <div className="w-full py-4 flex flex-col items-center justify-center space-y-1.5 bg-slate-900/60 rounded-lg border border-slate-700">
@@ -931,13 +1013,13 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                             title="Скачать видео осмотра"
                           >
                             <Download className="w-3 h-3 text-rose-400" />
-                            <span>Скачать видео</span>
+                            <span>Скачать</span>
                           </a>
-                          <label className="cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
+                          <div className="relative overflow-hidden cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2 py-1 rounded-lg flex items-center space-x-1">
                             <input
                               type="file"
-                              accept="video/*"
-                              className="hidden"
+                              accept="video/*,video/mp4,video/quicktime,video/mov"
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) handleFileUpload(file, "video");
@@ -945,7 +1027,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                             />
                             <RefreshCw className="w-3 h-3 text-rose-400" />
                             <span>Заменить</span>
-                          </label>
+                          </div>
                           <button
                             type="button"
                             onClick={() => setCarBodyVideo(null)}
@@ -958,19 +1040,19 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                       </div>
                     ) : (
                       <div className="w-full mt-auto space-y-1.5">
-                        <label className="cursor-pointer w-full py-2 px-3 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow transition active:scale-95">
+                        <div className="relative overflow-hidden cursor-pointer w-full py-2 px-3 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow transition active:scale-95">
                           <input
                             type="file"
-                            accept="video/*"
-                            className="hidden"
+                            accept="video/*,video/mp4,video/quicktime,video/mov"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) handleFileUpload(file, "video");
                             }}
                           />
                           <Video className="w-4 h-4 text-rose-400" />
-                          <span>Записать / Загрузить видео</span>
-                        </label>
+                          <span>Записать / Видео осмотра</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1075,32 +1157,52 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
             </div>
           )}
 
-          {/* STEP 3: CONTRACT & DOCS PHOTO */}
+          {/* STEP 3: CONTRACT & DOCS & MEDIA */}
           {currentStep === 3 && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60">
-                <h3 className="font-bold text-white text-base flex items-center space-x-2 mb-1">
-                  <FileText className="w-5 h-5 text-amber-400" />
-                  <span>Фото подписанного контракта и документов</span>
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Сделайте совместное фото подписанного контракта вместе с оригиналом водительского удостоверения и паспорта клиента:
-                </p>
-              </div>
-
-              {/* Upload preview card */}
-              <div className="border-2 border-dashed border-amber-500/50 bg-amber-950/10 rounded-2xl p-6 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center">
-                  <Camera className="w-6 h-6" />
-                </div>
+              <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h4 className="font-bold text-white text-sm">
-                    Фото подписанного договора + паспорт + права
-                  </h4>
-                  <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-                    Снимок подтверждает физическое присутствие клиента и юридическую силу договора. Сделайте фото договора вместе с оригиналами документов клиента.
+                  <h3 className="font-bold text-white text-base flex items-center space-x-2 mb-1">
+                    <FileText className="w-5 h-5 text-amber-400" />
+                    <span>Договор и медиафиксация автомобиля</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Прикрепите фото договора с клиентом, видео кругового осмотра кузова и фото уровня топлива:
                   </p>
                 </div>
+                <div className="flex items-center space-x-1.5 text-xs">
+                  {contractPhoto && <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded font-medium">Договор ✓</span>}
+                  {carBodyVideo && <span className="bg-rose-950/80 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded font-medium">Видео 360° ✓</span>}
+                  {dashboardPhoto && <span className="bg-amber-950/80 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded font-medium">Топливо ✓</span>}
+                </div>
+              </div>
+
+              {uploadError && (
+                <div className="bg-rose-500/20 border border-rose-500/40 text-rose-300 p-2.5 rounded-xl text-xs flex items-center justify-between">
+                  <span>{uploadError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setUploadError(null)}
+                    className="text-rose-400 hover:text-white ml-2 text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {/* 1. CONTRACT PHOTO */}
+              <div className="border-2 border-dashed border-amber-500/50 bg-amber-950/10 rounded-2xl p-5 text-center space-y-3">
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <h4 className="font-bold text-white text-sm text-left">
+                    1. Фото подписанного договора + документы клиента
+                  </h4>
+                </div>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Сделайте совместное фото подписанного контракта вместе с оригиналом водительского удостоверения и паспорта клиента.
+                </p>
 
                 {uploadingSlots.contract ? (
                   <div className="py-4 flex flex-col items-center justify-center space-y-1.5 bg-slate-900/60 rounded-xl border border-slate-700 max-w-sm mx-auto">
@@ -1137,7 +1239,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                     </div>
                     <div className="bg-emerald-950/60 border border-emerald-500/50 text-emerald-400 text-xs px-3 py-1.5 rounded-lg inline-flex items-center space-x-1.5 font-medium">
                       <Check className="w-4 h-4" />
-                      <span>Фото успешно сделано и прикреплено к отчёту</span>
+                      <span>Фото договора успешно прикреплено</span>
                     </div>
                     <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                       <a
@@ -1149,11 +1251,11 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                         <Download className="w-3.5 h-3.5 text-amber-400" />
                         <span>Скачать фото</span>
                       </a>
-                      <label className="cursor-pointer text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 border border-slate-700 transition active:scale-95">
+                      <div className="relative overflow-hidden cursor-pointer text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 border border-slate-700 transition active:scale-95">
                         <input
                           type="file"
                           accept="image/*"
-                          className="hidden"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) handleFileUpload(file, "contract");
@@ -1161,7 +1263,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                         />
                         <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
                         <span>Заменить фото</span>
-                      </label>
+                      </div>
                       <button
                         type="button"
                         onClick={() => setContractPhoto(null)}
@@ -1174,27 +1276,305 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                   </div>
                 ) : (
                   <div className="pt-2">
-                    <label className="cursor-pointer inline-flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition active:scale-95">
+                    <div className="relative overflow-hidden cursor-pointer inline-flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition active:scale-95">
                       <input
                         type="file"
                         accept="image/*"
-                        className="hidden"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) handleFileUpload(file, "contract");
                         }}
                       />
-                      <Camera className="w-4 h-4" />
-                      <span>Снять на камеру / Загрузить фото</span>
-                    </label>
+                      <Camera className="w-4 h-4 text-slate-950" />
+                      <span>📸 Снять на камеру / Фото договора</span>
+                    </div>
                   </div>
                 )}
               </div>
 
+              {/* 2. INSPECTION VIDEO & FUEL & TECH PASSPORT GRID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+                {/* VIDEO INSPECTION CARD */}
+                <div className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                  carBodyVideo ? "bg-slate-800/80 border-emerald-500/50" : "bg-slate-800/50 border-rose-500/40"
+                }`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center space-x-2">
+                        <div className="p-1.5 rounded-lg bg-rose-500/20 text-rose-400">
+                          <Video className="w-4 h-4" />
+                        </div>
+                        <span className="font-bold text-white text-xs">
+                          2. Видео осмотра автомобиля
+                        </span>
+                      </div>
+                      {carBodyVideo ? (
+                        <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
+                          ✓ Загружено
+                        </span>
+                      ) : (
+                        <span className="text-[10px] bg-rose-950/80 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold">
+                          Рекомендуется
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 mb-3">
+                      Круговое видео кузова 360° на телефон: фиксация всех царапин и сколов перед выдачей.
+                    </p>
+                  </div>
+
+                  {uploadingSlots.video ? (
+                    <div className="py-4 bg-slate-900/80 rounded-xl border border-slate-700 flex flex-col items-center justify-center space-y-1.5">
+                      <Loader2 className="w-5 h-5 text-rose-400 animate-spin" />
+                      <span className="text-xs text-rose-300 font-medium">Загрузка видео осмотра...</span>
+                      <span className="text-[10px] text-slate-400">Пожалуйста, подождите</span>
+                    </div>
+                  ) : carBodyVideo ? (
+                    <div className="space-y-2">
+                      <div className="rounded-xl overflow-hidden border border-slate-700 bg-black max-h-36">
+                        <video
+                          src={carBodyVideo}
+                          controls
+                          playsInline
+                          className="w-full h-32 object-contain"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
+                        <a
+                          href={`${carBodyVideo}?download=1`}
+                          download
+                          className="text-xs text-rose-300 hover:text-white bg-rose-500/15 hover:bg-rose-500/25 px-2.5 py-1.5 rounded-lg flex items-center space-x-1 border border-rose-500/30 transition font-medium"
+                          title="Скачать видео осмотра"
+                        >
+                          <Download className="w-3.5 h-3.5 text-rose-400" />
+                          <span>Скачать</span>
+                        </a>
+                        <div className="relative overflow-hidden cursor-pointer text-xs text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg flex items-center space-x-1">
+                          <input
+                            type="file"
+                            accept="video/*,video/mp4,video/quicktime,video/mov"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file, "video");
+                            }}
+                          />
+                          <RefreshCw className="w-3.5 h-3.5 text-rose-400" />
+                          <span>Заменить видео</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCarBodyVideo(null)}
+                          className="text-xs text-rose-400 hover:text-rose-300 p-1.5 hover:bg-rose-500/20 rounded-lg transition"
+                          title="Удалить видео"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative overflow-hidden cursor-pointer w-full py-2.5 px-3 bg-gradient-to-r from-rose-500/20 to-pink-500/20 hover:from-rose-500/30 hover:to-pink-500/30 border border-rose-500/40 text-rose-200 font-bold text-xs rounded-xl flex items-center justify-center space-x-2 shadow transition active:scale-95">
+                      <input
+                        type="file"
+                        accept="video/*,video/mp4,video/quicktime,video/mov"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file, "video");
+                        }}
+                      />
+                      <Video className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>🎥 Снять / Загрузить видео осмотра</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* FUEL PHOTO CARD */}
+                <div className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                  dashboardPhoto ? "bg-slate-800/80 border-emerald-500/50" : "bg-slate-800/50 border-amber-500/40"
+                }`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center space-x-2">
+                        <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
+                          <Fuel className="w-4 h-4" />
+                        </div>
+                        <span className="font-bold text-white text-xs">
+                          3. Фото уровня топлива и одометра
+                        </span>
+                      </div>
+                      {dashboardPhoto ? (
+                        <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
+                          ✓ Зафиксировано
+                        </span>
+                      ) : (
+                        <span className="text-[10px] bg-amber-950/80 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold">
+                          {fuelPercent}% бак
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 mb-3">
+                      Снимок щитка приборов: показывает точный пробег и шкалу уровня топлива в баке.
+                    </p>
+                  </div>
+
+                  {uploadingSlots.dashboard ? (
+                    <div className="py-4 bg-slate-900/80 rounded-xl border border-slate-700 flex flex-col items-center justify-center space-y-1.5">
+                      <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
+                      <span className="text-xs text-amber-300 font-medium">Загрузка фото топлива...</span>
+                    </div>
+                  ) : dashboardPhoto ? (
+                    <div className="space-y-2">
+                      <div className="relative group rounded-xl overflow-hidden border border-slate-700 max-h-36 bg-black">
+                        <img
+                          src={dashboardPhoto}
+                          alt="Панель приборов и топливо"
+                          className="w-full h-32 object-cover"
+                        />
+                        <div className="absolute top-2 right-2 flex items-center space-x-1.5">
+                          <a
+                            href={`${dashboardPhoto}?download=1`}
+                            download
+                            className="p-1 bg-black/70 hover:bg-black text-white rounded-md text-[10px]"
+                            title="Скачать фото"
+                          >
+                            <Download className="w-3.5 h-3.5 text-amber-400" />
+                          </a>
+                          <a
+                            href={dashboardPhoto}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 bg-black/70 hover:bg-black text-white rounded-md text-[10px]"
+                            title="Открыть в полном размере"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
+                        <a
+                          href={`${dashboardPhoto}?download=1`}
+                          download
+                          className="text-xs text-amber-300 hover:text-white bg-amber-500/15 hover:bg-amber-500/25 px-2.5 py-1.5 rounded-lg flex items-center space-x-1 border border-amber-500/30 transition font-medium"
+                          title="Скачать фото топлива"
+                        >
+                          <Download className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Скачать</span>
+                        </a>
+                        <div className="relative overflow-hidden cursor-pointer text-xs text-slate-300 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg flex items-center space-x-1">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file, "dashboard");
+                            }}
+                          />
+                          <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Заменить</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDashboardPhoto(null)}
+                          className="text-xs text-rose-400 hover:text-rose-300 p-1.5 hover:bg-rose-500/20 rounded-lg transition"
+                          title="Удалить фото"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative overflow-hidden cursor-pointer w-full py-2.5 px-3 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/40 text-amber-200 font-bold text-xs rounded-xl flex items-center justify-center space-x-2 shadow transition active:scale-95">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file, "dashboard");
+                        }}
+                      />
+                      <Camera className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>⛽ Снять / Фото уровня топлива</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 4. TECH PASSPORT OPTIONAL CARD */}
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                techPassportPhoto ? "bg-slate-800/80 border-emerald-500/40" : "bg-slate-800/40 border-slate-700/60"
+              }`}>
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 shrink-0">
+                    <FileCheck className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-slate-200 block truncate">
+                      4. Фото свидетельства о регистрации (техпаспорт)
+                    </span>
+                    <span className="text-[10px] text-slate-400 block">
+                      {techPassportPhoto ? "✓ Техпаспорт авто зафиксирован" : "Необязательно (при необходимости)"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0">
+                  {techPassportPhoto ? (
+                    <div className="flex items-center space-x-1.5">
+                      <a
+                        href={techPassportPhoto}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-blue-300 hover:text-white bg-blue-500/15 px-2.5 py-1 rounded-lg border border-blue-500/30"
+                      >
+                        Смотреть
+                      </a>
+                      <div className="relative overflow-hidden cursor-pointer text-[11px] text-slate-300 hover:text-white bg-slate-700 px-2.5 py-1 rounded-lg">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file, "techPassport");
+                          }}
+                        />
+                        <span>Заменить</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTechPassportPhoto(null)}
+                        className="text-rose-400 hover:text-rose-300 p-1 hover:bg-rose-500/20 rounded-md"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative overflow-hidden cursor-pointer px-3 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-300 font-semibold text-xs rounded-xl flex items-center space-x-1.5 shadow transition active:scale-95">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file, "techPassport");
+                        }}
+                      />
+                      <Camera className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Фото техпаспорта</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* CLIENT DETAILS */}
               <div className="bg-slate-800/40 p-3.5 rounded-xl border border-slate-700/50 text-xs text-slate-300 space-y-1">
                 <p><strong>Клиент:</strong> {booking.customer.fullName}</p>
-                <p><strong>Паспорт:</strong> {booking.customer.passportNumber}</p>
-                <p><strong>Водительское удостоверение:</strong> {booking.customer.driverLicenseNumber}</p>
+                <p><strong>Паспорт:</strong> {booking.customer.passportNumber || "Не указан"}</p>
+                <p><strong>Водительское удостоверение:</strong> {booking.customer.driverLicenseNumber || "Не указано"}</p>
               </div>
             </div>
           )}
