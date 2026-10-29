@@ -18,6 +18,7 @@ import {
   Wallet,
   Receipt,
   User,
+  HandCoins,
 } from "lucide-react";
 
 interface RecordExpenseModalProps {
@@ -33,6 +34,7 @@ const EXPENSE_CATEGORIES = [
   { id: "FUEL", label: "Заправка / Топливо", icon: Fuel, color: "text-amber-400 bg-amber-500/10 border-amber-500/30" },
   { id: "WASHING", label: "Мойка / Химчистка", icon: Sparkles, color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/30" },
   { id: "MAINTENANCE", label: "ТО / Масло / Шины", icon: Wrench, color: "text-rose-400 bg-rose-500/10 border-rose-500/30" },
+  { id: "INVESTOR_PAYOUT", label: "Выплата инвестору", icon: HandCoins, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" },
   { id: "PARKING_FINES", label: "Парковка / Аэропорт", icon: ParkingMeter, color: "text-blue-400 bg-blue-500/10 border-blue-500/30" },
   { id: "OFFICE_RENT", label: "Офис / Связь / Быт", icon: Building2, color: "text-purple-400 bg-purple-500/10 border-purple-500/30" },
   { id: "OTHER", label: "Прочее (комментарий)", icon: Package, color: "text-slate-300 bg-slate-800 border-slate-700" },
@@ -65,6 +67,11 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
   const [accounts, setAccounts] = useState<any[]>([]);
   const [cars, setCars] = useState<any[]>([]);
   const [cities, setCities] = useState<any[]>([]);
+  const [owners, setOwners] = useState<any[]>([]);
+  const [selectedOwnerId, setSelectedOwnerId] = useState<string>("");
+  const [ownerPendingBalance, setOwnerPendingBalance] = useState<number | null>(null);
+  const [ownerDetails, setOwnerDetails] = useState<any>(null);
+  const [loadingOwnerData, setLoadingOwnerData] = useState<boolean>(false);
 
   const [carSearch, setCarSearch] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -109,12 +116,45 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
           setAccountId(timelineData.financialAccounts[0].id);
         }
       }
+      if (teamData.owners && Array.isArray(teamData.owners)) {
+        setOwners(teamData.owners);
+      }
     } catch (e: any) {
       console.error("Error loading accounts:", e);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!selectedOwnerId) {
+      setOwnerPendingBalance(null);
+      setOwnerDetails(null);
+      return;
+    }
+    const fetchOwnerDetails = async () => {
+      setLoadingOwnerData(true);
+      try {
+        const res = await fetch(`/api/owners/portal?ownerId=${selectedOwnerId}`);
+        const data = await res.json();
+        if (data.success && data.selectedOwner) {
+          setOwnerDetails(data.selectedOwner);
+          const pending = data.metrics?.pendingBalanceUSD ?? null;
+          setOwnerPendingBalance(pending);
+          setDescription(`Выплата прибыли инвестору: ${data.selectedOwner.fullName}`);
+          if (pending && pending > 0 && (!amount || amount === "0")) {
+            setAmount(pending.toString());
+            setCurrency("GEL");
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching owner details:", err);
+      } finally {
+        setLoadingOwnerData(false);
+      }
+    };
+    fetchOwnerDetails();
+  }, [selectedOwnerId]);
 
   if (!isOpen) return null;
 
@@ -123,6 +163,10 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
       setErrorMsg("Укажите корректную сумму расхода больше 0");
+      return;
+    }
+    if (category === "INVESTOR_PAYOUT" && !selectedOwnerId) {
+      setErrorMsg("Пожалуйста, выберите инвестора из списка для выплаты");
       return;
     }
     if (!description.trim()) {
@@ -147,6 +191,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
           category,
           description: description.trim(),
           accountId,
+          ownerId: category === "INVESTOR_PAYOUT" ? selectedOwnerId : undefined,
           carId: carId || undefined,
           cityId: cityId || undefined,
           managerName: managerName.trim() || "Менеджер",
@@ -291,6 +336,13 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
                         setCurrency("GEL");
                         if (!description) setDescription("Полная мойка авто");
                       }
+                      if (cat.id === "INVESTOR_PAYOUT") {
+                        setCurrency("GEL");
+                        if (!description && selectedOwnerId) {
+                          const o = owners.find((x) => x.id === selectedOwnerId);
+                          if (o) setDescription(`Выплата прибыли инвестору: ${o.fullName}`);
+                        }
+                      }
                     }}
                     className={`p-2.5 rounded-xl border flex items-center space-x-2 transition-all active:scale-95 text-left ${
                       isSelected
@@ -305,6 +357,67 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
               })}
             </div>
           </div>
+
+          {/* Investor / Owner Selector when category is INVESTOR_PAYOUT */}
+          {category === "INVESTOR_PAYOUT" && (
+            <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-4 space-y-3 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-emerald-300 flex items-center space-x-1.5 uppercase tracking-wider">
+                  <HandCoins className="w-4 h-4 text-emerald-400" />
+                  <span>Инвестор / Владелец автомобиля *</span>
+                </label>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  Выплата дохода
+                </span>
+              </div>
+
+              <select
+                value={selectedOwnerId}
+                onChange={(e) => setSelectedOwnerId(e.target.value)}
+                required
+                className="w-full bg-slate-900 border border-emerald-500/50 focus:border-emerald-400 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition font-medium"
+              >
+                <option value="">— Выберите инвестора из списка —</option>
+                {owners.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.fullName} ({o.carsCount} авто) • {o.phone}
+                  </option>
+                ))}
+              </select>
+
+              {selectedOwnerId && (
+                <div className="bg-slate-900/90 border border-emerald-500/30 rounded-xl p-3 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-mono">Реквизиты инвестора:</span>
+                      <span className="text-xs font-bold text-white block">
+                        {ownerDetails?.bankName || "Банк инвестора"} • {ownerDetails?.bankIban || "IBAN не указан"}
+                      </span>
+                    </div>
+                    <div className="sm:text-right">
+                      <span className="text-[10px] text-slate-400 block font-mono">Начислено к выплате:</span>
+                      <span className="text-sm font-black text-emerald-400 font-mono">
+                        {loadingOwnerData ? "Загрузка..." : `${ownerPendingBalance ?? 0} ₾ (GEL)`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {ownerPendingBalance !== null && ownerPendingBalance > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAmount(ownerPendingBalance.toString());
+                        setCurrency("GEL");
+                      }}
+                      className="w-full sm:w-auto px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold transition flex items-center justify-center space-x-1.5 shadow"
+                    >
+                      <span>⚡ Выплатить весь остаток: {ownerPendingBalance} ₾</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Quick wash presets if category is WASHING */}
           {category === "WASHING" && (

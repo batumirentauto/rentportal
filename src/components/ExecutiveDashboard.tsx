@@ -195,6 +195,7 @@ export const ExecutiveDashboard: React.FC = () => {
     WASHING: "🧼 Мойка авто (расчёт раз в месяц)",
     FUEL: "⛽ Топливо и заправка",
     MAINTENANCE: "🔧 ТО и запчасти",
+    INVESTOR_PAYOUT: "💳 Выплаты инвесторам (доход от авто)",
     SALARY: "💼 Зарплаты персонала",
     OFFICE_RENT: "🏢 Аренда офисов",
     PARKING_FINES: "🚨 Штрафы и парковки",

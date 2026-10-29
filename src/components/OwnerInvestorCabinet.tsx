@@ -947,10 +947,16 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
           </div>
           <div className="mt-2">
             <span className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {metrics?.netProfitInvestorGEL?.toLocaleString()} ₾
+              {metrics?.netProfitInvestorGEL?.toLocaleString() || 0} ₾
             </span>
             <div className="text-[11px] text-emerald-400 font-semibold mt-1">
-              Доход от аренды минус расходы на авто
+              {metrics?.totalOwnerPlannedEarningsUSD > 0 ? (
+                <span className="text-amber-300 font-normal block">
+                  + {metrics.totalOwnerPlannedEarningsUSD} ₾ в текущих/плановых бронях (начисление при возврате авто)
+                </span>
+              ) : (
+                <span>Доход от завершённых аренд за вычетом расходов</span>
+              )}
             </div>
           </div>
         </div>
@@ -1512,8 +1518,35 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
                           )}
                         </td>
 
-                        <td className="py-3 px-3 text-right font-mono font-black text-emerald-400 text-sm">
-                          {b.ownerTotalPayout} ₾
+                        <td className="py-3 px-3 text-right">
+                          {b.isCompleted ? (
+                            <div>
+                              <span className="font-mono font-black text-emerald-400 text-sm block">
+                                +{b.earnedPayout} ₾
+                              </span>
+                              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono font-bold">
+                                ✅ Начислено (авто сдано)
+                              </span>
+                            </div>
+                          ) : b.isRentedNow ? (
+                            <div>
+                              <span className="font-mono font-bold text-blue-300 text-xs block">
+                                0 ₾ <span className="text-[10px] text-slate-400 font-normal">(план: {b.ownerTotalPayout} ₾)</span>
+                              </span>
+                              <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-mono">
+                                🚗 В поездке (до возврата)
+                              </span>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="font-mono font-bold text-slate-400 text-xs block">
+                                0 ₾ <span className="text-[10px] text-slate-500 font-normal">(план: {b.ownerTotalPayout} ₾)</span>
+                              </span>
+                              <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono">
+                                ⏳ До выдачи авто
+                              </span>
+                            </div>
+                          )}
                         </td>
 
                         <td className="py-3 px-4 text-center">

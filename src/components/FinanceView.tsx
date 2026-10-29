@@ -16,6 +16,7 @@ import {
   PlusCircle,
   User,
   Building2,
+  HandCoins,
 } from "lucide-react";
 import { RecordExpenseModal } from "./RecordExpenseModal";
 import { GoogleSheetsBackupBanner } from "./GoogleSheetsBackupBanner";
@@ -91,8 +92,14 @@ export const FinanceView: React.FC = () => {
     .filter((e) => e.category === "MAINTENANCE")
     .reduce((acc, e) => acc + (e.amount || 0), 0);
 
+  const investorPayoutExpenses = expenses
+    .filter((e) => e.category === "INVESTOR_PAYOUT")
+    .reduce((acc, e) => acc + (e.amount || 0), 0);
+
   const getCategoryBadge = (cat: string) => {
     switch (cat) {
+      case "INVESTOR_PAYOUT":
+        return { label: "Выплата инвестору", icon: HandCoins, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" };
       case "FUEL":
         return { label: "Заправка / Топливо", icon: Fuel, color: "text-amber-400 bg-amber-500/10 border-amber-500/30" };
       case "WASHING":
@@ -360,8 +367,8 @@ export const FinanceView: React.FC = () => {
       {activeFinanceTab === "expenses" && (
         <div className="space-y-6">
           {/* Expenses KPI Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
               <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
                 Всего расходов:
               </span>
@@ -373,7 +380,19 @@ export const FinanceView: React.FC = () => {
               </span>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+                Выплаты инвесторам:
+              </span>
+              <div className="text-2xl font-black text-emerald-400 font-mono mt-1">
+                {investorPayoutExpenses} ₾
+              </div>
+              <span className="text-xs text-emerald-500/80 mt-0.5 block">
+                Доход от аренды авто
+              </span>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
               <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
                 Заправка топлива:
               </span>
@@ -385,7 +404,7 @@ export const FinanceView: React.FC = () => {
               </span>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
               <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
                 Мойки и химчистки:
               </span>
@@ -393,11 +412,11 @@ export const FinanceView: React.FC = () => {
                 {washExpenses} ₾
               </div>
               <span className="text-xs text-slate-500 mt-0.5 block">
-                Начислено (расчёт раз в месяц по реестру)
+                Начислено автомойкам
               </span>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
               <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
                 ТО, масло и шины:
               </span>
@@ -487,6 +506,15 @@ export const FinanceView: React.FC = () => {
                                 </span>
                                 <span className="text-[10px] font-mono text-amber-400">
                                   {exp.car.plateNumber}
+                                </span>
+                              </div>
+                            ) : exp.owner ? (
+                              <div>
+                                <span className="font-bold text-emerald-400 block">
+                                  {exp.owner.fullName}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  Инвестор
                                 </span>
                               </div>
                             ) : (
