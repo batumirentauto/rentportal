@@ -5,6 +5,7 @@ export async function GET() {
   try {
     const payments = await prisma.payment.findMany({
       include: {
+        account: true,
         booking: {
           include: {
             car: true,

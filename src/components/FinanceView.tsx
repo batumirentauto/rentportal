@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   DollarSign,
   Landmark,
@@ -16,9 +16,14 @@ import {
   PlusCircle,
   User,
   Building2,
+  Calendar,
+  Filter,
+  Clock,
 } from "lucide-react";
 import { RecordExpenseModal } from "./RecordExpenseModal";
 import { GoogleSheetsBackupBanner } from "./GoogleSheetsBackupBanner";
+
+type PeriodPreset = "today" | "yesterday" | "day_before" | "week" | "month" | "all" | "custom";
 
 export const FinanceView: React.FC = () => {
   const [activeFinanceTab, setActiveFinanceTab] = useState<"payments" | "expenses" | "manager_cash">("payments");
@@ -29,6 +34,18 @@ export const FinanceView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
   const [expenseInitialCategory, setExpenseInitialCategory] = useState<string | undefined>(undefined);
+
+  // Фильтр по дате / периоду
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("today");
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const d = new Date();
+    return d.toISOString().split("T")[0];
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => {
+    const d = new Date();
+    return d.toISOString().split("T")[0];
+  });
+  const [showCustomRangeInputs, setShowCustomRangeInputs] = useState<boolean>(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -69,32 +86,202 @@ export const FinanceView: React.FC = () => {
     );
   }
 
-  const summary = financeData?.summary || {};
-  const payments = financeData?.payments || [];
+  // Расчет границ выбранного периода
+  const periodBounds = useMemo(() => {
+    const now = new Date();
 
-  // Expenses calculations
-  const totalExpensesGEL = expenses
-    .filter((e) => e.currency === "GEL")
-    .reduce((acc, e) => acc + (e.amount || 0), 0);
-  const totalExpensesUSD = expenses
-    .filter((e) => e.currency === "USD")
-    .reduce((acc, e) => acc + (e.amount || 0), 0);
+    if (periodPreset === "today") {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      return {
+        start,
+        end,
+        label: `Сегодня (${start.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })})`,
+        shortLabel: "Сегодня",
+      };
+    }
 
-  const fuelExpenses = expenses
-    .filter((e) => e.category === "FUEL")
-    .reduce((acc, e) => acc + (e.amount || 0), 0);
+    if (periodPreset === "yesterday") {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const start = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0, 0);
+      const end = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999);
+      return {
+        start,
+        end,
+        label: `Вчера (${start.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })})`,
+        shortLabel: "Вчера",
+      };
+    }
 
-  const washExpenses = expenses
-    .filter((e) => e.category === "WASHING")
-    .reduce((acc, e) => acc + (e.amount || 0), 0);
+    if (periodPreset === "day_before") {
+      const db = new Date(now);
+      db.setDate(db.getDate() - 2);
+      const start = new Date(db.getFullYear(), db.getMonth(), db.getDate(), 0, 0, 0, 0);
+      const end = new Date(db.getFullYear(), db.getMonth(), db.getDate(), 23, 59, 59, 999);
+      return {
+        start,
+        end,
+        label: `Позавчера (${start.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })})`,
+        shortLabel: "Позавчера",
+      };
+    }
 
-  const maintExpenses = expenses
-    .filter((e) => e.category === "MAINTENANCE")
-    .reduce((acc, e) => acc + (e.amount || 0), 0);
+    if (periodPreset === "week") {
+      const w = new Date(now);
+      w.setDate(w.getDate() - 6);
+      const start = new Date(w.getFullYear(), w.getMonth(), w.getDate(), 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      return {
+        start,
+        end,
+        label: `Последние 7 дней (${start.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })} — ${end.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })})`,
+        shortLabel: "7 дней",
+      };
+    }
 
-  const ownerPayoutExpenses = expenses
-    .filter((e) => e.category === "OWNER_PAYOUT")
-    .reduce((acc, e) => acc + (e.amount || 0), 0);
+    if (periodPreset === "month") {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      return {
+        start,
+        end,
+        label: `Этот месяц (${start.toLocaleDateString("ru-RU", { month: "long" })})`,
+        shortLabel: "Этот месяц",
+      };
+    }
+
+    if (periodPreset === "custom" && customStartDate) {
+      const start = new Date(`${customStartDate}T00:00:00`);
+      const endStr = customEndDate || customStartDate;
+      const end = new Date(`${endStr}T23:59:59.999`);
+      const isSingleDay = customStartDate === endStr;
+      return {
+        start,
+        end,
+        label: isSingleDay
+          ? `Дата: ${start.toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })}`
+          : `Период: ${start.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })} — ${end.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}`,
+        shortLabel: isSingleDay
+          ? start.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
+          : `${start.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}—${end.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}`,
+      };
+    }
+
+    return {
+      start: null,
+      end: null,
+      label: "Всё время",
+      shortLabel: "Всё время",
+    };
+  }, [periodPreset, customStartDate, customEndDate]);
+
+  const allPayments = financeData?.payments || [];
+  const allExpenses = expenses || [];
+
+  // Фильтрованные транзакции и расходы по выбранному периоду
+  const payments = useMemo(() => {
+    if (!periodBounds.start || !periodBounds.end) return allPayments;
+    return allPayments.filter((p: any) => {
+      const d = new Date(p.createdAt);
+      return d >= periodBounds.start! && d <= periodBounds.end!;
+    });
+  }, [allPayments, periodBounds]);
+
+  const filteredExpenses = useMemo(() => {
+    if (!periodBounds.start || !periodBounds.end) return allExpenses;
+    return allExpenses.filter((e: any) => {
+      const d = new Date(e.date || e.createdAt);
+      return d >= periodBounds.start! && d <= periodBounds.end!;
+    });
+  }, [allExpenses, periodBounds]);
+
+  // Динамическая сводка поступлений и залогов за выбранный период
+  const summary = useMemo(() => {
+    const s = {
+      totalUSD: 0,
+      totalGEL: 0,
+      totalEUR: 0,
+      depositsUSD: 0,
+      depositsGEL: 0,
+      pendingRefundsUSD: 0,
+      pendingRefundsGEL: 0,
+      byMethod: {
+        CASH: 0,
+        CARD_POS: 0,
+        TBC_BANK: 0,
+        BOG_BANK: 0,
+        CREDO_BANK: 0,
+        CRYPTO: 0,
+      } as Record<string, number>,
+    };
+
+    payments.forEach((p: any) => {
+      if (p.currency === "USD") {
+        if (p.type === "DEPOSIT") {
+          s.depositsUSD += p.amount;
+        } else {
+          s.totalUSD += p.amount;
+        }
+      } else if (p.currency === "GEL") {
+        if (p.type === "DEPOSIT") {
+          s.depositsGEL += p.amount;
+        } else {
+          s.totalGEL += p.amount;
+        }
+      } else if (p.currency === "EUR") {
+        s.totalEUR += p.amount;
+      }
+
+      if (p.changeOnReturn && p.changeOnReturn > 0) {
+        if (p.currency === "GEL") s.pendingRefundsGEL += p.changeOnReturn;
+        else s.pendingRefundsUSD += p.changeOnReturn;
+      }
+
+      if (s.byMethod[p.method] !== undefined) {
+        s.byMethod[p.method] += p.amount;
+      }
+    });
+
+    return s;
+  }, [payments]);
+
+  // Expenses calculations за выбранный период
+  const totalExpensesGEL = useMemo(() => {
+    return filteredExpenses
+      .filter((e) => e.currency === "GEL")
+      .reduce((acc, e) => acc + (e.amount || 0), 0);
+  }, [filteredExpenses]);
+
+  const totalExpensesUSD = useMemo(() => {
+    return filteredExpenses
+      .filter((e) => e.currency === "USD")
+      .reduce((acc, e) => acc + (e.amount || 0), 0);
+  }, [filteredExpenses]);
+
+  const fuelExpenses = useMemo(() => {
+    return filteredExpenses
+      .filter((e) => e.category === "FUEL")
+      .reduce((acc, e) => acc + (e.amount || 0), 0);
+  }, [filteredExpenses]);
+
+  const washExpenses = useMemo(() => {
+    return filteredExpenses
+      .filter((e) => e.category === "WASHING")
+      .reduce((acc, e) => acc + (e.amount || 0), 0);
+  }, [filteredExpenses]);
+
+  const maintExpenses = useMemo(() => {
+    return filteredExpenses
+      .filter((e) => e.category === "MAINTENANCE")
+      .reduce((acc, e) => acc + (e.amount || 0), 0);
+  }, [filteredExpenses]);
+
+  const ownerPayoutExpenses = useMemo(() => {
+    return filteredExpenses
+      .filter((e) => e.category === "OWNER_PAYOUT")
+      .reduce((acc, e) => acc + (e.amount || 0), 0);
+  }, [filteredExpenses]);
 
   const getCategoryBadge = (cat: string) => {
     switch (cat) {
@@ -168,6 +355,171 @@ export const FinanceView: React.FC = () => {
       {/* Google Sheets Backup & Reporting Banner */}
       <GoogleSheetsBackupBanner onSyncComplete={fetchData} />
 
+      {/* Панель выбора даты и периода для кассы смены */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Период отчёта кассы:
+                </span>
+                <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700 font-mono">
+                  {periodPreset === "today" ? "по умолчанию" : "фильтр активен"}
+                </span>
+              </div>
+              <h3 className="text-sm font-extrabold text-amber-400 mt-0.5 flex items-center space-x-1.5">
+                <span>{periodBounds.label}</span>
+              </h3>
+            </div>
+          </div>
+
+          {/* Кнопки быстрого выбора дат */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => {
+                setPeriodPreset("today");
+                setShowCustomRangeInputs(false);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                periodPreset === "today"
+                  ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20 scale-105"
+                  : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
+              }`}
+            >
+              Сегодня
+            </button>
+            <button
+              onClick={() => {
+                setPeriodPreset("yesterday");
+                setShowCustomRangeInputs(false);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                periodPreset === "yesterday"
+                  ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20 scale-105"
+                  : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
+              }`}
+            >
+              Вчера
+            </button>
+            <button
+              onClick={() => {
+                setPeriodPreset("day_before");
+                setShowCustomRangeInputs(false);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                periodPreset === "day_before"
+                  ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20 scale-105"
+                  : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
+              }`}
+            >
+              Позавчера
+            </button>
+            <button
+              onClick={() => {
+                setPeriodPreset("week");
+                setShowCustomRangeInputs(false);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                periodPreset === "week"
+                  ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20 scale-105"
+                  : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
+              }`}
+            >
+              7 дней
+            </button>
+            <button
+              onClick={() => {
+                setPeriodPreset("month");
+                setShowCustomRangeInputs(false);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                periodPreset === "month"
+                  ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20 scale-105"
+                  : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
+              }`}
+            >
+              Этот месяц
+            </button>
+            <button
+              onClick={() => {
+                setPeriodPreset("custom");
+                setShowCustomRangeInputs(true);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${
+                periodPreset === "custom"
+                  ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20 scale-105"
+                  : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Выбрать дату...</span>
+            </button>
+            <button
+              onClick={() => {
+                setPeriodPreset("all");
+                setShowCustomRangeInputs(false);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                periodPreset === "all"
+                  ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20 scale-105"
+                  : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
+              }`}
+            >
+              Всё время
+            </button>
+          </div>
+        </div>
+
+        {/* Раскрывающийся блок точного выбора даты или интервала */}
+        {(showCustomRangeInputs || periodPreset === "custom") && (
+          <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center gap-3 text-xs bg-slate-950/80 p-3 rounded-xl border border-slate-800/80">
+            <span className="text-slate-300 font-bold flex items-center space-x-1">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Укажите точную дату или диапазон:</span>
+            </span>
+            <div className="flex items-center space-x-1.5">
+              <span className="text-slate-400 font-semibold">С:</span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => {
+                  setCustomStartDate(e.target.value);
+                  setPeriodPreset("custom");
+                }}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white font-mono focus:border-amber-500 focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <span className="text-slate-400 font-semibold">По:</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => {
+                  setCustomEndDate(e.target.value);
+                  setPeriodPreset("custom");
+                }}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white font-mono focus:border-amber-500 focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={() => {
+                const todayStr = new Date().toISOString().split("T")[0];
+                setCustomStartDate(todayStr);
+                setCustomEndDate(todayStr);
+                setPeriodPreset("custom");
+              }}
+              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[11px] font-semibold border border-slate-700"
+            >
+              Сбросить на сегодня
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Main Switcher: Payments vs Expenses vs Manager Cash */}
       <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800 max-w-xl">
         <button
@@ -191,7 +543,7 @@ export const FinanceView: React.FC = () => {
           }`}
         >
           <Receipt className="w-4 h-4" />
-          <span>Журнал расходов ({expenses.length})</span>
+          <span>Журнал расходов ({filteredExpenses.length})</span>
         </button>
 
         <button
@@ -301,13 +653,23 @@ export const FinanceView: React.FC = () => {
 
           {/* Transactions List */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-            <h3 className="font-bold text-white text-base">
-              Журнал финансовых операций по выдачам
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="font-bold text-white text-base">
+                  Журнал финансовых операций по выдачам
+                </h3>
+                <span className="text-xs text-amber-400 font-semibold block mt-0.5">
+                  Период: {periodBounds.label}
+                </span>
+              </div>
+              <span className="text-xs text-slate-400 bg-slate-950 px-3 py-1 rounded-full border border-slate-800 font-mono w-max">
+                Транзакций: <strong className="text-white">{payments.length}</strong>
+              </span>
+            </div>
 
             {payments.length === 0 ? (
               <div className="p-8 text-center text-slate-500 text-xs">
-                Транзакций пока нет. Проведите выдачу авто через вкладку «План выдач», чтобы появилась первая проводка.
+                За выбранный период ({periodBounds.shortLabel}) транзакций нет. Выберите другой период или проведите выдачу авто через «План выдач».
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -447,12 +809,15 @@ export const FinanceView: React.FC = () => {
 
           {/* Expenses Table */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="font-bold text-white text-base">
                   Журнал операционных расходов сотрудников
                 </h3>
-                <p className="text-xs text-slate-400">
+                <span className="text-xs text-amber-400 font-semibold block mt-0.5">
+                  Период: {periodBounds.label}
+                </span>
+                <p className="text-xs text-slate-400 mt-0.5">
                   Все зафиксированные траты с указанием ответственного, автомобиля и счёта списания
                 </p>
               </div>
@@ -466,9 +831,9 @@ export const FinanceView: React.FC = () => {
               </button>
             </div>
 
-            {expenses.length === 0 ? (
+            {filteredExpenses.length === 0 ? (
               <div className="p-12 text-center text-slate-500 text-xs">
-                Расходов пока не зафиксировано. Нажмите кнопку «Записать расход», чтобы внести первую трату на бензин, мойку или ТО.
+                За выбранный период ({periodBounds.shortLabel}) расходов не найдено. Нажмите кнопку «Добавить расход» или выберите другой период.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -485,7 +850,7 @@ export const FinanceView: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                    {expenses.map((exp: any) => {
+                    {filteredExpenses.map((exp: any) => {
                       const badge = getCategoryBadge(exp.category);
                       const Icon = badge.icon;
                       return (
@@ -615,34 +980,59 @@ export const FinanceView: React.FC = () => {
                       {cityAccounts.length === 0 ? (
                         <p className="text-xs text-slate-500 italic py-2 text-center">Нет открытых касс</p>
                       ) : (
-                        cityAccounts.map((acc: any) => (
-                          <div
-                            key={acc.id}
-                            className="bg-slate-900 border border-slate-800/80 rounded-xl p-3 space-y-1.5 shadow"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-xs text-white flex items-center space-x-1">
-                                <User className="w-3.5 h-3.5 text-slate-400" />
-                                <span>{acc.managerName}</span>
-                              </span>
-                              <span className="text-[10px] text-slate-400 font-mono">
-                                ₾ GEL
-                              </span>
-                            </div>
+                        cityAccounts.map((acc: any) => {
+                          const accFilteredPayments = payments.filter((p: any) => {
+                            if (p.accountId === acc.id) return true;
+                            const pMgr = (p.managerName || "").toLowerCase();
+                            const accMgr = (acc.managerName || "").toLowerCase();
+                            const accName = (acc.name || "").toLowerCase();
+                            return (accMgr && pMgr.includes(accMgr)) || (accName && pMgr.includes(accName));
+                          });
 
-                            <div className="flex justify-between items-baseline pt-1">
-                              <span className="text-[10px] text-slate-400">На руках в кассе:</span>
-                              <span className="font-mono font-black text-emerald-400 text-sm">
-                                {acc.currentBalance} ₾
-                              </span>
-                            </div>
+                          const accFilteredExpenses = filteredExpenses.filter((e: any) => {
+                            if (e.accountId === acc.id) return true;
+                            const eMgr = (e.managerName || "").toLowerCase();
+                            const accMgr = (acc.managerName || "").toLowerCase();
+                            const accName = (acc.name || "").toLowerCase();
+                            return (accMgr && eMgr.includes(accMgr)) || (accName && eMgr.includes(accName));
+                          });
 
-                            <div className="flex justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-800/60 font-mono">
-                              <span>Сегодня:</span>
-                              <span>+{acc.todayIncome || 0} ₾ / -{acc.todayExpense || 0} ₾</span>
+                          const periodIncome = accFilteredPayments.reduce((s: number, p: any) => s + (p.amount || 0), 0);
+                          const periodExpense = accFilteredExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
+
+                          return (
+                            <div
+                              key={acc.id}
+                              className="bg-slate-900 border border-slate-800/80 rounded-xl p-3 space-y-1.5 shadow"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-xs text-white flex items-center space-x-1">
+                                  <User className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>{acc.managerName}</span>
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  ₾ GEL
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between items-baseline pt-1">
+                                <span className="text-[10px] text-slate-400">На руках в кассе:</span>
+                                <span className="font-mono font-black text-emerald-400 text-sm">
+                                  {acc.currentBalance} ₾
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between text-[10px] text-slate-400 pt-1.5 border-t border-slate-800/60 font-mono">
+                                <span className="text-amber-400 font-semibold">{periodBounds.shortLabel}:</span>
+                                <span className="font-bold">
+                                  <span className={periodIncome > 0 ? "text-emerald-400" : "text-slate-400"}>+{periodIncome} ₾</span>
+                                  <span className="text-slate-600"> / </span>
+                                  <span className={periodExpense > 0 ? "text-rose-400" : "text-slate-400"}>-{periodExpense} ₾</span>
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
