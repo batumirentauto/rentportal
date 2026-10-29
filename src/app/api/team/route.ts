@@ -164,8 +164,20 @@ export async function POST(request: Request) {
 
     // 2. Удаление пользователя
     if (action === "DELETE" && userId) {
+      const userToDelete = await prisma.user.findUnique({ where: { id: userId } });
+      if (userToDelete) {
+        // Удаляем или отвязываем связанные наличные кассы сотрудника
+        await prisma.financialAccount.deleteMany({
+          where: {
+            OR: [
+              { userId: userToDelete.id },
+              { managerResponsible: userToDelete.fullName },
+            ],
+          },
+        }).catch((e) => console.warn("Notice: could not delete financial accounts for user:", e));
+      }
       await prisma.user.delete({ where: { id: userId } });
-      return NextResponse.json({ success: true, message: "Пользователь удалён" });
+      return NextResponse.json({ success: true, message: "Пользователь и его касса успешно удалены" });
     }
 
     // 2.5. Полное редактирование карточки сотрудника

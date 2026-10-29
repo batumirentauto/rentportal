@@ -42,18 +42,31 @@ export default function Home() {
   const [overdueBookings, setOverdueBookings] = useState<any[]>([]);
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<"EXECUTIVE" | "MANAGER" | "OWNER">("EXECUTIVE");
+  const [currentUserName, setCurrentUserName] = useState<string>("Менеджер смены");
   const [ownerIdFromUrl, setOwnerIdFromUrl] = useState<string | null>(null);
 
-  // Check role and city from URL query param or localStorage
+  // Check role, user and city from URL query param or localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const urlRole = params.get("role")?.toUpperCase();
       const urlCity = params.get("city")?.toUpperCase();
       const urlOwnerId = params.get("ownerId");
+      const urlUser = params.get("user");
 
       if (urlCity && ["TBS", "BUS", "KUT"].includes(urlCity)) {
         setSelectedCity(urlCity);
+      }
+
+      if (urlUser) {
+        const decodedUser = decodeURIComponent(urlUser).trim();
+        setCurrentUserName(decodedUser);
+        localStorage.setItem("rentportal_manager_name", decodedUser);
+      } else {
+        const savedUser = localStorage.getItem("rentportal_manager_name");
+        if (savedUser) {
+          setCurrentUserName(savedUser);
+        }
       }
 
       if (urlOwnerId) {
@@ -284,6 +297,7 @@ export default function Home() {
         setActiveTab={setActiveTab}
         isSimulating={isSimulating}
         userRole={userRole}
+        currentUserName={currentUserName}
         onSwitchRole={handleSwitchRole}
       />
 
@@ -317,6 +331,7 @@ export default function Home() {
             {activeTab === "handover" && (
               <MorningSchedule
                 bookings={bookings}
+                currentUserName={currentUserName}
                 onOpenContract={(b) => setContractBooking(b)}
                 onOpenHandover={(b) => setHandoverBooking(b)}
                 onToggleWash={handleToggleWash}
@@ -417,6 +432,7 @@ export default function Home() {
       {handoverBooking && (
         <HandoverWizardModal
           booking={handoverBooking}
+          currentUserName={currentUserName}
           onClose={() => setHandoverBooking(null)}
           onComplete={handleCompleteHandover}
         />
@@ -426,6 +442,7 @@ export default function Home() {
       {returnBooking && (
         <ReturnWizardModal
           booking={returnBooking}
+          currentUserName={currentUserName}
           onClose={() => setReturnBooking(null)}
           onCompleted={() => {
             setReturnBooking(null);
@@ -478,6 +495,7 @@ export default function Home() {
       {/* Global Quick Record Expense Modal */}
       <RecordExpenseModal
         isOpen={isExpenseModalOpen}
+        currentUserName={currentUserName}
         onClose={() => setIsExpenseModalOpen(false)}
         onExpenseCreated={() => {
           fetchBookings();

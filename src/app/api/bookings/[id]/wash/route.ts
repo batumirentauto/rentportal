@@ -66,18 +66,33 @@ export async function POST(
     if (washStatus === "CLEAN" && finalCost > 0) {
       const typeLabel = washType === "FULL" ? "Полная мойка" : washType === "BODY" ? "Мойка кузова" : "Мойка салона";
       let acc = null;
-      if (managerName) {
+      if (managerName && managerName !== "Менеджер смены" && managerName !== "Менеджер смены (Грузия)") {
         acc = await prisma.financialAccount.findFirst({
-          where: { type: "CASH", managerResponsible: { contains: managerName.split(" ")[0] } },
+          where: {
+            type: "CASH",
+            OR: [
+              { managerResponsible: { contains: managerName.trim() } },
+              { name: { contains: managerName.trim() } },
+            ],
+          },
         });
       }
       if (!acc && booking.car.cityId) {
         acc = await prisma.financialAccount.findFirst({
-          where: { type: "CASH", cityId: booking.car.cityId },
+          where: {
+            type: "CASH",
+            cityId: booking.car.cityId,
+            AND: [{ managerResponsible: { not: { contains: "Николоз" } } }],
+          },
         });
       }
       if (!acc) {
-        acc = await prisma.financialAccount.findFirst({ where: { currency: "GEL" } }) || await prisma.financialAccount.findFirst();
+        acc = await prisma.financialAccount.findFirst({
+          where: {
+            currency: "GEL",
+            AND: [{ managerResponsible: { not: { contains: "Николоз" } } }],
+          },
+        }) || await prisma.financialAccount.findFirst();
       }
 
       if (acc) {

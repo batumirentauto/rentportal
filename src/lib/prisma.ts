@@ -392,6 +392,101 @@ function ensureSchema(dbFilePath: string) {
       console.warn("[Database] Mock data cleanup notice:", cleanErr);
     }
 
+    // 6.1 Transfer revenue from obsolete Nikoloz mock account to Evgeny and cleanup
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS "_MigrationFlags" ("id" TEXT PRIMARY KEY, "executedAt" DATETIME DEFAULT CURRENT_TIMESTAMP);`);
+      const nikFlag = db.prepare(`SELECT id FROM "_MigrationFlags" WHERE id = 'transfer_nikoloz_revenue_to_evgeny_v2'`).get();
+      if (!nikFlag) {
+        console.log("[Database] Checking for obsolete Nikoloz cash account and revenue transfer to Evgeny...");
+
+        // 1. Find Nikoloz account
+        const nikolozAcc = db.prepare(`
+          SELECT id, name, currentBalance, cityId FROM FinancialAccount 
+          WHERE managerResponsible LIKE '%Николоз%' OR name LIKE '%Николоз%' OR id = 'cmvm9rnfs000n987muoi3m70g'
+        `).get();
+
+        // 2. Find or create Evgeny user and cash account
+        let evgenyUser = db.prepare(`SELECT id, fullName, cityId FROM "User" WHERE fullName LIKE '%Евгений%'`).get();
+        let evgenyAcc = db.prepare(`
+          SELECT id, name, currentBalance FROM FinancialAccount 
+          WHERE managerResponsible LIKE '%Евгений%' OR name LIKE '%Евгений%' OR (userId IS NOT NULL AND userId = ?)
+        `).get(evgenyUser ? evgenyUser.id : 'none');
+
+        const batumiCity = db.prepare(`SELECT id FROM City WHERE code = 'BUS' LIMIT 1`).get();
+        const cityIdToUse = evgenyUser?.cityId || nikolozAcc?.cityId || batumiCity?.id || null;
+
+        if (!evgenyAcc) {
+          const newAccId = "acc_evgeny_" + Date.now();
+          db.prepare(`
+            INSERT INTO FinancialAccount (id, name, type, bankName, currency, cityId, initialBalance, currentBalance, managerResponsible, userId, isManagerCash, createdAt, updatedAt)
+            VALUES (?, 'Касса нал: Евгений (Батуми)', 'CASH', 'NONE', 'GEL', ?, 0, 0, 'Евгений', ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          `).run(newAccId, cityIdToUse, evgenyUser ? evgenyUser.id : null);
+          evgenyAcc = { id: newAccId, name: 'Касса нал: Евгений (Батуми)', currentBalance: 0 };
+          console.log("[Database] Created FinancialAccount for Евгений");
+        }
+
+        // 3. If Nikoloz account exists, transfer balance and reassign payments
+        if (nikolozAcc) {
+          const balanceToTransfer = nikolozAcc.currentBalance || 0;
+          if (balanceToTransfer > 0) {
+            db.prepare(`UPDATE FinancialAccount SET currentBalance = currentBalance + ? WHERE id = ?`).run(balanceToTransfer, evgenyAcc.id);
+            console.log(`[Database] Transferred ${balanceToTransfer} GEL from Nikoloz to Evgeny (${evgenyAcc.name})`);
+          }
+
+          // Reassign payments from Nikoloz to Evgeny
+          db.prepare(`
+            UPDATE Payment 
+            SET accountId = ?, managerName = 'Евгений' 
+            WHERE accountId = ? OR managerName LIKE '%Николоз%' OR managerName = 'Менеджер смены (Грузия)'
+          `).run(evgenyAcc.id, nikolozAcc.id);
+
+          // Reassign Handover reports
+          db.prepare(`
+            UPDATE HandoverReport 
+            SET managerName = 'Евгений' 
+            WHERE managerName LIKE '%Николоз%' OR managerName = 'Менеджер смены (Грузия)'
+          `).run();
+
+          // Reassign Expenses
+          db.prepare(`
+            UPDATE Expense 
+            SET accountId = ?, managerName = 'Евгений' 
+            WHERE accountId = ? OR managerName LIKE '%Николоз%'
+          `).run(evgenyAcc.id, nikolozAcc.id);
+
+          // DELETE obsolete Nikoloz account so he never appears again!
+          db.prepare(`DELETE FROM FinancialAccount WHERE id = ?`).run(nikolozAcc.id);
+          console.log("[Database] Deleted obsolete Nikoloz cash account.");
+        }
+
+        // 4. Remove any other orphaned seed accounts with fake managers if they have 0 balance and 0 payments
+        try {
+          db.exec(`
+            DELETE FROM FinancialAccount 
+            WHERE (managerResponsible IN ('Георгий (Тбилиси)', 'Леван (Кутаиси)') OR name LIKE '%Георгий (Тбилиси)%' OR name LIKE '%Леван (Кутаиси)%')
+              AND currentBalance = 0 
+              AND id NOT IN (SELECT DISTINCT accountId FROM Payment WHERE accountId IS NOT NULL)
+              AND id NOT IN (SELECT DISTINCT accountId FROM Expense WHERE accountId IS NOT NULL);
+          `);
+        } catch {}
+
+        // 5. Cleanup any accidental 0-balance cash accounts belonging to OWNERs (investors)
+        try {
+          db.exec(`
+            DELETE FROM FinancialAccount 
+            WHERE type = 'CASH' 
+              AND currentBalance = 0 
+              AND userId IN (SELECT id FROM "User" WHERE role = 'OWNER');
+          `);
+        } catch {}
+
+        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('transfer_nikoloz_revenue_to_evgeny_v2')`).run();
+        console.log("[Database] Migration transfer_nikoloz_revenue_to_evgeny_v2 successfully executed!");
+      }
+    } catch (migErr) {
+      console.warn("[Database] Migration notice:", migErr);
+    }
+
     // 7. Auto-sync: Any User with role = 'OWNER' who is missing a CarOwner record
     try {
       const unlinkedOwnerUsers = db.prepare(`

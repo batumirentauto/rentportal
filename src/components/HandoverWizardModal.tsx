@@ -27,21 +27,33 @@ import {
   RefreshCw,
   Droplets,
   Download,
+  User,
 } from "lucide-react";
 
 interface HandoverWizardModalProps {
   booking: any;
+  currentUserName?: string;
   onClose: () => void;
   onComplete: () => void;
 }
 
 export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
   booking,
+  currentUserName,
   onClose,
   onComplete,
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const [managerName, setManagerName] = useState<string>(() => {
+    if (currentUserName && currentUserName !== "Менеджер смены") return currentUserName;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("rentportal_manager_name");
+      if (stored) return stored;
+    }
+    return "Менеджер смены";
+  });
 
   const car = booking?.car || {};
 
@@ -190,7 +202,7 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          managerName: "Менеджер смены (Грузия)",
+          managerName: managerName.trim() || "Менеджер смены",
           mileageAtHandover: mileage,
           fuelLevelPercent: fuelPercent,
           techPassportVerified,
@@ -1214,6 +1226,34 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Shift Manager Confirmation & Cash Assignment */}
+              <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
+                    <User className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Менеджер смены (приём денег и выдача):</span>
+                  </label>
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold">Персональная касса</span>
+                </div>
+                <input
+                  type="text"
+                  value={managerName}
+                  onChange={(e) => {
+                    setManagerName(e.target.value);
+                    if (typeof window !== "undefined" && e.target.value.trim()) {
+                      localStorage.setItem("rentportal_manager_name", e.target.value.trim());
+                    }
+                  }}
+                  placeholder="Имя менеджера (например, Евгений)"
+                  className="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2 text-xs text-white font-medium focus:outline-none transition"
+                />
+                <p className="text-[10px] text-slate-400">
+                  {paymentMethod === "CASH"
+                    ? `Выручка ${rentalAmount} ₾ (наличные) будет зафиксирована в кассе менеджера «${managerName || "Менеджер"}».`
+                    : `Выдача будет зарегистрирована за менеджером «${managerName || "Менеджер"}».`}
+                </p>
               </div>
 
               {/* Payment Method Selection */}

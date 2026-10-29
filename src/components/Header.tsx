@@ -14,6 +14,7 @@ interface HeaderProps {
   setActiveTab: (tab: "timeline" | "catalog" | "pricing" | "maintenance" | "handover" | "mobileapp" | "techpassports" | "owners" | "washing" | "finance" | "reports" | "executive" | "knowledge" | "crm" | "team" | "chats") => void;
   isSimulating: boolean;
   userRole?: "EXECUTIVE" | "MANAGER" | "OWNER";
+  currentUserName?: string;
   onSwitchRole?: (role: "EXECUTIVE" | "MANAGER" | "OWNER") => void;
 }
 
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   isSimulating,
   userRole = "EXECUTIVE",
+  currentUserName,
   onSwitchRole,
 }) => {
   React.useEffect(() => {
@@ -233,13 +235,15 @@ export const Header: React.FC<HeaderProps> = ({
                       alert("Неверный PIN-код доступа");
                     }
                   }}
-                  title="Режим менеджера выдачи (ограничен). Нажмите для входа руководителя"
+                  title={currentUserName && currentUserName !== "Менеджер смены" ? `Менеджер смены: ${currentUserName}. Нажмите для входа руководителя` : "Режим менеджера выдачи (ограничен). Нажмите для входа руководителя"}
                   className="flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-blue-950/90 border border-blue-500/50 text-blue-300 hover:bg-blue-900/80 transition text-xs font-bold"
                 >
                   <span>💼</span>
-                  <span className="hidden sm:inline">Менеджер выдачи</span>
+                  <span className="hidden sm:inline">
+                    {currentUserName && currentUserName !== "Менеджер смены" ? currentUserName : "Менеджер выдачи"}
+                  </span>
                   <span className="text-[9px] bg-blue-500/20 text-blue-300 px-1 py-0.2 rounded font-mono">
-                    Ограничен
+                    Смена
                   </span>
                 </button>
               ) : (

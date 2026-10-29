@@ -22,6 +22,7 @@ import {
 
 interface RecordExpenseModalProps {
   isOpen: boolean;
+  currentUserName?: string;
   onClose: () => void;
   onExpenseCreated?: () => void;
   preselectedCarId?: string;
@@ -39,6 +40,7 @@ const EXPENSE_CATEGORIES = [
 
 export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
   isOpen,
+  currentUserName,
   onClose,
   onExpenseCreated,
   preselectedCarId,
@@ -50,7 +52,14 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
   const [description, setDescription] = useState<string>("");
   const [accountId, setAccountId] = useState<string>("");
   const [carId, setCarId] = useState<string>(preselectedCarId || "");
-  const [managerName, setManagerName] = useState<string>("Менеджер смены");
+  const [managerName, setManagerName] = useState<string>(() => {
+    if (currentUserName && currentUserName !== "Менеджер смены") return currentUserName;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("rentportal_manager_name");
+      if (stored) return stored;
+    }
+    return "Менеджер смены";
+  });
   const [cityId, setCityId] = useState<string>(preselectedCityId || "");
 
   const [accounts, setAccounts] = useState<any[]>([]);

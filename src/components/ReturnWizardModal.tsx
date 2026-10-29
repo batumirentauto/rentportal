@@ -38,12 +38,14 @@ import {
 
 interface ReturnWizardModalProps {
   booking: any;
+  currentUserName?: string;
   onClose: () => void;
   onCompleted: (result: any) => void;
 }
 
 export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   booking,
+  currentUserName,
   onClose,
   onCompleted,
 }) => {
@@ -308,7 +310,14 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const unpaidExtensionsToDeduct = (includeUnpaidExtensions && unpaidExtensionsTotalAmount > 0) ? unpaidExtensionsTotalAmount : 0;
 
   // 7. Взаиморасчет
-  const [managerName, setManagerName] = useState<string>("Менеджер смены (Грузия)");
+  const [managerName, setManagerName] = useState<string>(() => {
+    if (currentUserName && currentUserName !== "Менеджер смены") return currentUserName;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("rentportal_manager_name");
+      if (stored) return stored;
+    }
+    return "Менеджер смены";
+  });
   const [settlementMethod, setSettlementMethod] = useState<string>("CASH");
   const [extraWashFee, setExtraWashFee] = useState<number>(0);
   const [conditionNotes, setConditionNotes] = useState<string>("");

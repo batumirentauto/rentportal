@@ -25,6 +25,7 @@ import { ManagerTasksSection } from "./ManagerTasksSection";
 
 interface MorningScheduleProps {
   bookings: any[];
+  currentUserName?: string;
   onOpenContract: (booking: any) => void;
   onOpenHandover: (booking: any) => void;
   onToggleWash: (bookingId: string, currentStatus: string) => void;
@@ -35,6 +36,7 @@ interface MorningScheduleProps {
 
 export const MorningSchedule: React.FC<MorningScheduleProps> = ({
   bookings,
+  currentUserName,
   onOpenContract,
   onOpenHandover,
   onToggleWash,
@@ -612,6 +614,7 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
       {selectedReturnBooking && (
         <ReturnWizardModal
           booking={selectedReturnBooking}
+          currentUserName={currentUserName}
           onClose={() => setSelectedReturnBooking(null)}
           onCompleted={() => {
             setSelectedReturnBooking(null);

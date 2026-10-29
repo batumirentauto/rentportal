@@ -16,7 +16,9 @@ export async function GET() {
     const accounts = await prisma.financialAccount.findMany({
       include: {
         city: true,
-        user: true,
+        user: {
+          include: { city: true },
+        },
       },
       orderBy: {
         type: "asc",
@@ -184,6 +186,14 @@ export async function GET() {
       if (acc.type === "CASH") {
         totalCashGEL += acc.currentBalance;
 
+        // Исключаем инвесторов/владельцев и удаленных тестовых пользователей из касс смены менеджеров
+        if (acc.user && acc.user.role === "OWNER") {
+          return;
+        }
+        if (acc.managerResponsible && acc.managerResponsible.includes("Николоз")) {
+          return;
+        }
+
         // Расчет активности по этой конкретной кассе
         const accPayments = payments.filter((p) => p.accountId === acc.id || (p.managerName && p.managerName.includes(acc.managerResponsible || "")));
         const accExpenses = expenses.filter((e) => e.accountId === acc.id || (e.managerName && e.managerName.includes(acc.managerResponsible || "")));
@@ -201,8 +211,8 @@ export async function GET() {
           name: acc.name,
           managerName: acc.managerResponsible || acc.user?.fullName || "Менеджер",
           userId: acc.userId,
-          cityName: acc.city?.nameRu || "Батуми",
-          cityCode: acc.city?.code || "BUS",
+          cityName: acc.city?.nameRu || (acc.user as any)?.city?.nameRu || "Батуми",
+          cityCode: acc.city?.code || (acc.user as any)?.city?.code || "BUS",
           cityId: acc.cityId,
           currency: acc.currency,
           currentBalance: acc.currentBalance,

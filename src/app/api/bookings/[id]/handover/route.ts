@@ -64,11 +64,15 @@ export async function POST(
       ? new Date(`${expectedReturnDate}T${expectedReturnTime}:00`)
       : undefined;
 
+    const effectiveManagerName = (managerName && managerName.trim() !== "Менеджер смены" && managerName.trim() !== "Менеджер смены (Грузия)")
+      ? managerName.trim()
+      : (managerName?.trim() || "Менеджер смены");
+
     // 1. Создаем или обновляем HandoverReport
     const handoverReport = await prisma.handoverReport.upsert({
       where: { bookingId: id },
       update: {
-        managerName,
+        managerName: effectiveManagerName,
         mileageAtHandover: Number(mileageAtHandover) || booking.car.currentMileage,
         fuelLevelPercent: Number(fuelLevelPercent) || booking.car.currentFuelPerc,
         techPassportVerified: Boolean(techPassportVerified),
@@ -87,7 +91,7 @@ export async function POST(
       create: {
         bookingId: id,
         carId: booking.carId,
-        managerName,
+        managerName: effectiveManagerName,
         mileageAtHandover: Number(mileageAtHandover) || booking.car.currentMileage,
         fuelLevelPercent: Number(fuelLevelPercent) || booking.car.currentFuelPerc,
         techPassportVerified: Boolean(techPassportVerified),
@@ -105,26 +109,68 @@ export async function POST(
       },
     });
 
-    // Находим персональную наличную кассу ответственного менеджера или кассу города
+    // Находим персональную наличную кассу ответственного менеджера или создаем её
     let managerCashAcc = null;
-    if (managerName) {
+
+    if (effectiveManagerName && effectiveManagerName !== "Менеджер смены") {
+      // 1. Поиск персональной кассы менеджера
       managerCashAcc = await prisma.financialAccount.findFirst({
         where: {
           type: "CASH",
-          managerResponsible: { contains: managerName.split(" ")[0] },
+          OR: [
+            { managerResponsible: { contains: effectiveManagerName } },
+            { name: { contains: effectiveManagerName } },
+            { user: { fullName: { contains: effectiveManagerName } } },
+          ],
         },
       });
+
+      // 2. Если кассы еще нет — создаем автоматически персональную кассу
+      if (!managerCashAcc) {
+        const user = await prisma.user.findFirst({
+          where: { fullName: { contains: effectiveManagerName } },
+        });
+        const targetCityId = user?.cityId || booking.car.cityId || null;
+        managerCashAcc = await prisma.financialAccount.create({
+          data: {
+            name: `Касса нал: ${effectiveManagerName}`,
+            type: "CASH",
+            currency: rentalCurrency || "GEL",
+            bankName: "NONE",
+            cityId: targetCityId || undefined,
+            userId: user?.id || null,
+            managerResponsible: effectiveManagerName,
+            isManagerCash: true,
+            initialBalance: 0,
+            currentBalance: 0,
+          },
+        });
+      }
     }
+
+    // 3. Fallback: общая касса города без чужих персональных имен (Николоз и др.)
     if (!managerCashAcc && booking.car.cityId) {
       managerCashAcc = await prisma.financialAccount.findFirst({
         where: {
           type: "CASH",
           cityId: booking.car.cityId,
+          AND: [
+            { managerResponsible: { not: { contains: "Николоз" } } },
+          ],
         },
       });
     }
+
     if (!managerCashAcc) {
-      managerCashAcc = await prisma.financialAccount.findFirst({ where: { currency: "GEL", type: "CASH" } });
+      managerCashAcc = await prisma.financialAccount.findFirst({
+        where: {
+          type: "CASH",
+          currency: "GEL",
+          AND: [
+            { managerResponsible: { not: { contains: "Николоз" } } },
+          ],
+        },
+      });
     }
 
     // 2. Создаем проводку за аренду и услуги
@@ -140,7 +186,7 @@ export async function POST(
         amountExpected: Number(amountExpected) || Number(rentalAmount) || booking.totalAmount,
         amountReceived: Number(amountReceived) || Number(rentalAmount) || booking.totalAmount,
         changeOnReturn: Number(changeOnReturn) || 0,
-        managerName,
+        managerName: effectiveManagerName,
         notes: paymentNotes || `Оплата аренды при выдаче (${paymentMethod})`,
       },
     });
@@ -167,7 +213,7 @@ export async function POST(
           accountId: depositMethod === "CASH" ? managerCashAcc?.id : undefined,
           amountExpected: Number(depositAmount),
           amountReceived: Number(depositAmount),
-          managerName,
+          managerName: effectiveManagerName,
           notes: `Залог/депозит за авто (${depositMethod}). Подлежит возврату при сдаче авто.`,
         },
       });
@@ -205,7 +251,7 @@ export async function POST(
             currency: "GEL",
             carId: booking.carId,
             cityId: booking.car.cityId,
-            managerName,
+            managerName: effectiveManagerName,
             status: "ACCRUED", // Начислено к ежемесячной оплате автомойке (не списывается с кармана менеджера)
             isMonthlySettled: false,
             description: `Начислено за мойку перед выдачей: ${washTypeLabel} — ${booking.car.brand} ${booking.car.model} (${booking.car.plateNumber}), бронь #${booking.bookingNumber}`,
