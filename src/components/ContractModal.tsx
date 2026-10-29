@@ -133,11 +133,15 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, 
     if (typeof window === "undefined") return;
     const page1El = document.getElementById("contract-page-1");
     const page2El = document.getElementById("contract-page-2");
-    if (!page1El || !page2El) return;
+    if (!page1El || !page2El) {
+      alert("Элементы договора не найдены на странице");
+      return;
+    }
 
     setIsDownloading(true);
     try {
-      const html2canvas = (await import("html2canvas")).default;
+      // Use html2canvas-pro for full Tailwind v4 OKLCH color support
+      const html2canvasPro = (await import("html2canvas-pro")).default;
       const { jsPDF } = await import("jspdf");
 
       const cleanCustomer = (customerName || "клиент")
@@ -154,32 +158,84 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, 
       const pdfWidth = 210;
       const pdfHeight = 297;
 
-      // 1. Render Page 1
-      const canvas1 = await html2canvas(page1El, {
+      const renderOptions = {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
-      });
+        windowWidth: 1000,
+        onclone: (clonedDoc: Document) => {
+          const p1 = clonedDoc.getElementById("contract-page-1");
+          const p2 = clonedDoc.getElementById("contract-page-2");
+          [p1, p2].forEach((el) => {
+            if (el) {
+              el.style.width = "794px";
+              el.style.minWidth = "794px";
+              el.style.maxWidth = "794px";
+              if (el.parentElement) {
+                el.parentElement.style.width = "820px";
+                el.parentElement.style.minWidth = "820px";
+              }
+            }
+          });
+        },
+      };
+
+      // 1. Render Page 1
+      const canvas1 = await html2canvasPro(page1El, renderOptions);
       const img1 = canvas1.toDataURL("image/jpeg", 0.98);
       pdf.addImage(img1, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
 
       // 2. Render Page 2
       pdf.addPage();
-      const canvas2 = await html2canvas(page2El, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      });
+      const canvas2 = await html2canvasPro(page2El, renderOptions);
       const img2 = canvas2.toDataURL("image/jpeg", 0.98);
       pdf.addImage(img2, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
 
-      // 3. Save PDF
-      pdf.save(filename);
-    } catch (err) {
+      // 3. Generate blob & trigger reliable mobile/desktop download
+      const pdfBlob = pdf.output("blob");
+      const blobUrl = URL.createObjectURL(pdfBlob);
+
+      // Check for mobile iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+
+      // Check if Web Share API with Files is supported (ideal for mobile iOS / Android)
+      const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
+      if (
+        isIOS &&
+        navigator.canShare &&
+        navigator.canShare({ files: [pdfFile] })
+      ) {
+        try {
+          await navigator.share({
+            files: [pdfFile],
+            title: filename,
+          });
+          return;
+        } catch (shareErr: any) {
+          // If user cancelled the share sheet, do nothing; otherwise fallback to link download
+          if (shareErr.name === "AbortError") {
+            return;
+          }
+        }
+      }
+
+      // Standard / fallback download via anchor tag
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      if (isIOS) {
+        link.target = "_blank";
+      }
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 2000);
+    } catch (err: any) {
       console.error("PDF generation failed:", err);
-      alert("Не удалось сформировать PDF. Пожалуйста, попробуйте еще раз.");
+      alert(`Не удалось сформировать PDF: ${err?.message || err}`);
     } finally {
       setIsDownloading(false);
     }
