@@ -229,13 +229,13 @@ export const Header: React.FC<HeaderProps> = ({
                       alert("Неверный PIN-код доступа");
                     }
                   }}
-                  title="Изолированный доступ инвестора. Нажмите для входа руководителя"
-                  className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/80 transition text-xs font-bold shadow-sm"
+                  title="Изолированный доступ инвестора. Нажмите для выхода в режим руководителя"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-500/60 text-emerald-300 hover:text-white transition text-xs font-black shadow-md cursor-pointer active:scale-95"
                 >
                   <Lock className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="hidden sm:inline">Кабинет инвестора</span>
-                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 py-0.2 rounded font-mono">
-                    Изолирован
+                  <span className="text-[10px] bg-emerald-500/30 text-emerald-200 px-1.5 py-0.5 rounded font-mono border border-emerald-500/40">
+                    Выйти (7777) ➔
                   </span>
                 </button>
               ) : userRole === "MANAGER" ? (

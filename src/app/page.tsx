@@ -87,18 +87,20 @@ export default function Home() {
         localStorage.setItem("rentportal_role", "MANAGER");
       } else if (urlRole === "EXECUTIVE" || urlRole === "ADMIN") {
         setUserRole("EXECUTIVE");
+        setActiveTab("timeline");
         localStorage.setItem("rentportal_role", "EXECUTIVE");
+        localStorage.removeItem("rentportal_ownerId");
       } else {
+        // Обычный вход по главной ссылке без параметров:
+        // Не блокируем руководителя в изолированном кабинете инвестора!
         const savedRole = localStorage.getItem("rentportal_role");
-        if (savedRole === "OWNER") {
-          setUserRole("OWNER");
-          setActiveTab("owners");
-          const savedOwnerId = localStorage.getItem("rentportal_ownerId");
-          if (savedOwnerId) {
-            setOwnerIdFromUrl(savedOwnerId);
-          }
-        } else if (savedRole === "MANAGER") {
+        if (savedRole === "MANAGER") {
           setUserRole("MANAGER");
+        } else {
+          setUserRole("EXECUTIVE");
+          setActiveTab("timeline");
+          localStorage.setItem("rentportal_role", "EXECUTIVE");
+          localStorage.removeItem("rentportal_ownerId");
         }
       }
     }
