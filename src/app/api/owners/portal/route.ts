@@ -142,7 +142,6 @@ export async function GET(request: Request) {
     });
 
     const totalOwnerExpensesGEL = ownerExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-    let totalOwnerPlannedEarningsUSD = 0;
 
     const ownerCarsSummary = owner.cars.map((car) => {
       const isCurrentlyRented = car.status === "RENTED";
@@ -155,22 +154,12 @@ export async function GET(request: Request) {
       const periodBookings = car.bookings.filter((b) => new Date(b.startDate) >= startDate);
       let carEarnings = 0;
       let carDays = 0;
-      let carPlannedEarnings = 0;
 
       periodBookings.forEach((b) => {
-        if (b.status === "CANCELLED") return;
-
         const rate = b.ownerDailyRate || car.defaultOwnerDailyRate || 25;
         const payout = b.ownerTotalPayout || rate * b.rentalDays;
-        const isCompleted = b.status === "COMPLETED";
-
-        // НАЧИСЛЕНИЕ ПРОИСХОДИТ ТОЛЬКО ПОСЛЕ ВОЗВРАТА АВТО НА БАЗУ (COMPLETED)
-        if (isCompleted) {
-          carEarnings += payout;
-          carDays += b.rentalDays;
-        } else {
-          carPlannedEarnings += payout;
-        }
+        carEarnings += payout;
+        carDays += b.rentalDays;
 
         ownerBookingsList.push({
           bookingId: b.id,
@@ -184,21 +173,16 @@ export async function GET(request: Request) {
           endDate: b.endDate,
           rentalDays: b.rentalDays,
           status: b.status,
-          isCompleted,
-          isRentedNow: b.status === "ACTIVE",
-          isUpcoming: b.status === "CONFIRMED" || b.status === "PENDING",
           pickupCity: b.pickupLocation?.city?.nameRu || "Грузия",
           defaultCarRate: car.defaultOwnerDailyRate,
           ownerDailyRate: rate,
           ownerTotalPayout: payout,
-          earnedPayout: isCompleted ? payout : 0,
           isRateAdjusted: rate !== car.defaultOwnerDailyRate,
           createdAt: b.createdAt,
         });
       });
 
       totalOwnerEarningsUSD += carEarnings;
-      totalOwnerPlannedEarningsUSD += carPlannedEarnings;
       totalDaysRented += carDays;
 
       // Days in period for utilization calculation
@@ -285,7 +269,6 @@ export async function GET(request: Request) {
         totalCarsCount: owner.cars.length,
         activeRentedCarsNow,
         totalOwnerEarningsUSD,
-        totalOwnerPlannedEarningsUSD,
         totalOwnerExpensesGEL,
         netProfitInvestorGEL,
         totalDaysRented,
@@ -708,59 +691,53 @@ export async function POST(request: Request) {
       );
     }
 
-    const numAmount = Number(amount);
-    const ownerObj = await prisma.carOwner.findUnique({ where: { id: ownerId } });
+    const owner = await prisma.carOwner.findUnique({ where: { id: ownerId } });
+    if (!owner) {
+      return NextResponse.json({ success: false, error: "Owner not found" }, { status: 404 });
+    }
 
-    // 1. Фиксация в персональном реестре выплат инвестору (история и баланс в кабинете инвестора)
+    const numAmount = Number(amount);
+    const payoutCurrency = currency || "GEL";
+
     const payout = await prisma.ownerPayout.create({
       data: {
         ownerId,
         amount: numAmount,
-        currency: currency || "GEL",
+        currency: payoutCurrency,
         status: "PAID",
         paymentMethod: paymentMethod || "BANK_TRANSFER",
-        notes: notes || `Выплата инвестору (${paymentMethod})`,
+        notes: notes || `Выплата владельцу (${paymentMethod || "Банковский перевод"})`,
       },
     });
 
-    // 2. Находим счёт списания компании
-    let accountToUse = null;
-    if (body.accountId) {
-      accountToUse = await prisma.financialAccount.findUnique({ where: { id: body.accountId } });
-    }
-    if (!accountToUse) {
-      if (paymentMethod === "CASH") {
-        accountToUse = await prisma.financialAccount.findFirst({ where: { type: "CASH" } });
-      } else {
-        accountToUse = await prisma.financialAccount.findFirst({ where: { type: "BANK_ACCOUNT" } });
-      }
-    }
-    if (!accountToUse) {
-      accountToUse = await prisma.financialAccount.findFirst();
+    // Находим счет для списания средств и создания проводки в общих расходах компании
+    let targetAccountId = body.accountId;
+    if (!targetAccountId) {
+      const defaultAcc = await prisma.financialAccount.findFirst({
+        where: { type: paymentMethod === "CASH" ? "CASH" : "BANK_ACCOUNT" },
+      });
+      targetAccountId = defaultAcc?.id;
     }
 
-    // 3. Создаем синхронную проводку в общих расходах компании (Expense)
-    let createdExpense = null;
-    if (accountToUse) {
-      const methodLabel = paymentMethod === "CASH" ? "Наличные" : paymentMethod === "CRYPTO" ? "Криптовалюта" : "Банковский перевод";
-      createdExpense = await prisma.expense.create({
+    let expense = null;
+    if (targetAccountId) {
+      expense = await prisma.expense.create({
         data: {
-          accountId: accountToUse.id,
-          category: "INVESTOR_PAYOUT",
+          accountId: targetAccountId,
+          category: "OWNER_PAYOUT",
           amount: numAmount,
-          currency: currency || "GEL",
-          ownerId,
-          description: `Выплата прибыли инвестору: ${ownerObj?.fullName || "Владелец авто"} (${methodLabel})${notes ? ` — ${notes}` : ""}`,
-          managerName: body.managerName || "Руководство VSL",
+          currency: payoutCurrency,
+          description: `Выплата инвестору: ${owner.fullName} (${notes || (paymentMethod === "CASH" ? "Наличные" : "Банковский перевод")})`,
+          ownerId: owner.id,
           status: "PAID",
           isMonthlySettled: true,
-          date: date ? new Date(date) : new Date(),
+          managerName: "Руководство / Бухгалтерия",
+          date: new Date(),
         },
       });
 
-      // 4. Списываем средства с баланса счета/кассы компании
       await prisma.financialAccount.update({
-        where: { id: accountToUse.id },
+        where: { id: targetAccountId },
         data: {
           currentBalance: {
             decrement: numAmount,
@@ -769,14 +746,13 @@ export async function POST(request: Request) {
       });
     }
 
-    // 5. Синхронизируем финансовую отчетность с Google Sheets
     triggerAsyncFinancialSheetsSync();
 
     return NextResponse.json({
       success: true,
-      message: `Выплата ${numAmount} ₾ инвестору «${ownerObj?.fullName || "Владелец"}» успешно проведена и отражена в расходах компании!`,
+      message: "Выплата инвестору успешно зафиксирована в реестре и учтена в общих расходах компании!",
       payout,
-      expense: createdExpense,
+      expense,
     });
   } catch (error: any) {
     if (error?.digest?.startsWith?.("NEXT_")) {

@@ -161,7 +161,7 @@ export async function GET(request: Request) {
       WASHING: { label: "Мойка и детейлинг", amountGEL: 0, amountUSD: 0, count: 0 },
       FUEL: { label: "Топливо и перегоны", amountGEL: 0, amountUSD: 0, count: 0 },
       MAINTENANCE: { label: "ТО, запчасти и шиномонтаж", amountGEL: 0, amountUSD: 0, count: 0 },
-      INVESTOR_PAYOUT: { label: "Выплаты владельцам авто (инвесторам)", amountGEL: 0, amountUSD: 0, count: 0 },
+      OWNER_PAYOUT: { label: "Выплаты инвесторам (владельцам авто)", amountGEL: 0, amountUSD: 0, count: 0 },
       SALARY: { label: "Зарплаты и бонусы менеджеров", amountGEL: 0, amountUSD: 0, count: 0 },
       OFFICE_RENT: { label: "Аренда офисов и стоянок", amountGEL: 0, amountUSD: 0, count: 0 },
       PARKING_FINES: { label: "Парковки в аэропортах и штрафы", amountGEL: 0, amountUSD: 0, count: 0 },

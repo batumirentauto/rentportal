@@ -16,7 +16,6 @@ import {
   PlusCircle,
   User,
   Building2,
-  HandCoins,
 } from "lucide-react";
 import { RecordExpenseModal } from "./RecordExpenseModal";
 import { GoogleSheetsBackupBanner } from "./GoogleSheetsBackupBanner";
@@ -29,6 +28,7 @@ export const FinanceView: React.FC = () => {
   const [managerCashByCity, setManagerCashByCity] = useState<any>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
+  const [expenseInitialCategory, setExpenseInitialCategory] = useState<string | undefined>(undefined);
 
   const fetchData = async () => {
     setLoading(true);
@@ -92,20 +92,20 @@ export const FinanceView: React.FC = () => {
     .filter((e) => e.category === "MAINTENANCE")
     .reduce((acc, e) => acc + (e.amount || 0), 0);
 
-  const investorPayoutExpenses = expenses
-    .filter((e) => e.category === "INVESTOR_PAYOUT")
+  const ownerPayoutExpenses = expenses
+    .filter((e) => e.category === "OWNER_PAYOUT")
     .reduce((acc, e) => acc + (e.amount || 0), 0);
 
   const getCategoryBadge = (cat: string) => {
     switch (cat) {
-      case "INVESTOR_PAYOUT":
-        return { label: "Выплата инвестору", icon: HandCoins, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" };
       case "FUEL":
         return { label: "Заправка / Топливо", icon: Fuel, color: "text-amber-400 bg-amber-500/10 border-amber-500/30" };
       case "WASHING":
         return { label: "Мойка / Химчистка", icon: Sparkles, color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/30" };
       case "MAINTENANCE":
         return { label: "ТО / Ремонт", icon: Wrench, color: "text-rose-400 bg-rose-500/10 border-rose-500/30" };
+      case "OWNER_PAYOUT":
+        return { label: "Выплата инвестору", icon: Landmark, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" };
       case "PARKING_FINES":
         return { label: "Парковка / Штраф", icon: ParkingMeter, color: "text-blue-400 bg-blue-500/10 border-blue-500/30" };
       case "OFFICE_RENT":
@@ -125,14 +125,30 @@ export const FinanceView: React.FC = () => {
             <span>Касса смены & Учёт расходов</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Прием оплат за аренду, залоги клиентов и операционные расходы сотрудников (топливо, мойка, ТО)
+            Прием оплат за аренду, залоги клиентов и операционные расходы сотрудников (топливо, мойка, ТО, выплаты инвесторам)
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Action: Record Owner Payout Button */}
+          <button
+            onClick={() => {
+              setExpenseInitialCategory("OWNER_PAYOUT");
+              setIsExpenseModalOpen(true);
+            }}
+            className="px-3.5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-950 transition active:scale-95 flex items-center space-x-1.5"
+            title="Выплатить доход владельцу автомобиля (инвестору)"
+          >
+            <Coins className="w-4 h-4" />
+            <span>+ Выплата инвестору</span>
+          </button>
+
           {/* Action: Record Expense Button */}
           <button
-            onClick={() => setIsExpenseModalOpen(true)}
+            onClick={() => {
+              setExpenseInitialCategory(undefined);
+              setIsExpenseModalOpen(true);
+            }}
             className="px-4 py-2.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-xl text-xs font-black shadow-lg shadow-rose-950 transition active:scale-95 flex items-center space-x-1.5"
           >
             <Receipt className="w-4 h-4" />
@@ -367,63 +383,63 @@ export const FinanceView: React.FC = () => {
       {activeFinanceTab === "expenses" && (
         <div className="space-y-6">
           {/* Expenses KPI Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
-            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">
                 Всего расходов:
               </span>
               <div className="text-2xl font-black text-rose-400 font-mono mt-1">
                 {totalExpensesGEL} ₾
               </div>
-              <span className="text-xs text-slate-500 mt-0.5 block">
+              <span className="text-[10px] text-slate-500 mt-0.5 block">
                 + ${totalExpensesUSD} USD
               </span>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">
                 Выплаты инвесторам:
               </span>
               <div className="text-2xl font-black text-emerald-400 font-mono mt-1">
-                {investorPayoutExpenses} ₾
+                {ownerPayoutExpenses} ₾
               </div>
-              <span className="text-xs text-emerald-500/80 mt-0.5 block">
-                Доход от аренды авто
+              <span className="text-[10px] text-slate-500 mt-0.5 block">
+                Доход владельцев авто
               </span>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">
                 Заправка топлива:
               </span>
               <div className="text-2xl font-black text-amber-400 font-mono mt-1">
                 {fuelExpenses} ₾
               </div>
-              <span className="text-xs text-slate-500 mt-0.5 block">
-                Бензин / дизель для выдач
+              <span className="text-[10px] text-slate-500 mt-0.5 block">
+                Бензин / дизель
               </span>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">
                 Мойки и химчистки:
               </span>
               <div className="text-2xl font-black text-cyan-400 font-mono mt-1">
                 {washExpenses} ₾
               </div>
-              <span className="text-xs text-slate-500 mt-0.5 block">
-                Начислено автомойкам
+              <span className="text-[10px] text-slate-500 mt-0.5 block">
+                Начислено в реестр
               </span>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">
                 ТО, масло и шины:
               </span>
               <div className="text-2xl font-black text-purple-400 font-mono mt-1">
                 {maintExpenses} ₾
               </div>
-              <span className="text-xs text-slate-500 mt-0.5 block">
+              <span className="text-[10px] text-slate-500 mt-0.5 block">
                 Сервисные расходы
               </span>
             </div>
@@ -499,22 +515,22 @@ export const FinanceView: React.FC = () => {
                             {exp.description}
                           </td>
                           <td className="py-3 px-4">
-                            {exp.car ? (
+                            {exp.owner ? (
+                              <div>
+                                <span className="font-bold text-emerald-400 block">
+                                  {exp.owner.fullName}
+                                </span>
+                                <span className="text-[10px] text-emerald-500/80 font-mono">
+                                  Инвестор
+                                </span>
+                              </div>
+                            ) : exp.car ? (
                               <div>
                                 <span className="font-bold text-white block">
                                   {exp.car.brand} {exp.car.model}
                                 </span>
                                 <span className="text-[10px] font-mono text-amber-400">
                                   {exp.car.plateNumber}
-                                </span>
-                              </div>
-                            ) : exp.owner ? (
-                              <div>
-                                <span className="font-bold text-emerald-400 block">
-                                  {exp.owner.fullName}
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-mono">
-                                  Инвестор
                                 </span>
                               </div>
                             ) : (
@@ -640,7 +656,11 @@ export const FinanceView: React.FC = () => {
       {/* Record Expense Modal */}
       <RecordExpenseModal
         isOpen={isExpenseModalOpen}
-        onClose={() => setIsExpenseModalOpen(false)}
+        initialCategory={expenseInitialCategory}
+        onClose={() => {
+          setIsExpenseModalOpen(false);
+          setExpenseInitialCategory(undefined);
+        }}
         onExpenseCreated={fetchData}
       />
     </div>

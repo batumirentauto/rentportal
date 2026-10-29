@@ -116,7 +116,9 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
   const [isRecordPayoutOpen, setIsRecordPayoutOpen] = useState<boolean>(false);
   const [payoutAmount, setPayoutAmount] = useState<number>(500);
   const [payoutMethod, setPayoutMethod] = useState<string>("BANK_TRANSFER");
+  const [payoutAccountId, setPayoutAccountId] = useState<string>("");
   const [payoutNotes, setPayoutNotes] = useState<string>("");
+  const [companyAccounts, setCompanyAccounts] = useState<any[]>([]);
 
   // Modal: Edit Owner Personal Profile & Requisites
   const [isEditProfileOpen, setIsEditProfileOpen] = useState<boolean>(false);
@@ -131,6 +133,19 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
   const [profileNotes, setProfileNotes] = useState<string>("");
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Load company financial accounts for payouts
+  useEffect(() => {
+    fetch("/api/team")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.accounts && d.accounts.length > 0) {
+          setCompanyAccounts(d.accounts);
+          setPayoutAccountId((prev) => prev || d.accounts[0].id);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Sync initialOwnerId
   useEffect(() => {
@@ -350,6 +365,7 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
           amount: payoutAmount,
           currency: "GEL",
           paymentMethod: payoutMethod,
+          accountId: payoutAccountId || undefined,
           notes: payoutNotes,
         }),
       });
@@ -947,16 +963,10 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
           </div>
           <div className="mt-2">
             <span className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {metrics?.netProfitInvestorGEL?.toLocaleString() || 0} ₾
+              {metrics?.netProfitInvestorGEL?.toLocaleString()} ₾
             </span>
             <div className="text-[11px] text-emerald-400 font-semibold mt-1">
-              {metrics?.totalOwnerPlannedEarningsUSD > 0 ? (
-                <span className="text-amber-300 font-normal block">
-                  + {metrics.totalOwnerPlannedEarningsUSD} ₾ в текущих/плановых бронях (начисление при возврате авто)
-                </span>
-              ) : (
-                <span>Доход от завершённых аренд за вычетом расходов</span>
-              )}
+              Доход от аренды минус расходы на авто
             </div>
           </div>
         </div>
@@ -1518,35 +1528,8 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
                           )}
                         </td>
 
-                        <td className="py-3 px-3 text-right">
-                          {b.isCompleted ? (
-                            <div>
-                              <span className="font-mono font-black text-emerald-400 text-sm block">
-                                +{b.earnedPayout} ₾
-                              </span>
-                              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono font-bold">
-                                ✅ Начислено (авто сдано)
-                              </span>
-                            </div>
-                          ) : b.isRentedNow ? (
-                            <div>
-                              <span className="font-mono font-bold text-blue-300 text-xs block">
-                                0 ₾ <span className="text-[10px] text-slate-400 font-normal">(план: {b.ownerTotalPayout} ₾)</span>
-                              </span>
-                              <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-mono">
-                                🚗 В поездке (до возврата)
-                              </span>
-                            </div>
-                          ) : (
-                            <div>
-                              <span className="font-mono font-bold text-slate-400 text-xs block">
-                                0 ₾ <span className="text-[10px] text-slate-500 font-normal">(план: {b.ownerTotalPayout} ₾)</span>
-                              </span>
-                              <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono">
-                                ⏳ До выдачи авто
-                              </span>
-                            </div>
-                          )}
+                        <td className="py-3 px-3 text-right font-mono font-black text-emerald-400 text-sm">
+                          {b.ownerTotalPayout} ₾
                         </td>
 
                         <td className="py-3 px-4 text-center">
@@ -2017,6 +2000,28 @@ export const OwnerInvestorCabinet: React.FC<OwnerInvestorCabinetProps> = ({
                   <option value="CRYPTO">🪙 Криптовалютный перевод</option>
                 </select>
               </div>
+
+              {companyAccounts.length > 0 && (
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">
+                    Счёт списания компании (источник выплаты):
+                  </label>
+                  <select
+                    value={payoutAccountId}
+                    onChange={(e) => setPayoutAccountId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-medium focus:outline-none focus:border-emerald-500"
+                  >
+                    {companyAccounts.map((acc: any) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} ({acc.currentBalance} {acc.currency === "GEL" ? "₾" : "$"})
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-[10px] text-emerald-400/90 mt-1 block">
+                    ✓ Сумма будет списана с этого счёта и автоматически отразится в общем журнале расходов компании и отчётности P&L.
+                  </span>
+                </div>
+              )}
 
               <div>
                 <label className="text-slate-300 font-bold block mb-1">

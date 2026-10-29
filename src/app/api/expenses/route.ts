@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       cityId,
       carId,
       ownerId,
-      paymentMethod,
+      paymentMethod = "BANK_TRANSFER",
       managerName = "Менеджер",
       date,
       status: requestedStatus,
@@ -69,23 +69,22 @@ export async function POST(request: Request) {
       },
     });
 
-    // Если это выплата инвестору — синхронно фиксируем в его личном реестре выплат (OwnerPayout)
-    let payout = null;
-    if (category === "INVESTOR_PAYOUT" && ownerId) {
-      payout = await prisma.ownerPayout.create({
+    // Если это выплата инвестору (владельцу авто) — фиксируем в реестре выплат инвесторам
+    if (category === "OWNER_PAYOUT" && ownerId) {
+      await prisma.ownerPayout.create({
         data: {
           ownerId,
           amount: Number(amount),
           currency,
           status: "PAID",
-          paymentMethod: paymentMethod || "BANK_TRANSFER",
-          notes: description || `Выплата прибыли инвестору`,
+          paymentMethod,
+          notes: description || `Выплата инвестору из журнала расходов (${managerName})`,
         },
-      });
+      }).catch((e) => console.warn("Notice: could not create OwnerPayout from expense:", e));
     }
 
     // Списываем средства с баланса кассы / счёта ТОЛЬКО если статус PAID (не начисление)
-    if (status === "PAID") {
+    if (status === "PAID" && accountId) {
       await prisma.financialAccount.update({
         where: { id: accountId },
         data: {
@@ -99,7 +98,7 @@ export async function POST(request: Request) {
     // Auto-sync financial data to Google Sheets backup
     triggerAsyncFinancialSheetsSync();
 
-    return NextResponse.json({ success: true, expense, payout });
+    return NextResponse.json({ success: true, expense });
   } catch (error) {
     console.error("Error creating expense:", error);
     return NextResponse.json({ success: false, error: "Failed to create expense" }, { status: 500 });

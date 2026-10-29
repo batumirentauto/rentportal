@@ -139,7 +139,7 @@ export async function GET() {
       WASHING: 0,
       FUEL: 0,
       MAINTENANCE: 0,
-      INVESTOR_PAYOUT: 0,
+      OWNER_PAYOUT: 0,
       SALARY: 0,
       OFFICE_RENT: 0,
       PARKING_FINES: 0,
