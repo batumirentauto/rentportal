@@ -329,6 +329,8 @@ export async function PATCH(request: Request) {
         },
       });
 
+      triggerAsyncFinancialSheetsSync();
+
       return NextResponse.json({
         success: true,
         message: "Базовая ставка владельца для автомобиля успешно обновлена!",
@@ -353,6 +355,8 @@ export async function PATCH(request: Request) {
           ownerTotalPayout: total,
         },
       });
+
+      triggerAsyncFinancialSheetsSync();
 
       return NextResponse.json({
         success: true,

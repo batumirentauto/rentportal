@@ -215,9 +215,25 @@ export async function syncAllFinancialDataToGoogleSheets(
 
   let totalExpensesGEL = 0;
   let totalExpensesUSD = 0;
+  let totalOwnerPayoutExpensesGEL = 0;
+  let totalFuelExpensesGEL = 0;
+  let totalWashExpensesGEL = 0;
+  let totalMaintExpensesGEL = 0;
+  let totalOfficeExpensesGEL = 0;
+  let totalParkingFinesGEL = 0;
+
   for (const exp of expenses) {
-    if (exp.currency === "USD") totalExpensesUSD += exp.amount || 0;
-    else totalExpensesGEL += exp.amount || 0;
+    if (exp.currency === "USD") {
+      totalExpensesUSD += exp.amount || 0;
+    } else {
+      totalExpensesGEL += exp.amount || 0;
+      if (exp.category === "OWNER_PAYOUT") totalOwnerPayoutExpensesGEL += exp.amount || 0;
+      else if (exp.category === "FUEL") totalFuelExpensesGEL += exp.amount || 0;
+      else if (exp.category === "WASHING") totalWashExpensesGEL += exp.amount || 0;
+      else if (exp.category === "MAINTENANCE") totalMaintExpensesGEL += exp.amount || 0;
+      else if (exp.category === "OFFICE_RENT") totalOfficeExpensesGEL += exp.amount || 0;
+      else if (exp.category === "PARKING_FINES") totalParkingFinesGEL += exp.amount || 0;
+    }
   }
 
   let totalActiveDebtsGEL = 0;
@@ -231,6 +247,7 @@ export async function syncAllFinancialDataToGoogleSheets(
   const availableCarsCount = cars.filter((c) => c.status === "AVAILABLE" && !c.isStopBlocked && !c.isArchived).length;
   const stopBlockedCarsCount = cars.filter((c) => c.isStopBlocked).length;
   const fleetUtilizationRate = cars.length > 0 ? Math.round((rentedCarsCount / cars.length) * 100) : 0;
+  const netCompanyProfitGEL = totalRentalRevenueGEL - totalOwnerPayouts - (totalExpensesGEL - totalOwnerPayoutExpensesGEL);
 
   // ==========================================
   // SHEET 1: 📊 Сводка и Баланс
@@ -247,9 +264,15 @@ export async function syncAllFinancialDataToGoogleSheets(
     ["Всего бронирований в системе", bookings.length, "заказов"],
     ["Суммарная выручка от аренды (GEL)", totalRentalRevenueGEL, "GEL"],
     ["Суммарная выручка от аренды (USD)", totalRentalRevenueUSD, "USD"],
-    ["Начислено владельцам автомобилей (инвесторам)", totalOwnerPayouts, "USD/GEL"],
-    ["Суммарные расходы (мойка, бензин, ТО, офис) GEL", totalExpensesGEL, "GEL"],
-    ["Суммарные расходы (USD)", totalExpensesUSD, "USD"],
+    ["Начислено владельцам авто (инвесторам по завершённым арендам)", totalOwnerPayouts, "GEL"],
+    ["Фактически выплачено владельцам авто (инвесторам)", totalOwnerPayoutExpensesGEL, "GEL"],
+    ["Расходы: ТО, запчасти, аксессуары (люстра, балки, сервис)", totalMaintExpensesGEL, "GEL"],
+    ["Расходы: Заправка топлива (бензин/дизель)", totalFuelExpensesGEL, "GEL"],
+    ["Расходы: Мойки и детейлинг", totalWashExpensesGEL, "GEL"],
+    ["Расходы: Офис, быт, связь", totalOfficeExpensesGEL, "GEL"],
+    ["Расходы: Парковки и штрафы", totalParkingFinesGEL, "GEL"],
+    ["Суммарные операционные расходы компании (без выплат инвесторам) GEL", totalExpensesGEL - totalOwnerPayoutExpensesGEL, "GEL"],
+    ["Чистая операционная прибыль компании (VSL) GEL", netCompanyProfitGEL, "GEL"],
     ["Остаток средств во всех кассах и на счетах (GEL)", totalCashBalancesGEL, "GEL"],
     ["Остаток средств во всех кассах и на счетах (USD)", totalCashBalancesUSD, "USD"],
     ["Общая сумма активных долгов клиентов", totalActiveDebtsGEL, "GEL"],
@@ -410,12 +433,14 @@ export async function syncAllFinancialDataToGoogleSheets(
 
   for (const exp of expenses) {
     const categoryName =
-      exp.category === "WASHING"
+      exp.category === "OWNER_PAYOUT"
+        ? "Выплата инвестору"
+        : exp.category === "WASHING"
         ? "Мойка авто"
         : exp.category === "FUEL"
         ? "Бензин / Топливо"
         : exp.category === "MAINTENANCE"
-        ? "ТО и ремонт"
+        ? "ТО, запчасти и аксессуары"
         : exp.category === "SALARY"
         ? "Зарплата"
         : exp.category === "OFFICE_RENT"
@@ -425,6 +450,15 @@ export async function syncAllFinancialDataToGoogleSheets(
         : exp.category === "MARKETING"
         ? "Реклама"
         : "Прочие расходы";
+
+    let receiptDisplay = "—";
+    if (exp.receiptPhotoUrl) {
+      if (exp.receiptPhotoUrl.startsWith("http")) {
+        receiptDisplay = `=HYPERLINK("${exp.receiptPhotoUrl}"; "Открыть чек ↗")`;
+      } else {
+        receiptDisplay = `=HYPERLINK("https://rentportal-production.up.railway.app${exp.receiptPhotoUrl}"; "Открыть чек ↗")`;
+      }
+    }
 
     expensesValues.push([
       new Date(exp.date).toLocaleDateString("ru-RU", { timeZone: "Asia/Tbilisi" }),
@@ -439,7 +473,7 @@ export async function syncAllFinancialDataToGoogleSheets(
       exp.isOwnerExpense ? `Владелец (${exp.owner?.fullName || "Инвестор"})` : "Компания (VSL)",
       exp.managerName || "—",
       exp.status === "PAID" ? "Оплачено" : "Начислено",
-      exp.receiptPhotoUrl ? "Есть фото" : "—",
+      receiptDisplay,
     ]);
   }
 
