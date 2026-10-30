@@ -37,6 +37,10 @@ export async function GET() {
     investorNames.delete("андрей колесников");
     investorNames.delete("колесников");
     investorNames.delete("руководство");
+    investorNames.delete("павел климов");
+    investorNames.delete("климов");
+    investorNames.delete("павел");
+    investorNames.delete("паша");
 
     // 2. Все платежи и расходы
     const payments = await prisma.payment.findMany({
@@ -161,6 +165,11 @@ export async function GET() {
     };
 
     expenses.forEach((e) => {
+      // Внутренние межкассовые переводы (инкассация) не являются операционными расходами бизнеса
+      if (e.category === "TRANSFER") {
+        return;
+      }
+
       const eDate = new Date(e.date);
       const isToday = eDate >= today;
       const isYesterday = eDate >= yesterday && eDate < today;
@@ -214,6 +223,10 @@ export async function GET() {
             name !== "андрей колесников" &&
             name !== "колесников" &&
             name !== "руководство" &&
+            name !== "павел климов" &&
+            name !== "климов" &&
+            name !== "павел" &&
+            name !== "паша" &&
             ((mgrLower && mgrLower.includes(name)) || (accNameLower && accNameLower.includes(name)))
           ) {
             isInvestor = true;
@@ -442,11 +455,24 @@ export async function POST(request: Request) {
         data: { currentBalance: { increment: numAmount } },
       });
 
-      // Запись расхода в кассе менеджера
+      // Создание проводки в CashTransfer
+      const transfer = await prisma.cashTransfer.create({
+        data: {
+          fromAccountId,
+          toAccountId,
+          amount: numAmount,
+          currency: fromAcc.currency || "GEL",
+          senderName: managerName || fromAcc.managerResponsible || fromAcc.name,
+          recipientName: toAcc.managerResponsible || toAcc.name,
+          notes: notes ? notes.trim() : `Перенос средств: ${fromAcc.name} ➔ ${toAcc.name}`,
+        },
+      });
+
+      // Запись расхода-инкассации в кассе менеджера
       const expense = await prisma.expense.create({
         data: {
           accountId: fromAccountId,
-          category: "OTHER",
+          category: "TRANSFER",
           amount: numAmount,
           currency: fromAcc.currency || "GEL",
           description: `Инкассация: сдача выручки в «${toAcc.name}» (${notes || "инкассация смены"})`,
@@ -459,6 +485,7 @@ export async function POST(request: Request) {
         success: true,
         message: `Инкассация успешно зафиксирована! ${numAmount} ₾ передано в «${toAcc.name}»`,
         expense,
+        transfer,
       });
     }
 

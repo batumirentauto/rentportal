@@ -376,6 +376,8 @@ model FinancialAccount {
   expenses           Expense[]
   refunds            BookingRefund[]
   extensions         BookingExtension[]
+  transfersSent      CashTransfer[]     @relation("TransfersSent")
+  transfersReceived  CashTransfer[]     @relation("TransfersReceived")
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 }
@@ -426,6 +428,22 @@ model Expense {
   date           DateTime          @default(now())
   receiptPhotoUrl String?
   createdAt      DateTime          @default(now())
+}
+
+// Переводы между кассами компании (сдача смены руководителю, инкассация, перевод в банк)
+model CashTransfer {
+  id             String           @id @default(cuid())
+  fromAccountId  String
+  fromAccount    FinancialAccount @relation("TransfersSent", fields: [fromAccountId], references: [id])
+  toAccountId    String
+  toAccount      FinancialAccount @relation("TransfersReceived", fields: [toAccountId], references: [id])
+  amount         Float
+  currency       String           @default("GEL")
+  senderName     String           // e.g. "Евгений"
+  recipientName  String           // e.g. "Павел Климов"
+  notes          String?          // e.g. "Менеджер Женя отдал наличную кассу руководителю Паше"
+  date           DateTime         @default(now())
+  createdAt      DateTime         @default(now())
 }
 
 model CarWashTask {

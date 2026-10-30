@@ -572,6 +572,61 @@ function ensureSchema(dbFilePath: string) {
       console.warn("[Database] Executive cash accounts notice:", execErr);
     }
 
+    // 6.4 Ensure CashTransfer table exists
+    try {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS "CashTransfer" (
+          "id" TEXT PRIMARY KEY,
+          "fromAccountId" TEXT NOT NULL,
+          "toAccountId" TEXT NOT NULL,
+          "amount" REAL NOT NULL,
+          "currency" TEXT NOT NULL DEFAULT 'GEL',
+          "senderName" TEXT NOT NULL,
+          "recipientName" TEXT NOT NULL,
+          "notes" TEXT,
+          "date" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "CashTransfer_fromAccountId_fkey" FOREIGN KEY ("fromAccountId") REFERENCES "FinancialAccount" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+          CONSTRAINT "CashTransfer_toAccountId_fkey" FOREIGN KEY ("toAccountId") REFERENCES "FinancialAccount" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+        );
+      `);
+    } catch (ctErr) {
+      console.warn("[Database] CashTransfer table notice:", ctErr);
+    }
+
+    // 6.5 Ensure Pavel Klimov (Руководитель Паша) exists and has a cash register
+    try {
+      const pavelFlag = db.prepare(`SELECT id FROM "_MigrationFlags" WHERE id = 'ensure_pavel_klimov_cash_v1'`).get();
+      if (!pavelFlag) {
+        let pavelUser = db.prepare(`SELECT id, fullName, cityId FROM "User" WHERE fullName LIKE '%Павел%' OR fullName LIKE '%Климов%' OR fullName LIKE '%Паша%' LIMIT 1`).get() as any;
+        if (!pavelUser) {
+          const newPavelId = "usr_pavel_" + Date.now();
+          db.prepare(`
+            INSERT INTO "User" (id, fullName, role, phone, email, createdAt, updatedAt)
+            VALUES (?, 'Павел Климов', 'EXECUTIVE', '+995-500-00-11', 'pavel@vslrent.ge', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          `).run(newPavelId);
+          pavelUser = { id: newPavelId, fullName: 'Павел Климов', cityId: null };
+          console.log("[Database] Created User record for Павел Климов (EXECUTIVE)");
+        }
+
+        const pavelAcc = db.prepare(`SELECT id FROM FinancialAccount WHERE name LIKE '%Павел%' OR managerResponsible LIKE '%Павел%' OR name LIKE '%Климов%' OR name LIKE '%Паша%' LIMIT 1`).get();
+        if (!pavelAcc) {
+          const batumiCity = db.prepare(`SELECT id FROM City WHERE code = 'BUS' LIMIT 1`).get() as any;
+          const newPavelAccId = "acc_pavel_" + Date.now();
+          db.prepare(`
+            INSERT INTO FinancialAccount (id, name, type, bankName, currency, cityId, initialBalance, currentBalance, managerResponsible, userId, isManagerCash, createdAt, updatedAt)
+            VALUES (?, 'Касса нал: Павел Климов (Руководство)', 'CASH', 'NONE', 'GEL', ?, 0, 0, 'Павел Климов', ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          `).run(newPavelAccId, pavelUser.cityId || batumiCity?.id || null, pavelUser.id);
+          console.log("[Database] Created FinancialAccount for Павел Климов (Касса нал: Павел Климов)");
+        }
+
+        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('ensure_pavel_klimov_cash_v1')`).run();
+        console.log("[Database] Pavel Klimov cash account migration completed successfully!");
+      }
+    } catch (pavelErr) {
+      console.warn("[Database] Pavel Klimov cash notice:", pavelErr);
+    }
+
     // 7. Auto-sync: Any User with role = 'OWNER' who is missing a CarOwner record
     try {
       const unlinkedOwnerUsers = db.prepare(`

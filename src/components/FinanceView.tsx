@@ -19,8 +19,10 @@ import {
   Calendar,
   Filter,
   Clock,
+  ArrowRightLeft,
 } from "lucide-react";
 import { RecordExpenseModal } from "./RecordExpenseModal";
+import { TransferCashModal } from "./TransferCashModal";
 import { GoogleSheetsBackupBanner } from "./GoogleSheetsBackupBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -31,8 +33,12 @@ export const FinanceView: React.FC = () => {
   const [activeFinanceTab, setActiveFinanceTab] = useState<"payments" | "expenses" | "manager_cash">("payments");
   const [financeData, setFinanceData] = useState<any>(null);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [allAccounts, setAllAccounts] = useState<any[]>([]);
   const [managerCashAccounts, setManagerCashAccounts] = useState<any[]>([]);
   const [managerCashByCity, setManagerCashByCity] = useState<any>({});
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState<boolean>(false);
+  const [transferInitialFromAccountId, setTransferInitialFromAccountId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(true);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
   const [expenseInitialCategory, setExpenseInitialCategory] = useState<string | undefined>(undefined);
@@ -52,19 +58,23 @@ export const FinanceView: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [finRes, expRes, execRes] = await Promise.all([
+      const [finRes, expRes, execRes, trRes] = await Promise.all([
         fetch("/api/finance"),
         fetch("/api/expenses"),
         fetch("/api/executive/analytics"),
+        fetch("/api/finance/transfers"),
       ]);
 
       const finJson = await finRes.json();
       const expJson = await expRes.json();
       const execJson = await execRes.json();
+      const trJson = await trRes.json();
 
       if (finJson.success) setFinanceData(finJson);
       if (expJson.success) setExpenses(expJson.expenses || []);
+      if (trJson.success) setTransfers(trJson.transfers || []);
       if (execJson.success) {
+        setAllAccounts(execJson.accounts || []);
         setManagerCashAccounts(execJson.managerCashAccounts || []);
         setManagerCashByCity(execJson.managerCashByCity || {});
       }
@@ -1088,11 +1098,24 @@ export const FinanceView: React.FC = () => {
                 </h3>
               </div>
 
-              <div className="flex items-center space-x-2 bg-slate-950 px-4 py-2 rounded-2xl border border-slate-800">
-                <span className="text-xs text-slate-400">Всего у менеджеров:</span>
-                <span className="text-base font-black text-emerald-400 font-mono">
-                  {managerCashAccounts.reduce((sum, a) => sum + (a.currentBalance || 0), 0)} ₾
-                </span>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex items-center space-x-2 bg-slate-950 px-4 py-2 rounded-2xl border border-slate-800">
+                  <span className="text-xs text-slate-400">Всего у менеджеров:</span>
+                  <span className="text-base font-black text-emerald-400 font-mono">
+                    {managerCashAccounts.reduce((sum, a) => sum + (a.currentBalance || 0), 0)} ₾
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTransferInitialFromAccountId(undefined);
+                    setIsTransferModalOpen(true);
+                  }}
+                  className="flex items-center space-x-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition active:scale-95"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <span>{language === "ka" ? "თანხის გადატანა" : "Перевод / Сдать смену"}</span>
+                </button>
               </div>
             </div>
 
@@ -1193,6 +1216,21 @@ export const FinanceView: React.FC = () => {
                                   <span className="text-slate-300 font-semibold">+{accTotalIncome} ₾</span>
                                 </div>
                               )}
+
+                              {/* Быстрая кнопка сдачи / перевода средств */}
+                              <div className="pt-2 border-t border-slate-800/60">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setTransferInitialFromAccountId(acc.id);
+                                    setIsTransferModalOpen(true);
+                                  }}
+                                  className="w-full py-1.5 px-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold flex items-center justify-center space-x-1.5 transition active:scale-95"
+                                >
+                                  <ArrowRightLeft className="w-3 h-3" />
+                                  <span>{language === "ka" ? "სალაროს გადაცემა" : "Сдать / Перевести"}</span>
+                                </button>
+                              </div>
                             </div>
                           );
                         })
@@ -1201,6 +1239,66 @@ export const FinanceView: React.FC = () => {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Cash Transfers Journal (История межкассовых проводок и инкассаций) */}
+            <div className="pt-4 border-t border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-extrabold text-white flex items-center space-x-2">
+                  <ArrowRightLeft className="w-4 h-4 text-emerald-400" />
+                  <span>{language === "ka" ? "სალაროების გადაცემის ისტორია" : "История передачи и переводов касс"}</span>
+                </h4>
+                <span className="text-[11px] font-mono text-slate-400">
+                  {transfers.length} {language === "ka" ? "ოპერაცია" : "проводок"}
+                </span>
+              </div>
+
+              {transfers.length === 0 ? (
+                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-center text-xs text-slate-500 italic">
+                  {language === "ka" ? "გადაცემების ისტორია ცარიელია" : "История перемещений пуста. Проведите первый перевод денег из кассы в кассу."}
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/60">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 bg-slate-900/80 text-[10px] uppercase tracking-wider text-slate-400 font-mono">
+                        <th className="py-2.5 px-3">Дата</th>
+                        <th className="py-2.5 px-3">Откуда (Списание)</th>
+                        <th className="py-2.5 px-3">Куда (Зачисление)</th>
+                        <th className="py-2.5 px-3">Сумма</th>
+                        <th className="py-2.5 px-3">Комментарий / Причина</th>
+                        <th className="py-2.5 px-3 text-right">Статус</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {transfers.map((tr: any) => (
+                        <tr key={tr.id} className="hover:bg-slate-900/50 transition">
+                          <td className="py-2.5 px-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                            {new Date(tr.createdAt).toLocaleDateString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                          </td>
+                          <td className="py-2.5 px-3 font-semibold text-slate-200">
+                            {tr.fromAccount?.name || tr.senderName}
+                          </td>
+                          <td className="py-2.5 px-3 font-semibold text-emerald-300">
+                            {tr.toAccount?.name || tr.recipientName}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-black text-emerald-400 whitespace-nowrap">
+                            {tr.amount} ₾
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-400 text-[11px]">
+                            {tr.notes || "—"}
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                              Проведено ✅
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1215,6 +1313,18 @@ export const FinanceView: React.FC = () => {
           setExpenseInitialCategory(undefined);
         }}
         onExpenseCreated={fetchData}
+      />
+
+      {/* Transfer Cash Modal */}
+      <TransferCashModal
+        isOpen={isTransferModalOpen}
+        onClose={() => {
+          setIsTransferModalOpen(false);
+          setTransferInitialFromAccountId(undefined);
+        }}
+        onTransferSuccess={fetchData}
+        initialFromAccountId={transferInitialFromAccountId}
+        accounts={allAccounts.length > 0 ? allAccounts : managerCashAccounts}
       />
     </div>
   );
