@@ -29,11 +29,11 @@ export async function GET() {
     // 1.1 Получаем инвесторов (владельцев авто), у которых НЕ должно быть касс
     const carOwners = await prisma.carOwner.findMany({ select: { fullName: true } });
     const investorNames = new Set(carOwners.map((o) => o.fullName.trim().toLowerCase()));
-    // Известные инвесторы
-    ["герман", "максим кириченко", "артур", "давид", "жора", "илья"].forEach((n) =>
+    // Известные чистые пассивные инвесторы (у них нет сменных касс)
+    ["герман", "артур", "давид", "жора", "илья"].forEach((n) =>
       investorNames.add(n)
     );
-    // Руководство и администраторы НЕ являются инвесторами и ДОЛЖНЫ иметь свои кассы
+    // Руководство и администраторы НЕ являются чистыми инвесторами и ДОЛЖНЫ иметь свои кассы!
     investorNames.delete("андрей колесников");
     investorNames.delete("колесников");
     investorNames.delete("руководство");
@@ -44,6 +44,9 @@ export async function GET() {
     investorNames.delete("георгий шепель");
     investorNames.delete("шепель");
     investorNames.delete("георгий");
+    investorNames.delete("максим кириченко");
+    investorNames.delete("кириченко");
+    investorNames.delete("максим");
 
     // 2. Все платежи и расходы
     const payments = await prisma.payment.findMany({
@@ -212,16 +215,13 @@ export async function GET() {
       if (acc.type === "CASH") {
         totalCashGEL += acc.currentBalance;
 
-        // Исключаем ТОЛЬКО инвесторов (OWNER). Руководство и администратор ДОЛЖНЫ иметь свои кассы!
-        if (acc.user && acc.user.role === "OWNER") {
-          return;
-        }
-
         const mgrLower = (acc.managerResponsible || acc.user?.fullName || "").trim().toLowerCase();
         const accNameLower = (acc.name || "").trim().toLowerCase();
 
-        // Полный иммунитет для касс руководства и администраторов
+        // Полный иммунитет для касс руководства и администраторов (Кириченко, Шепель, Климов, Колесников)
         const isExecutiveLeader =
+          mgrLower.includes("кириченко") ||
+          accNameLower.includes("кириченко") ||
           mgrLower.includes("шепель") ||
           accNameLower.includes("шепель") ||
           mgrLower.includes("климов") ||
@@ -230,6 +230,11 @@ export async function GET() {
           accNameLower.includes("колесников") ||
           mgrLower.includes("руководство") ||
           accNameLower.includes("руководство");
+
+        // Исключаем ТОЛЬКО чистых инвесторов (OWNER), которые НЕ входят в руководство
+        if (!isExecutiveLeader && acc.user && acc.user.role === "OWNER") {
+          return;
+        }
 
         let isInvestor = false;
         if (!isExecutiveLeader) {
@@ -309,6 +314,8 @@ export async function GET() {
 
       if (
         nameL.includes("руководство") ||
+        nameL.includes("кириченко") ||
+        mgrL.includes("кириченко") ||
         nameL.includes("шепель") ||
         mgrL.includes("шепель") ||
         nameL.includes("климов") ||

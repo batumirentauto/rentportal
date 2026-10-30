@@ -600,21 +600,25 @@ function ensureSchema(dbFilePath: string) {
       console.warn("[Database] CashTransfer table notice:", ctErr);
     }
 
-    // 6.5 Ensure all executives (Георгий Шепель, Павел Климов, Андрей Колесников) have cash registers
+    // 6.5 Ensure all executives (Георгий Шепель, Павел Климов, Андрей Колесников, Максим Кириченко) have cash registers
     try {
-      const allExecFlag = db.prepare(`SELECT id FROM "_MigrationFlags" WHERE id = 'ensure_all_executives_cash_accounts_v4'`).get();
+      const allExecFlag = db.prepare(`SELECT id FROM "_MigrationFlags" WHERE id = 'ensure_all_executives_cash_accounts_v6'`).get();
       if (!allExecFlag) {
-        console.log("[Database] Ensuring cash accounts for all executives (Георгий Шепель, Павел Климов, Андрей Колесников)...");
+        console.log("[Database] Ensuring cash accounts for all executives (Георгий Шепель, Павел Климов, Андрей Колесников, Максим Кириченко)...");
 
         const executives = [
           { name: "Георгий Шепель", title: "Касса нал: Георгий Шепель (Руководство)", phone: "+995-500-00-12", email: "george@vslrent.ge" },
           { name: "Павел Климов", title: "Касса нал: Павел Климов (Руководство)", phone: "+995-500-00-11", email: "pavel@vslrent.ge" },
           { name: "Андрей Колесников", title: "Касса нал: Андрей Колесников (Батуми)", phone: "+995-500-00-10", email: "andrey@vslrent.ge" },
+          { name: "Максим Кириченко", title: "Касса нал: Максим Кириченко (Руководство)", phone: "+995-555-36-13-78", email: "maks.makovod111@gmail.com" },
         ];
 
         for (const exec of executives) {
           // Check/create user
-          let user = db.prepare(`SELECT id, fullName, cityId FROM "User" WHERE fullName LIKE ? LIMIT 1`).get(`%${exec.name}%`) as any;
+          let user = db.prepare(`SELECT id, fullName, cityId FROM "User" WHERE fullName LIKE ? AND role = 'EXECUTIVE' LIMIT 1`).get(`%${exec.name}%`) as any;
+          if (!user) {
+            user = db.prepare(`SELECT id, fullName, cityId FROM "User" WHERE fullName LIKE ? LIMIT 1`).get(`%${exec.name}%`) as any;
+          }
           if (!user) {
             const newUid = "usr_exec_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
             db.prepare(`
@@ -637,7 +641,7 @@ function ensureSchema(dbFilePath: string) {
           }
         }
 
-        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('ensure_all_executives_cash_accounts_v4')`).run();
+        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('ensure_all_executives_cash_accounts_v6')`).run();
         console.log("[Database] All executive cash accounts ensured successfully!");
       }
     } catch (allExecErr) {
