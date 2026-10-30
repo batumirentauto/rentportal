@@ -205,34 +205,39 @@ export const FinanceView: React.FC = () => {
         TBC_BANK: 0,
         BOG_BANK: 0,
         CREDO_BANK: 0,
+        BANK_TRANSFER: 0,
         CRYPTO: 0,
       } as Record<string, number>,
     };
 
     payments.forEach((p: any) => {
+      const amt = Number(p.amount) || 0;
       if (p.currency === "USD") {
         if (p.type === "DEPOSIT") {
-          s.depositsUSD += p.amount;
+          s.depositsUSD += amt;
         } else {
-          s.totalUSD += p.amount;
+          s.totalUSD += amt;
         }
       } else if (p.currency === "GEL") {
         if (p.type === "DEPOSIT") {
-          s.depositsGEL += p.amount;
+          s.depositsGEL += amt;
         } else {
-          s.totalGEL += p.amount;
+          s.totalGEL += amt;
         }
       } else if (p.currency === "EUR") {
-        s.totalEUR += p.amount;
+        s.totalEUR += amt;
       }
 
-      if (p.changeOnReturn && p.changeOnReturn > 0) {
-        if (p.currency === "GEL") s.pendingRefundsGEL += p.changeOnReturn;
-        else s.pendingRefundsUSD += p.changeOnReturn;
+      if (p.changeOnReturn && Number(p.changeOnReturn) > 0) {
+        if (p.currency === "GEL") s.pendingRefundsGEL += Number(p.changeOnReturn);
+        else s.pendingRefundsUSD += Number(p.changeOnReturn);
       }
 
-      if (s.byMethod[p.method] !== undefined) {
-        s.byMethod[p.method] += p.amount;
+      const methodKey = p.method || "CASH";
+      if (s.byMethod[methodKey] !== undefined) {
+        s.byMethod[methodKey] += amt;
+      } else {
+        s.byMethod[methodKey] = amt;
       }
     });
 
@@ -285,6 +290,27 @@ export const FinanceView: React.FC = () => {
       </div>
     );
   }
+
+  const getPaymentMethodInfo = (method: string) => {
+    switch (method) {
+      case "CASH":
+        return { label: "💵 Наличные (CASH)", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" };
+      case "CARD_POS":
+        return { label: "💳 Терминал / Карта", color: "text-blue-400 bg-blue-500/10 border-blue-500/30" };
+      case "BOG_BANK":
+        return { label: "🏦 Bank of Georgia", color: "text-amber-400 bg-amber-500/10 border-amber-500/30" };
+      case "TBC_BANK":
+        return { label: "🏦 TBC Bank", color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/30" };
+      case "CREDO_BANK":
+        return { label: "🏦 Credo Bank", color: "text-rose-400 bg-rose-500/10 border-rose-500/30" };
+      case "BANK_TRANSFER":
+        return { label: "🏦 Банковский перевод", color: "text-indigo-400 bg-indigo-500/10 border-indigo-500/30" };
+      case "CRYPTO":
+        return { label: "💎 Криптовалюта (USDT)", color: "text-teal-400 bg-teal-500/10 border-teal-500/30" };
+      default:
+        return { label: method || "Не указан", color: "text-slate-300 bg-slate-800 border-slate-700" };
+    }
+  };
 
   const getCategoryBadge = (cat: string) => {
     switch (cat) {
@@ -642,7 +668,7 @@ export const FinanceView: React.FC = () => {
 
               <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
                 <span className="text-slate-400 block mb-1">🏦 Credo Bank</span>
-                <span className="text-base font-bold text-red-400 font-mono">
+                <span className="text-base font-bold text-rose-400 font-mono">
                   {summary.byMethod?.CREDO_BANK || 0} ₾
                 </span>
               </div>
@@ -654,6 +680,14 @@ export const FinanceView: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {/* Дополнительно: Банковский перевод (если есть) */}
+            {Boolean(summary.byMethod?.BANK_TRANSFER) && (
+              <div className="mt-2 p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-300">🏦 Банковский перевод (счёт):</span>
+                <span className="font-bold font-mono text-indigo-400">{summary.byMethod?.BANK_TRANSFER} ₾</span>
+              </div>
+            )}
           </div>
 
           {/* Transactions List */}
@@ -691,53 +725,59 @@ export const FinanceView: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                    {payments.map((p: any) => (
-                      <tr key={p.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-4 text-slate-400 font-mono">
-                          {new Date(p.createdAt).toLocaleTimeString("ru-RU", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="font-bold text-white block">
-                            {p.booking?.car?.brand} {p.booking?.car?.model}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {p.booking?.car?.plateNumber} • {p.booking?.bookingNumber}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-slate-300">
-                          {p.booking?.customer?.fullName}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              p.type === "DEPOSIT"
-                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                            }`}
-                          >
-                            {p.type === "DEPOSIT" ? "ДЕПОЗИТ" : "АРЕНДА"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-semibold text-slate-300">
-                          {p.method}
-                        </td>
-                        <td className="py-3 px-4 font-mono font-bold text-amber-400 text-sm">
-                          ${p.amount} {p.currency}
-                        </td>
-                        <td className="py-3 px-4">
-                          {p.changeOnReturn && p.changeOnReturn > 0 ? (
-                            <span className="text-rose-400 font-mono font-bold">
-                              ${p.changeOnReturn} {p.currency}
+                    {payments.map((p: any) => {
+                      const methodInfo = getPaymentMethodInfo(p.method);
+                      const isGEL = p.currency === "GEL";
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-800/40">
+                          <td className="py-3 px-4 text-slate-400 font-mono">
+                            {new Date(p.createdAt).toLocaleTimeString("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="font-bold text-white block">
+                              {p.booking?.car?.brand} {p.booking?.car?.model}
                             </span>
-                          ) : (
-                            <span className="text-slate-600">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {p.booking?.car?.plateNumber} • {p.booking?.bookingNumber}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-slate-300">
+                            {p.booking?.customer?.fullName || "—"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                p.type === "DEPOSIT"
+                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                              }`}
+                            >
+                              {p.type === "DEPOSIT" ? "ДЕПОЗИТ" : "АРЕНДА"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${methodInfo.color}`}>
+                              {methodInfo.label}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-mono font-bold text-amber-400 text-sm">
+                            {p.amount} {isGEL ? "₾" : p.currency === "USD" ? "$" : p.currency}
+                          </td>
+                          <td className="py-3 px-4">
+                            {p.changeOnReturn && p.changeOnReturn > 0 ? (
+                              <span className="text-rose-400 font-mono font-bold">
+                                {p.changeOnReturn} {isGEL ? "₾" : "$"}
+                              </span>
+                            ) : (
+                              <span className="text-slate-600">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

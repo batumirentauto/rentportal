@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
+  await connection();
   try {
     const payments = await prisma.payment.findMany({
       include: {
@@ -31,12 +32,14 @@ export async function GET() {
       depositsUSD: 0,
       depositsGEL: 0,
       pendingRefundsUSD: 0,
+      pendingRefundsGEL: 0,
       byMethod: {
         CASH: 0,
         CARD_POS: 0,
         TBC_BANK: 0,
         BOG_BANK: 0,
         CREDO_BANK: 0,
+        BANK_TRANSFER: 0,
         CRYPTO: 0,
       } as Record<string, number>,
     };
@@ -59,11 +62,17 @@ export async function GET() {
       }
 
       if (p.changeOnReturn && p.changeOnReturn > 0) {
-        summary.pendingRefundsUSD += p.changeOnReturn;
+        if (p.currency === "GEL") {
+          summary.pendingRefundsGEL += p.changeOnReturn;
+        } else {
+          summary.pendingRefundsUSD += p.changeOnReturn;
+        }
       }
 
       if (summary.byMethod[p.method] !== undefined) {
         summary.byMethod[p.method] += p.amount;
+      } else {
+        summary.byMethod[p.method] = p.amount;
       }
     });
 
