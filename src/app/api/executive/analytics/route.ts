@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
+  await connection();
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
