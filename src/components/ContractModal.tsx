@@ -161,6 +161,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, 
       const renderOptions = {
         scale: 2,
         useCORS: true,
+        allowTaint: true,
         logging: false,
         backgroundColor: "#ffffff",
         windowWidth: 1000,
@@ -198,32 +199,32 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, 
 
       // Check for mobile iOS
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      const safeFilename = `Dogovor_${(booking.bookingNumber || "GEO").replace(/[^\w-]/g, "")}_${lang}.pdf`;
 
-      // Check if Web Share API with Files is supported (ideal for mobile iOS / Android)
-      const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
-      if (
-        isIOS &&
-        navigator.canShare &&
-        navigator.canShare({ files: [pdfFile] })
-      ) {
-        try {
-          await navigator.share({
-            files: [pdfFile],
-            title: filename,
-          });
-          return;
-        } catch (shareErr: any) {
-          // If user cancelled the share sheet, do nothing; otherwise fallback to link download
-          if (shareErr.name === "AbortError") {
+      // Web Share API fallback check
+      try {
+        if (isIOS && navigator.canShare) {
+          const pdfFile = new File([pdfBlob], safeFilename, { type: "application/pdf" });
+          if (navigator.canShare({ files: [pdfFile] })) {
+            await navigator.share({
+              files: [pdfFile],
+              title: filename,
+            });
             return;
           }
         }
+      } catch (shareErr: any) {
+        if (shareErr.name === "AbortError") {
+          return;
+        }
+        console.warn("Share API fallback to direct link:", shareErr);
       }
 
       // Standard / fallback download via anchor tag
       const link = document.createElement("a");
       link.href = blobUrl;
       link.download = filename;
+      link.rel = "noopener noreferrer";
       if (isIOS) {
         link.target = "_blank";
       }
@@ -232,7 +233,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, 
       setTimeout(() => {
         document.body.removeChild(link);
         URL.revokeObjectURL(blobUrl);
-      }, 2000);
+      }, 5000);
     } catch (err: any) {
       console.error("PDF generation failed:", err);
       alert(`Не удалось сформировать PDF: ${err?.message || err}`);

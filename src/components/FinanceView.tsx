@@ -37,8 +37,8 @@ export const FinanceView: React.FC = () => {
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
   const [expenseInitialCategory, setExpenseInitialCategory] = useState<string | undefined>(undefined);
 
-  // Фильтр по дате / периоду
-  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("today");
+  // Фильтр по дате / периоду - по умолчанию "all", чтобы пользователь сразу видел всю кассу и разбивку
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("all");
   const [customStartDate, setCustomStartDate] = useState<string>(() => {
     const d = new Date();
     return d.toISOString().split("T")[0];
@@ -244,6 +244,65 @@ export const FinanceView: React.FC = () => {
     return s;
   }, [payments]);
 
+  // Сводка за всё время (на случай, если выбран пустой фильтр)
+  const allTimeSummary = useMemo(() => {
+    const s = {
+      totalGEL: 0,
+      totalUSD: 0,
+      depositsGEL: 0,
+      byMethod: {
+        CASH: 0,
+        CARD_POS: 0,
+        TBC_BANK: 0,
+        BOG_BANK: 0,
+        CREDO_BANK: 0,
+        BANK_TRANSFER: 0,
+        CRYPTO: 0,
+      } as Record<string, number>,
+    };
+    allPayments.forEach((p: any) => {
+      const amt = Number(p.amount) || 0;
+      if (p.currency === "GEL") {
+        if (p.type === "DEPOSIT") s.depositsGEL += amt;
+        else s.totalGEL += amt;
+      } else if (p.currency === "USD") {
+        s.totalUSD += amt;
+      }
+      const methodKey = p.method || "CASH";
+      if (s.byMethod[methodKey] !== undefined) s.byMethod[methodKey] += amt;
+      else s.byMethod[methodKey] = amt;
+    });
+    return s;
+  }, [allPayments]);
+
+  // Подсчёт количества платежей для быстрых фильтров
+  const counts = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    
+    const y = new Date(now);
+    y.setDate(y.getDate() - 1);
+    const yStart = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0, 0);
+    const yEnd = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999);
+
+    const todayCount = allPayments.filter((p: any) => {
+      const d = new Date(p.createdAt);
+      return d >= todayStart && d <= todayEnd;
+    }).length;
+
+    const yesterdayCount = allPayments.filter((p: any) => {
+      const d = new Date(p.createdAt);
+      return d >= yStart && d <= yEnd;
+    }).length;
+
+    return {
+      today: todayCount,
+      yesterday: yesterdayCount,
+      all: allPayments.length,
+    };
+  }, [allPayments]);
+
   // Expenses calculations за выбранный период
   const totalExpensesGEL = useMemo(() => {
     return filteredExpenses
@@ -412,16 +471,16 @@ export const FinanceView: React.FC = () => {
           <div className="flex items-center gap-1.5 flex-wrap">
             <button
               onClick={() => {
-                setPeriodPreset("today");
+                setPeriodPreset("all");
                 setShowCustomRangeInputs(false);
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                periodPreset === "today"
+                periodPreset === "all"
                   ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20 scale-105"
                   : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
               }`}
             >
-              {t("today")}
+              {t("allTime")} ({counts.all})
             </button>
             <button
               onClick={() => {
@@ -434,7 +493,20 @@ export const FinanceView: React.FC = () => {
                   : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
               }`}
             >
-              {t("yesterday")}
+              {t("yesterday")} ({counts.yesterday})
+            </button>
+            <button
+              onClick={() => {
+                setPeriodPreset("today");
+                setShowCustomRangeInputs(false);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                periodPreset === "today"
+                  ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20 scale-105"
+                  : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
+              }`}
+            >
+              {t("today")} ({counts.today})
             </button>
             <button
               onClick={() => {
@@ -488,19 +560,6 @@ export const FinanceView: React.FC = () => {
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>{t("selectDate")}</span>
-            </button>
-            <button
-              onClick={() => {
-                setPeriodPreset("all");
-                setShowCustomRangeInputs(false);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                periodPreset === "all"
-                  ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20 scale-105"
-                  : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700"
-              }`}
-            >
-              {t("allTime")}
             </button>
           </div>
         </div>
@@ -593,6 +652,47 @@ export const FinanceView: React.FC = () => {
       {/* TAB 1: PAYMENTS */}
       {activeFinanceTab === "payments" && (
         <div className="space-y-6">
+          {/* Quick Notice if the selected period has no payments */}
+          {payments.length === 0 && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">ℹ️</span>
+                <div>
+                  <p className="font-bold text-amber-300 text-sm">
+                    {language === "ka" ? "არჩეულ პერიოდში გადახდები არ არის" : `За выбранный период (${periodBounds.label}) платежей нет`}
+                  </p>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    {language === "ka"
+                      ? `სულ სალაროში: ${allTimeSummary.totalGEL} ₾ (ნაღდი: ${allTimeSummary.byMethod.CASH} ₾, ტერმინალი: ${allTimeSummary.byMethod.CARD_POS} ₾)`
+                      : `Всего в кассе за всё время: ${allTimeSummary.totalGEL} ₾ (Наличные: ${allTimeSummary.byMethod.CASH} ₾ • Карта/POS: ${allTimeSummary.byMethod.CARD_POS} ₾ • Credo: ${allTimeSummary.byMethod.CREDO_BANK} ₾)`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 shrink-0">
+                {counts.yesterday > 0 && (
+                  <button
+                    onClick={() => {
+                      setPeriodPreset("yesterday");
+                      setShowCustomRangeInputs(false);
+                    }}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 rounded-xl font-bold border border-slate-700 transition"
+                  >
+                    Вчера ({counts.yesterday})
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setPeriodPreset("all");
+                    setShowCustomRangeInputs(false);
+                  }}
+                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-black transition shadow"
+                >
+                  Все поступления ({counts.all})
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Summary KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
@@ -1034,6 +1134,15 @@ export const FinanceView: React.FC = () => {
                             return (accMgr && pMgr.includes(accMgr)) || (accName && pMgr.includes(accName));
                           });
 
+                          const accAllPayments = allPayments.filter((p: any) => {
+                            if (p.accountId === acc.id) return true;
+                            const pMgr = (p.managerName || "").toLowerCase();
+                            const accMgr = (acc.managerName || "").toLowerCase();
+                            const accName = (acc.name || "").toLowerCase();
+                            return (accMgr && pMgr.includes(accMgr)) || (accName && pMgr.includes(accName));
+                          });
+                          const accTotalIncome = accAllPayments.reduce((s: number, p: any) => s + (p.amount || 0), 0);
+
                           const accFilteredExpenses = filteredExpenses.filter((e: any) => {
                             if (e.accountId === acc.id) return true;
                             const eMgr = (e.managerName || "").toLowerCase();
@@ -1077,6 +1186,13 @@ export const FinanceView: React.FC = () => {
                                   <span className={periodExpense > 0 ? "text-rose-400" : "text-slate-400"}>-{periodExpense} ₾</span>
                                 </span>
                               </div>
+
+                              {periodPreset !== "all" && (
+                                <div className="flex justify-between text-[9px] text-slate-500 font-mono pt-0.5">
+                                  <span>{language === "ka" ? "სულ მიღებული:" : "Всего принято:"}</span>
+                                  <span className="text-slate-300 font-semibold">+{accTotalIncome} ₾</span>
+                                </div>
+                              )}
                             </div>
                           );
                         })
