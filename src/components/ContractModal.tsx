@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Download, FileText, Edit3, Loader2 } from "lucide-react";
+import { X, Download, FileText, Edit3, Loader2, Cloud } from "lucide-react";
 
 interface ContractModalProps {
   booking: any;
@@ -29,6 +29,8 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, 
   const [secondDriverLicense, setSecondDriverLicense] = useState<string>("");
   const [showEditControls, setShowEditControls] = useState<boolean>(false);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [driveUrl, setDriveUrl] = useState<string | null>(booking?.googleDriveContractUrl || null);
+  const [isUploadingToDrive, setIsUploadingToDrive] = useState<boolean>(false);
 
   const handleSelectLanguage = (newLang: Language) => {
     setLang(newLang);
@@ -197,6 +199,9 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, 
       const pdfBlob = pdf.output("blob");
       const blobUrl = URL.createObjectURL(pdfBlob);
 
+      // Asynchronously duplicate to Google Drive "Договоры ИИ"
+      syncPdfToDrive(pdfBlob, filename);
+
       // Check for mobile iOS
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       const safeFilename = `Dogovor_${(booking.bookingNumber || "GEO").replace(/[^\w-]/g, "")}_${lang}.pdf`;
@@ -239,6 +244,116 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, 
       alert(`Не удалось сформировать PDF: ${err?.message || err}`);
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  // Duplicate / sync generated PDF to Google Drive folder "Договоры ИИ"
+  const syncPdfToDrive = async (pdfBlob: Blob, filename: string): Promise<string | null> => {
+    return new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(pdfBlob);
+      reader.onloadend = async () => {
+        try {
+          const base64data = (reader.result as string)?.split(",")[1];
+          if (!base64data) {
+            resolve(null);
+            return;
+          }
+          const res = await fetch("/api/contracts/save-to-drive", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              bookingId: booking?.id,
+              fileName: filename,
+              base64Pdf: base64data,
+            }),
+          });
+          const data = await res.json();
+          if (data.fileUrl) {
+            setDriveUrl(data.fileUrl);
+            resolve(data.fileUrl);
+          } else {
+            resolve(null);
+          }
+        } catch (e) {
+          console.warn("Failed to sync contract to Google Drive:", e);
+          resolve(null);
+        }
+      };
+    });
+  };
+
+  // Manual Trigger: Send directly to Google Drive "Договоры ИИ"
+  const handleUploadToDriveOnly = async () => {
+    if (typeof window === "undefined") return;
+    const page1El = document.getElementById("contract-page-1");
+    const page2El = document.getElementById("contract-page-2");
+    if (!page1El || !page2El) return;
+
+    setIsUploadingToDrive(true);
+    try {
+      const html2canvasPro = (await import("html2canvas-pro")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const cleanCustomer = (customerName || "клиент")
+        .trim()
+        .replace(/[^\wа-яА-ЯёЁა-ჰ-]/g, "_");
+      const filename = `Договор_${booking.bookingNumber}_${cleanCustomer}_${lang}.pdf`;
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+
+      const renderOptions = {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: 1000,
+        onclone: (clonedDoc: Document) => {
+          const p1 = clonedDoc.getElementById("contract-page-1");
+          const p2 = clonedDoc.getElementById("contract-page-2");
+          [p1, p2].forEach((el) => {
+            if (el) {
+              el.style.width = "794px";
+              el.style.minWidth = "794px";
+              el.style.maxWidth = "794px";
+              if (el.parentElement) {
+                el.parentElement.style.width = "820px";
+                el.parentElement.style.minWidth = "820px";
+              }
+            }
+          });
+        },
+      };
+
+      const canvas1 = await html2canvasPro(page1El, renderOptions);
+      const img1 = canvas1.toDataURL("image/jpeg", 0.98);
+      pdf.addImage(img1, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+
+      pdf.addPage();
+      const canvas2 = await html2canvasPro(page2El, renderOptions);
+      const img2 = canvas2.toDataURL("image/jpeg", 0.98);
+      pdf.addImage(img2, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+
+      const pdfBlob = pdf.output("blob");
+      const uploadedUrl = await syncPdfToDrive(pdfBlob, filename);
+      if (uploadedUrl) {
+        alert("Договор успешно продублирован в папку «Договоры ИИ» на Google Диске!");
+      } else {
+        alert("Договор сохранен на сервере автопроката.");
+      }
+    } catch (err: any) {
+      console.error("Failed to upload to Drive:", err);
+      alert(`Не удалось загрузить на Google Диск: ${err?.message || err}`);
+    } finally {
+      setIsUploadingToDrive(false);
     }
   };
 
@@ -305,6 +420,41 @@ export const ContractModal: React.FC<ContractModalProps> = ({ booking, onClose, 
               <Edit3 className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden sm:inline">{showEditControls ? "Скрыть" : "Параметры"}</span>
             </button>
+
+            {/* Google Drive Status & Upload Button */}
+            {driveUrl ? (
+              <a
+                href={driveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-bold transition shadow"
+                title="Договор сохранен на Google Диске в папке «Договоры ИИ». Нажмите, чтобы открыть."
+              >
+                <Cloud className="w-3.5 h-3.5 text-blue-400" />
+                <span className="hidden sm:inline">Google Диск:</span>
+                <span>В папке ИИ ✅</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={handleUploadToDriveOnly}
+                disabled={isUploadingToDrive || isDownloading}
+                className="flex items-center space-x-1 px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition active:scale-95 disabled:opacity-50"
+                title="Отправить договор в папку «Договоры ИИ» на Google Диске"
+              >
+                {isUploadingToDrive ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                    <span className="hidden sm:inline">В Диск...</span>
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="hidden sm:inline">В Google Диск</span>
+                  </>
+                )}
+              </button>
+            )}
 
             {/* Direct PDF Download Button (no print dialog needed) */}
             <button

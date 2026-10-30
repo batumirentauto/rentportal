@@ -212,6 +212,8 @@ model Booking {
   totalAmount         Float           // Общая сумма к оплате
   depositAmount       Float           @default(0) // Залог/депозит (по умолчанию 0 GEL)
   contractLanguage    String?         @default("RU") // Язык договора: "RU", "GE", "EN"
+  googleDriveContractUrl String?      // Ссылка на договор в Google Диске (папка «Договоры ИИ»)
+  googleDriveContractId  String?      // File ID в Google Диске
   source              String?         @default("WHATSAPP") // Источник заявки: "WHATSAPP", "TELEGRAM", "INSTAGRAM", "PHONE", "WEBSITE"
   currency            String          @default("GEL") // Базовая валюта расчёта: GEL / USD / EUR
   ownerDailyRate      Float?          // Фиксированная/скорректированная ставка владельца за день

@@ -316,6 +316,12 @@ function ensureSchema(dbFilePath: string) {
       if (!bookingColNames.has("contractLanguage")) {
         db.exec("ALTER TABLE Booking ADD COLUMN contractLanguage TEXT DEFAULT 'RU'");
       }
+      if (!bookingColNames.has("googleDriveContractUrl")) {
+        db.exec("ALTER TABLE Booking ADD COLUMN googleDriveContractUrl TEXT");
+      }
+      if (!bookingColNames.has("googleDriveContractId")) {
+        db.exec("ALTER TABLE Booking ADD COLUMN googleDriveContractId TEXT");
+      }
     } catch {}
 
     // 3.1 Check AdditionalDriver table columns
