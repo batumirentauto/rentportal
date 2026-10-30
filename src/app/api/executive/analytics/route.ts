@@ -25,6 +25,13 @@ export async function GET() {
       },
     });
 
+    // 1.1 Получаем всех владельцев (инвесторов) парка, чтобы никогда не считать их менеджерами
+    const carOwners = await prisma.carOwner.findMany({ select: { fullName: true } });
+    const investorNames = new Set(carOwners.map((o) => o.fullName.trim().toLowerCase()));
+    ["герман", "максим кириченко", "артур", "давид", "жора", "илья", "андрей колесников", "колесников", "руководство", "николоз"].forEach((n) =>
+      investorNames.add(n)
+    );
+
     // 2. Все платежи и расходы
     const payments = await prisma.payment.findMany({
       include: {
@@ -187,11 +194,22 @@ export async function GET() {
       if (acc.type === "CASH") {
         totalCashGEL += acc.currentBalance;
 
-        // Исключаем инвесторов/владельцев и удаленных тестовых пользователей из касс смены менеджеров
-        if (acc.user && acc.user.role === "OWNER") {
+        // Исключаем инвесторов/владельцев и руководство из касс смены менеджеров
+        if (acc.user && (acc.user.role === "OWNER" || acc.user.role === "EXECUTIVE")) {
           return;
         }
-        if (acc.managerResponsible && acc.managerResponsible.includes("Николоз")) {
+
+        const mgrLower = (acc.managerResponsible || acc.user?.fullName || "").trim().toLowerCase();
+        const accNameLower = (acc.name || "").trim().toLowerCase();
+
+        let isInvestorOrExec = false;
+        for (const name of Array.from(investorNames)) {
+          if ((mgrLower && mgrLower.includes(name)) || (accNameLower && accNameLower.includes(name))) {
+            isInvestorOrExec = true;
+            break;
+          }
+        }
+        if (isInvestorOrExec) {
           return;
         }
 

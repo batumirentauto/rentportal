@@ -487,6 +487,49 @@ function ensureSchema(dbFilePath: string) {
       console.warn("[Database] Migration notice:", migErr);
     }
 
+    // 6.2 Cleanup investor / owner cash accounts (German, Maksim Kirichenko, Andrey Kolesnikov)
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS "_MigrationFlags" ("id" TEXT PRIMARY KEY, "executedAt" DATETIME DEFAULT CURRENT_TIMESTAMP);`);
+      const invCashFlag = db.prepare(`SELECT id FROM "_MigrationFlags" WHERE id = 'cleanup_investors_cash_accounts_v3'`).get();
+      if (!invCashFlag) {
+        console.log("[Database] Cleaning up cash accounts belonging to investors (German, Maksim, etc)...");
+
+        // 1. Delete 0-balance cash accounts for investors / owners
+        db.exec(`
+          DELETE FROM FinancialAccount 
+          WHERE type = 'CASH' 
+            AND currentBalance = 0
+            AND (
+              managerResponsible IN ('Герман', 'Максим Кириченко', 'Андрей Колесников')
+              OR name LIKE '%Герман%'
+              OR name LIKE '%Максим Кириченко%'
+              OR name LIKE '%Андрей Колесников%'
+            )
+            AND id NOT IN (SELECT DISTINCT accountId FROM Payment WHERE accountId IS NOT NULL)
+            AND id NOT IN (SELECT DISTINCT accountId FROM Expense WHERE accountId IS NOT NULL);
+        `);
+
+        // 2. Fix Andrey Kolesnikov role to EXECUTIVE
+        try {
+          db.prepare(`
+            UPDATE "User" SET role = 'EXECUTIVE' WHERE fullName LIKE '%Колесников%' AND role = 'MANAGER';
+          `).run();
+        } catch {}
+
+        // 3. Remove duplicate MANAGER user for Maksim Kirichenko (he already has OWNER and EXECUTIVE)
+        try {
+          db.prepare(`
+            DELETE FROM "User" WHERE fullName LIKE '%Максим Кириченко%' AND role = 'MANAGER';
+          `).run();
+        } catch {}
+
+        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('cleanup_investors_cash_accounts_v3')`).run();
+        console.log("[Database] Investor cash accounts cleanup completed successfully!");
+      }
+    } catch (invErr) {
+      console.warn("[Database] Investor cash accounts cleanup notice:", invErr);
+    }
+
     // 7. Auto-sync: Any User with role = 'OWNER' who is missing a CarOwner record
     try {
       const unlinkedOwnerUsers = db.prepare(`
