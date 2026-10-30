@@ -79,15 +79,6 @@ export const FinanceView: React.FC = () => {
     fetchData();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="p-12 text-center text-slate-400">
-        <RefreshCcw className="w-8 h-8 animate-spin mx-auto mb-2 text-amber-400" />
-        <p>Загрузка кассы и расходов...</p>
-      </div>
-    );
-  }
-
   // Расчет границ выбранного периода
   const periodBounds = useMemo(() => {
     const now = new Date();
@@ -284,6 +275,16 @@ export const FinanceView: React.FC = () => {
       .filter((e) => e.category === "OWNER_PAYOUT")
       .reduce((acc, e) => acc + (e.amount || 0), 0);
   }, [filteredExpenses]);
+
+  // ВАЖНО: ранний return только ПОСЛЕ всех хуков (правила React Hooks)
+  if (loading) {
+    return (
+      <div className="p-12 text-center text-slate-400">
+        <RefreshCcw className="w-8 h-8 animate-spin mx-auto mb-2 text-amber-400" />
+        <p>Загрузка кассы и расходов...</p>
+      </div>
+    );
+  }
 
   const getCategoryBadge = (cat: string) => {
     switch (cat) {
