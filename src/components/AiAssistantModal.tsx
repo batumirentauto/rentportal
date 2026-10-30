@@ -197,57 +197,76 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
       {/* Slide-out / Modal Container */}
       {isOpen && (
-        <div
-          className={`fixed z-50 transition-all duration-300 ease-out flex flex-col bg-slate-900/95 backdrop-blur-xl border border-purple-500/30 rounded-3xl shadow-2xl shadow-black/80 overflow-hidden ${
-            isExpanded
-              ? "inset-4 sm:inset-10"
-              : "bottom-5 right-5 w-[92vw] sm:w-[460px] h-[650px] max-h-[88vh]"
-          }`}
-        >
-          {/* Header */}
-          <div className="p-4 bg-gradient-to-r from-slate-900 via-purple-950/60 to-slate-900 border-b border-purple-500/20 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="relative p-2 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-2xl shadow-md shadow-purple-950">
-                <Bot className="w-5 h-5 text-white" />
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-white flex items-center space-x-1.5">
-                  <span>ИИ-Копилот Автопроката</span>
-                  <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1.5 py-0.2 rounded uppercase font-mono">
-                    Gemini
-                  </span>
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  База 65+ авто • ТО • Штрафы • Задачи
-                </p>
-              </div>
+        <>
+          {/* Full-Screen Dark Backdrop: Clicking/tapping outside immediately closes the assistant */}
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsOpen(false)}
+            aria-label="Закрыть ИИ Ассистент"
+          />
+
+          {/* Assistant Modal Window */}
+          <div
+            className={`fixed z-50 transition-all duration-300 ease-out flex flex-col bg-slate-900/98 backdrop-blur-2xl border border-purple-500/40 rounded-2xl sm:rounded-3xl shadow-2xl shadow-black/90 overflow-hidden ${
+              isExpanded
+                ? "inset-2 sm:inset-8"
+                : "inset-x-2 bottom-2 top-14 sm:top-auto sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[480px] sm:h-[640px] sm:max-h-[88vh]"
+            }`}
+          >
+            {/* Mobile swipe/close indicator bar */}
+            <div
+              className="sm:hidden flex justify-center py-1.5 bg-slate-950/80 border-b border-purple-500/10 cursor-pointer active:bg-slate-800"
+              onClick={() => setIsOpen(false)}
+              title="Нажмите, чтобы закрыть"
+            >
+              <div className="w-10 h-1 bg-slate-600 rounded-full" />
             </div>
 
-            <div className="flex items-center space-x-1 text-slate-400">
-              <button
-                onClick={clearChat}
-                className="p-1.5 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition"
-                title="Очистить переписку"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="p-1.5 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition hidden sm:block"
-                title={isExpanded ? "Свернуть" : "Развернуть на весь экран"}
-              >
-                {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
-                title="Закрыть (Esc)"
-              >
-                <X className="w-4 h-4" />
-              </button>
+            {/* Header */}
+            <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-900 via-purple-950/60 to-slate-900 border-b border-purple-500/20 flex items-center justify-between gap-2">
+              <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                <div className="relative p-1.5 sm:p-2 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl sm:rounded-2xl shadow-md shadow-purple-950 shrink-0">
+                  <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs sm:text-sm font-black text-white flex items-center space-x-1.5 truncate">
+                    <span className="truncate">ИИ-Копилот</span>
+                    <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1 py-0.2 rounded uppercase font-mono shrink-0">
+                      Gemini
+                    </span>
+                  </h3>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                    База 65+ авто • ТО • Штрафы • Задачи
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-1 text-slate-400 shrink-0">
+                <button
+                  onClick={clearChat}
+                  className="p-1.5 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition"
+                  title="Очистить переписку"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </button>
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="p-1.5 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition hidden sm:block"
+                  title={isExpanded ? "Свернуть" : "Развернуть на весь экран"}
+                >
+                  {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 hover:text-white rounded-xl border border-rose-500/30 transition text-xs font-bold active:scale-95 shadow-sm"
+                  title="Закрыть окно ассистента (Esc)"
+                >
+                  <X className="w-4 h-4 text-rose-400" />
+                  <span className="text-[11px] sm:text-xs">Закрыть</span>
+                </button>
+              </div>
             </div>
-          </div>
 
           {/* Quick Prompts Bar */}
           <div className="px-3 py-2 bg-slate-950/50 border-b border-slate-800/80 flex items-center space-x-1.5 overflow-x-auto scrollbar-thin">
@@ -353,7 +372,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
           </div>
 
           {/* Input Footer */}
-          <div className="p-3 bg-slate-950/70 border-t border-slate-800/80">
+          <div className="p-3 bg-slate-950/90 border-t border-slate-800/80 space-y-2 shrink-0">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -372,15 +391,27 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
               <button
                 type="submit"
                 disabled={!input.trim() || loading}
-                className="p-2.5 bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl shadow-md transition active:scale-95"
+                className="p-2.5 bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl shadow-md transition active:scale-95 shrink-0"
                 title="Отправить сообщение"
               >
                 <Send className="w-4 h-4" />
               </button>
             </form>
+
+            <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
+              <span className="hidden sm:inline">Esc или клик вне окна — закрыть</span>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="text-slate-400 hover:text-rose-300 transition text-[11px] underline underline-offset-2 ml-auto py-0.5 font-medium"
+              >
+                Закрыть ассистент
+              </button>
+            </div>
           </div>
         </div>
-      )}
-    </>
-  );
+      </>
+    )}
+  </>
+);
 };
