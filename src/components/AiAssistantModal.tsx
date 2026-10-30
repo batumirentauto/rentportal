@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Sparkles,
   X,
@@ -17,6 +18,7 @@ import {
   DollarSign,
   ClipboardList,
   ShieldAlert,
+  ChevronDown,
 } from "lucide-react";
 
 interface Message {
@@ -53,8 +55,13 @@ interface AiAssistantModalProps {
 export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   standaloneTrigger = true,
 }) => {
+  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome-1",
@@ -170,6 +177,223 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     ]);
   };
 
+  const modalContent = isOpen ? (
+    <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-end sm:items-end p-0 sm:p-5 pointer-events-auto">
+      {/* Full-Screen Dark Backdrop: Clicking/tapping outside immediately closes the assistant */}
+      <div
+        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
+        onClick={() => setIsOpen(false)}
+        aria-label="Закрыть ИИ Ассистент"
+      />
+
+      {/* Assistant Modal Window */}
+      <div
+        className={`relative z-[101] w-full sm:w-[480px] bg-slate-900/98 backdrop-blur-2xl border-t sm:border border-purple-500/40 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black/90 flex flex-col overflow-hidden transition-all duration-300 ${
+          isExpanded
+            ? "h-[94vh] sm:h-[88vh] sm:w-[800px]"
+            : "h-[85vh] sm:h-[650px] max-h-[92vh]"
+        }`}
+      >
+        {/* Mobile top bar to close */}
+        <div
+          className="sm:hidden flex items-center justify-center py-2 bg-slate-950 border-b border-purple-500/20 cursor-pointer active:bg-slate-800 text-slate-300 hover:text-white gap-1.5 text-xs font-bold"
+          onClick={() => setIsOpen(false)}
+          title="Нажмите, чтобы закрыть"
+        >
+          <ChevronDown className="w-4 h-4 text-rose-400 animate-bounce" />
+          <span>Нажмите, чтобы закрыть окно</span>
+        </div>
+
+        {/* Header */}
+        <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-900 via-purple-950/60 to-slate-900 border-b border-purple-500/20 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+            <div className="relative p-1.5 sm:p-2 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl sm:rounded-2xl shadow-md shadow-purple-950 shrink-0">
+              <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-xs sm:text-sm font-black text-white flex items-center space-x-1.5 truncate">
+                <span className="truncate">ИИ-Копилот</span>
+                <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1 py-0.2 rounded uppercase font-mono shrink-0">
+                  Gemini
+                </span>
+              </h3>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                База 65+ авто • ТО • Штрафы • Задачи
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-1.5 text-slate-400 shrink-0">
+            <button
+              onClick={clearChat}
+              className="p-1.5 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition"
+              title="Очистить переписку"
+            >
+              <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1.5 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition hidden sm:block"
+              title={isExpanded ? "Свернуть" : "Развернуть на весь экран"}
+            >
+              {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="flex items-center space-x-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow-md border border-rose-400 transition active:scale-95 shrink-0"
+              title="Закрыть окно ассистента (Esc)"
+            >
+              <X className="w-4 h-4 stroke-[2.5]" />
+              <span>Закрыть</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Prompts Bar */}
+        <div className="px-3 py-2 bg-slate-950/50 border-b border-slate-800/80 flex items-center space-x-1.5 overflow-x-auto scrollbar-thin">
+          {QUICK_PROMPTS.map((qp, idx) => {
+            const Icon = qp.icon;
+            return (
+              <button
+                key={idx}
+                onClick={() => handleSendMessage(qp.prompt)}
+                disabled={loading}
+                className="px-2.5 py-1 bg-slate-900 hover:bg-purple-950/60 text-slate-300 hover:text-purple-200 border border-slate-800 hover:border-purple-500/40 rounded-xl text-[11px] font-medium whitespace-nowrap transition active:scale-95 flex items-center space-x-1.5 shrink-0"
+              >
+                <Icon className="w-3 h-3 text-purple-400 shrink-0" />
+                <span>{qp.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Chat Messages Body */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs scrollbar-thin">
+          {messages.map((m) => {
+            const isUser = m.role === "user";
+            return (
+              <div
+                key={m.id}
+                className={`flex items-start space-x-2.5 ${
+                  isUser ? "flex-row-reverse space-x-reverse" : "flex-row"
+                }`}
+              >
+                <div
+                  className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-white shadow-sm ${
+                    isUser
+                      ? "bg-slate-800 text-slate-300"
+                      : "bg-gradient-to-tr from-indigo-600 to-purple-600"
+                  }`}
+                >
+                  {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                </div>
+
+                <div className="max-w-[85%] space-y-1.5">
+                  <div
+                    className={`p-3.5 rounded-2xl leading-relaxed whitespace-pre-wrap break-words ${
+                      isUser
+                        ? "bg-purple-600 text-white rounded-tr-none shadow-md shadow-purple-950/30"
+                        : "bg-slate-800/90 text-slate-200 rounded-tl-none border border-slate-700/60 shadow-md"
+                    }`}
+                  >
+                    {m.content}
+                  </div>
+
+                  {/* Action Card Badge (e.g. Task Created) */}
+                  {m.action?.type === "TASK_CREATED" && m.action.task && (
+                    <div className="p-3 bg-emerald-950/70 border border-emerald-500/50 rounded-xl text-emerald-200 space-y-1 shadow-md">
+                      <div className="flex items-center space-x-1.5 font-bold text-[11px] text-emerald-400">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>Задача зарегистрирована в CRM</span>
+                      </div>
+                      <div className="text-[11px] font-semibold text-white">
+                        {m.action.task.title}
+                      </div>
+                      <div className="text-[10px] text-emerald-300/80 flex flex-wrap gap-2 pt-0.5">
+                        {m.action.task.city && <span>📍 {m.action.task.city}</span>}
+                        {m.action.task.priority && (
+                          <span className="font-mono uppercase font-bold text-amber-300">
+                            ⚡ {m.action.task.priority}
+                          </span>
+                        )}
+                        {m.action.task.deadline && <span>⏱️ Дедлайн: {m.action.task.deadline}</span>}
+                      </div>
+                    </div>
+                  )}
+
+                  <div
+                    className={`text-[10px] text-slate-500 px-1 ${
+                      isUser ? "text-right" : "text-left"
+                    }`}
+                  >
+                    {m.timestamp}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {loading && (
+            <div className="flex items-center space-x-2.5">
+              <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shrink-0 text-white shadow-sm">
+                <Bot className="w-4 h-4 animate-spin" />
+              </div>
+              <div className="p-3 bg-slate-800/80 rounded-2xl rounded-tl-none border border-slate-700/60 flex items-center space-x-2 text-slate-400">
+                <div className="flex space-x-1">
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" />
+                </div>
+                <span className="text-[11px]">ИИ анализирует парк и формирует ответ...</span>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Footer */}
+        <div className="p-3 bg-slate-950/95 border-t border-slate-800/80 space-y-2 shrink-0">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            className="flex items-center space-x-2"
+          >
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Спросите об авто, ТО, ценах или дайте задачу..."
+              disabled={loading}
+              className="flex-1 bg-slate-900 border border-slate-700/80 focus:border-purple-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition shadow-inner"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || loading}
+              className="p-2.5 bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl shadow-md transition active:scale-95 shrink-0"
+              title="Отправить сообщение"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+
+          {/* Full-width Close Button */}
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="w-full py-2 bg-slate-800/90 hover:bg-rose-950/50 text-rose-300 hover:text-white border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
+          >
+            <X className="w-4 h-4 text-rose-400" />
+            <span>Закрыть ассистент</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <>
       {/* Floating Trigger Launcher Button */}
@@ -195,223 +419,10 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
         </button>
       )}
 
-      {/* Slide-out / Modal Container */}
-      {isOpen && (
-        <>
-          {/* Full-Screen Dark Backdrop: Clicking/tapping outside immediately closes the assistant */}
-          <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity"
-            onClick={() => setIsOpen(false)}
-            aria-label="Закрыть ИИ Ассистент"
-          />
-
-          {/* Assistant Modal Window */}
-          <div
-            className={`fixed z-50 transition-all duration-300 ease-out flex flex-col bg-slate-900/98 backdrop-blur-2xl border border-purple-500/40 rounded-2xl sm:rounded-3xl shadow-2xl shadow-black/90 overflow-hidden ${
-              isExpanded
-                ? "inset-2 sm:inset-8"
-                : "inset-x-2 bottom-2 top-14 sm:top-auto sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[480px] sm:h-[640px] sm:max-h-[88vh]"
-            }`}
-          >
-            {/* Mobile swipe/close indicator bar */}
-            <div
-              className="sm:hidden flex justify-center py-1.5 bg-slate-950/80 border-b border-purple-500/10 cursor-pointer active:bg-slate-800"
-              onClick={() => setIsOpen(false)}
-              title="Нажмите, чтобы закрыть"
-            >
-              <div className="w-10 h-1 bg-slate-600 rounded-full" />
-            </div>
-
-            {/* Header */}
-            <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-900 via-purple-950/60 to-slate-900 border-b border-purple-500/20 flex items-center justify-between gap-2">
-              <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
-                <div className="relative p-1.5 sm:p-2 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl sm:rounded-2xl shadow-md shadow-purple-950 shrink-0">
-                  <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-xs sm:text-sm font-black text-white flex items-center space-x-1.5 truncate">
-                    <span className="truncate">ИИ-Копилот</span>
-                    <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1 py-0.2 rounded uppercase font-mono shrink-0">
-                      Gemini
-                    </span>
-                  </h3>
-                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                    База 65+ авто • ТО • Штрафы • Задачи
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-1 text-slate-400 shrink-0">
-                <button
-                  onClick={clearChat}
-                  className="p-1.5 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition"
-                  title="Очистить переписку"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </button>
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-1.5 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition hidden sm:block"
-                  title={isExpanded ? "Свернуть" : "Развернуть на весь экран"}
-                >
-                  {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                </button>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 hover:text-white rounded-xl border border-rose-500/30 transition text-xs font-bold active:scale-95 shadow-sm"
-                  title="Закрыть окно ассистента (Esc)"
-                >
-                  <X className="w-4 h-4 text-rose-400" />
-                  <span className="text-[11px] sm:text-xs">Закрыть</span>
-                </button>
-              </div>
-            </div>
-
-          {/* Quick Prompts Bar */}
-          <div className="px-3 py-2 bg-slate-950/50 border-b border-slate-800/80 flex items-center space-x-1.5 overflow-x-auto scrollbar-thin">
-            {QUICK_PROMPTS.map((qp, idx) => {
-              const Icon = qp.icon;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleSendMessage(qp.prompt)}
-                  disabled={loading}
-                  className="px-2.5 py-1 bg-slate-900 hover:bg-purple-950/60 text-slate-300 hover:text-purple-200 border border-slate-800 hover:border-purple-500/40 rounded-xl text-[11px] font-medium whitespace-nowrap transition active:scale-95 flex items-center space-x-1.5 shrink-0"
-                >
-                  <Icon className="w-3 h-3 text-purple-400 shrink-0" />
-                  <span>{qp.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Chat Messages Body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs scrollbar-thin">
-            {messages.map((m) => {
-              const isUser = m.role === "user";
-              return (
-                <div
-                  key={m.id}
-                  className={`flex items-start space-x-2.5 ${
-                    isUser ? "flex-row-reverse space-x-reverse" : "flex-row"
-                  }`}
-                >
-                  <div
-                    className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-white shadow-sm ${
-                      isUser
-                        ? "bg-slate-800 text-slate-300"
-                        : "bg-gradient-to-tr from-indigo-600 to-purple-600"
-                    }`}
-                  >
-                    {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-                  </div>
-
-                  <div className="max-w-[85%] space-y-1.5">
-                    <div
-                      className={`p-3.5 rounded-2xl leading-relaxed whitespace-pre-wrap break-words ${
-                        isUser
-                          ? "bg-purple-600 text-white rounded-tr-none shadow-md shadow-purple-950/30"
-                          : "bg-slate-800/90 text-slate-200 rounded-tl-none border border-slate-700/60 shadow-md"
-                      }`}
-                    >
-                      {m.content}
-                    </div>
-
-                    {/* Action Card Badge (e.g. Task Created) */}
-                    {m.action?.type === "TASK_CREATED" && m.action.task && (
-                      <div className="p-3 bg-emerald-950/70 border border-emerald-500/50 rounded-xl text-emerald-200 space-y-1 shadow-md">
-                        <div className="flex items-center space-x-1.5 font-bold text-[11px] text-emerald-400">
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                          <span>Задача зарегистрирована в CRM</span>
-                        </div>
-                        <div className="text-[11px] font-semibold text-white">
-                          {m.action.task.title}
-                        </div>
-                        <div className="text-[10px] text-emerald-300/80 flex flex-wrap gap-2 pt-0.5">
-                          {m.action.task.city && <span>📍 {m.action.task.city}</span>}
-                          {m.action.task.priority && (
-                            <span className="font-mono uppercase font-bold text-amber-300">
-                              ⚡ {m.action.task.priority}
-                            </span>
-                          )}
-                          {m.action.task.deadline && <span>⏱️ Дедлайн: {m.action.task.deadline}</span>}
-                        </div>
-                      </div>
-                    )}
-
-                    <div
-                      className={`text-[10px] text-slate-500 px-1 ${
-                        isUser ? "text-right" : "text-left"
-                      }`}
-                    >
-                      {m.timestamp}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {loading && (
-              <div className="flex items-center space-x-2.5">
-                <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shrink-0 text-white shadow-sm">
-                  <Bot className="w-4 h-4 animate-spin" />
-                </div>
-                <div className="p-3 bg-slate-800/80 rounded-2xl rounded-tl-none border border-slate-700/60 flex items-center space-x-2 text-slate-400">
-                  <div className="flex space-x-1">
-                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" />
-                  </div>
-                  <span className="text-[11px]">ИИ анализирует парк и формирует ответ...</span>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Footer */}
-          <div className="p-3 bg-slate-950/90 border-t border-slate-800/80 space-y-2 shrink-0">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage();
-              }}
-              className="flex items-center space-x-2"
-            >
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Спросите об авто, ТО, ценах или дайте задачу..."
-                disabled={loading}
-                className="flex-1 bg-slate-900 border border-slate-700/80 focus:border-purple-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition shadow-inner"
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || loading}
-                className="p-2.5 bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl shadow-md transition active:scale-95 shrink-0"
-                title="Отправить сообщение"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
-
-            <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
-              <span className="hidden sm:inline">Esc или клик вне окна — закрыть</span>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="text-slate-400 hover:text-rose-300 transition text-[11px] underline underline-offset-2 ml-auto py-0.5 font-medium"
-              >
-                Закрыть ассистент
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
-    )}
-  </>
-);
+      {/* Render Modal via Portal directly to body */}
+      {mounted && typeof document !== "undefined" && modalContent
+        ? createPortal(modalContent, document.body)
+        : null}
+    </>
+  );
 };
