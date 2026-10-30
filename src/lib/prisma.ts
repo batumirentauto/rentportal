@@ -594,37 +594,48 @@ function ensureSchema(dbFilePath: string) {
       console.warn("[Database] CashTransfer table notice:", ctErr);
     }
 
-    // 6.5 Ensure Pavel Klimov (Руководитель Паша) exists and has a cash register
+    // 6.5 Ensure all executives (Георгий Шепель, Павел Климов, Андрей Колесников) have cash registers
     try {
-      const pavelFlag = db.prepare(`SELECT id FROM "_MigrationFlags" WHERE id = 'ensure_pavel_klimov_cash_v1'`).get();
-      if (!pavelFlag) {
-        let pavelUser = db.prepare(`SELECT id, fullName, cityId FROM "User" WHERE fullName LIKE '%Павел%' OR fullName LIKE '%Климов%' OR fullName LIKE '%Паша%' LIMIT 1`).get() as any;
-        if (!pavelUser) {
-          const newPavelId = "usr_pavel_" + Date.now();
-          db.prepare(`
-            INSERT INTO "User" (id, fullName, role, phone, email, createdAt, updatedAt)
-            VALUES (?, 'Павел Климов', 'EXECUTIVE', '+995-500-00-11', 'pavel@vslrent.ge', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          `).run(newPavelId);
-          pavelUser = { id: newPavelId, fullName: 'Павел Климов', cityId: null };
-          console.log("[Database] Created User record for Павел Климов (EXECUTIVE)");
+      const allExecFlag = db.prepare(`SELECT id FROM "_MigrationFlags" WHERE id = 'ensure_all_executives_cash_accounts_v4'`).get();
+      if (!allExecFlag) {
+        console.log("[Database] Ensuring cash accounts for all executives (Георгий Шепель, Павел Климов, Андрей Колесников)...");
+
+        const executives = [
+          { name: "Георгий Шепель", title: "Касса нал: Георгий Шепель (Руководство)", phone: "+995-500-00-12", email: "george@vslrent.ge" },
+          { name: "Павел Климов", title: "Касса нал: Павел Климов (Руководство)", phone: "+995-500-00-11", email: "pavel@vslrent.ge" },
+          { name: "Андрей Колесников", title: "Касса нал: Андрей Колесников (Батуми)", phone: "+995-500-00-10", email: "andrey@vslrent.ge" },
+        ];
+
+        for (const exec of executives) {
+          // Check/create user
+          let user = db.prepare(`SELECT id, fullName, cityId FROM "User" WHERE fullName LIKE ? LIMIT 1`).get(`%${exec.name}%`) as any;
+          if (!user) {
+            const newUid = "usr_exec_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
+            db.prepare(`
+              INSERT INTO "User" (id, fullName, role, phone, email, createdAt, updatedAt)
+              VALUES (?, ?, 'EXECUTIVE', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            `).run(newUid, exec.name, exec.phone, exec.email);
+            user = { id: newUid, fullName: exec.name, cityId: null };
+            console.log(`[Database] Created User for ${exec.name}`);
+          }
+
+          // Check/create cash account
+          const acc = db.prepare(`SELECT id FROM FinancialAccount WHERE name LIKE ? OR managerResponsible LIKE ? LIMIT 1`).get(`%${exec.name}%`, `%${exec.name}%`);
+          if (!acc) {
+            const newAccId = "acc_exec_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
+            db.prepare(`
+              INSERT INTO FinancialAccount (id, name, type, bankName, currency, cityId, initialBalance, currentBalance, managerResponsible, userId, isManagerCash, createdAt, updatedAt)
+              VALUES (?, ?, 'CASH', 'NONE', 'GEL', ?, 0, 0, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            `).run(newAccId, exec.title, user.cityId || null, exec.name, user.id);
+            console.log(`[Database] Created FinancialAccount for ${exec.name}: ${exec.title}`);
+          }
         }
 
-        const pavelAcc = db.prepare(`SELECT id FROM FinancialAccount WHERE name LIKE '%Павел%' OR managerResponsible LIKE '%Павел%' OR name LIKE '%Климов%' OR name LIKE '%Паша%' LIMIT 1`).get();
-        if (!pavelAcc) {
-          const batumiCity = db.prepare(`SELECT id FROM City WHERE code = 'BUS' LIMIT 1`).get() as any;
-          const newPavelAccId = "acc_pavel_" + Date.now();
-          db.prepare(`
-            INSERT INTO FinancialAccount (id, name, type, bankName, currency, cityId, initialBalance, currentBalance, managerResponsible, userId, isManagerCash, createdAt, updatedAt)
-            VALUES (?, 'Касса нал: Павел Климов (Руководство)', 'CASH', 'NONE', 'GEL', ?, 0, 0, 'Павел Климов', ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          `).run(newPavelAccId, pavelUser.cityId || batumiCity?.id || null, pavelUser.id);
-          console.log("[Database] Created FinancialAccount for Павел Климов (Касса нал: Павел Климов)");
-        }
-
-        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('ensure_pavel_klimov_cash_v1')`).run();
-        console.log("[Database] Pavel Klimov cash account migration completed successfully!");
+        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('ensure_all_executives_cash_accounts_v4')`).run();
+        console.log("[Database] All executive cash accounts ensured successfully!");
       }
-    } catch (pavelErr) {
-      console.warn("[Database] Pavel Klimov cash notice:", pavelErr);
+    } catch (allExecErr) {
+      console.warn("[Database] All executive cash accounts notice:", allExecErr);
     }
 
     // 7. Auto-sync: Any User with role = 'OWNER' who is missing a CarOwner record

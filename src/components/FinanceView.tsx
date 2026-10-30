@@ -1119,9 +1119,10 @@ export const FinanceView: React.FC = () => {
               </div>
             </div>
 
-            {/* City Groups */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Groups: Leadership & Cities */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
+                { city: "Руководство", code: "EXEC", icon: "👑", desc: "Шепель, Климов, Колесников" },
                 { city: "Батуми", code: "BUS", icon: "🌊", desc: "Батуми (Офис & Аэропорт)" },
                 { city: "Тбилиси", code: "TBS", icon: "🏛️", desc: "Тбилиси (Офис & Аэропорт)" },
                 { city: "Кутаиси", code: "KUT", icon: "🌿", desc: "Кутаиси (Копитнари)" },

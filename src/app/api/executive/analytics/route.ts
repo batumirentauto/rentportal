@@ -41,6 +41,9 @@ export async function GET() {
     investorNames.delete("климов");
     investorNames.delete("павел");
     investorNames.delete("паша");
+    investorNames.delete("георгий шепель");
+    investorNames.delete("шепель");
+    investorNames.delete("георгий");
 
     // 2. Все платежи и расходы
     const payments = await prisma.payment.findMany({
@@ -217,20 +220,24 @@ export async function GET() {
         const mgrLower = (acc.managerResponsible || acc.user?.fullName || "").trim().toLowerCase();
         const accNameLower = (acc.name || "").trim().toLowerCase();
 
+        // Полный иммунитет для касс руководства и администраторов
+        const isExecutiveLeader =
+          mgrLower.includes("шепель") ||
+          accNameLower.includes("шепель") ||
+          mgrLower.includes("климов") ||
+          accNameLower.includes("климов") ||
+          mgrLower.includes("колесников") ||
+          accNameLower.includes("колесников") ||
+          mgrLower.includes("руководство") ||
+          accNameLower.includes("руководство");
+
         let isInvestor = false;
-        for (const name of Array.from(investorNames)) {
-          if (
-            name !== "андрей колесников" &&
-            name !== "колесников" &&
-            name !== "руководство" &&
-            name !== "павел климов" &&
-            name !== "климов" &&
-            name !== "павел" &&
-            name !== "паша" &&
-            ((mgrLower && mgrLower.includes(name)) || (accNameLower && accNameLower.includes(name)))
-          ) {
-            isInvestor = true;
-            break;
+        if (!isExecutiveLeader) {
+          for (const name of Array.from(investorNames)) {
+            if ((mgrLower && mgrLower.includes(name)) || (accNameLower && accNameLower.includes(name))) {
+              isInvestor = true;
+              break;
+            }
           }
         }
         if (isInvestor) {
@@ -288,19 +295,35 @@ export async function GET() {
       }
     });
 
-    // Группировка наличных касс менеджеров по городам
+    // Группировка наличных касс: Руководство компании + по городам (Тбилиси, Батуми, Кутаиси)
     const managerCashByCity: Record<string, any[]> = {
+      "Руководство": [],
       Тбилиси: [],
       Батуми: [],
       Кутаиси: [],
     };
 
     managerCashAccountsList.forEach((acc) => {
-      const cityKey = acc.cityName || "Батуми";
-      if (!managerCashByCity[cityKey]) {
-        managerCashByCity[cityKey] = [];
+      const nameL = (acc.name || "").toLowerCase();
+      const mgrL = (acc.managerName || "").toLowerCase();
+
+      if (
+        nameL.includes("руководство") ||
+        nameL.includes("шепель") ||
+        mgrL.includes("шепель") ||
+        nameL.includes("климов") ||
+        mgrL.includes("климов") ||
+        nameL.includes("колесников") ||
+        mgrL.includes("колесников")
+      ) {
+        managerCashByCity["Руководство"].push(acc);
+      } else {
+        const cityKey = acc.cityName || "Батуми";
+        if (!managerCashByCity[cityKey]) {
+          managerCashByCity[cityKey] = [];
+        }
+        managerCashByCity[cityKey].push(acc);
       }
-      managerCashByCity[cityKey].push(acc);
     });
 
     return NextResponse.json({
