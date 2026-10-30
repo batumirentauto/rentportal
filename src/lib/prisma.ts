@@ -552,6 +552,19 @@ function ensureSchema(dbFilePath: string) {
           console.log("[Database] Created FinancialAccount for Андрей Колесников");
         }
 
+        // 2. Руководство VSL (Администрация Тбилиси)
+        const execAcc = db.prepare(`SELECT id FROM FinancialAccount WHERE name LIKE '%Руководство%' AND type = 'CASH' LIMIT 1`).get();
+        if (!execAcc) {
+          const tbilisiCity = db.prepare(`SELECT id FROM City WHERE code = 'TBS' LIMIT 1`).get();
+          const execUser = db.prepare(`SELECT id, fullName, cityId FROM "User" WHERE role = 'EXECUTIVE' LIMIT 1`).get();
+          const newExecAccId = "acc_exec_" + Date.now();
+          db.prepare(`
+            INSERT INTO FinancialAccount (id, name, type, bankName, currency, cityId, initialBalance, currentBalance, managerResponsible, userId, isManagerCash, createdAt, updatedAt)
+            VALUES (?, 'Касса нал: Руководство (Тбилиси)', 'CASH', 'NONE', 'GEL', ?, 0, 0, 'Руководство', ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          `).run(newExecAccId, tbilisiCity?.id || null, execUser ? execUser.id : null);
+          console.log("[Database] Created FinancialAccount for Руководство");
+        }
+
         db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('ensure_exec_and_admin_cash_v1')`).run();
         console.log("[Database] Executive and admin cash accounts migration completed successfully!");
       }
