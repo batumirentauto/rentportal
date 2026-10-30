@@ -26,12 +26,17 @@ export async function GET() {
       },
     });
 
-    // 1.1 Получаем всех владельцев (инвесторов) парка, чтобы никогда не считать их менеджерами
+    // 1.1 Получаем инвесторов (владельцев авто), у которых НЕ должно быть касс
     const carOwners = await prisma.carOwner.findMany({ select: { fullName: true } });
     const investorNames = new Set(carOwners.map((o) => o.fullName.trim().toLowerCase()));
-    ["герман", "максим кириченко", "артур", "давид", "жора", "илья", "андрей колесников", "колесников", "руководство", "николоз"].forEach((n) =>
+    // Известные инвесторы
+    ["герман", "максим кириченко", "артур", "давид", "жора", "илья"].forEach((n) =>
       investorNames.add(n)
     );
+    // Руководство и администраторы НЕ являются инвесторами и ДОЛЖНЫ иметь свои кассы
+    investorNames.delete("андрей колесников");
+    investorNames.delete("колесников");
+    investorNames.delete("руководство");
 
     // 2. Все платежи и расходы
     const payments = await prisma.payment.findMany({
@@ -195,22 +200,30 @@ export async function GET() {
       if (acc.type === "CASH") {
         totalCashGEL += acc.currentBalance;
 
-        // Исключаем инвесторов/владельцев и руководство из касс смены менеджеров
-        if (acc.user && (acc.user.role === "OWNER" || acc.user.role === "EXECUTIVE")) {
+        // Исключаем ТОЛЬКО инвесторов (OWNER). Руководство и администратор ДОЛЖНЫ иметь свои кассы!
+        if (acc.user && acc.user.role === "OWNER") {
           return;
         }
 
         const mgrLower = (acc.managerResponsible || acc.user?.fullName || "").trim().toLowerCase();
         const accNameLower = (acc.name || "").trim().toLowerCase();
 
-        let isInvestorOrExec = false;
+        let isInvestor = false;
         for (const name of Array.from(investorNames)) {
-          if ((mgrLower && mgrLower.includes(name)) || (accNameLower && accNameLower.includes(name))) {
-            isInvestorOrExec = true;
+          if (
+            name !== "андрей колесников" &&
+            name !== "колесников" &&
+            name !== "руководство" &&
+            ((mgrLower && mgrLower.includes(name)) || (accNameLower && accNameLower.includes(name)))
+          ) {
+            isInvestor = true;
             break;
           }
         }
-        if (isInvestorOrExec) {
+        if (isInvestor) {
+          return;
+        }
+        if (mgrLower.includes("николоз") || accNameLower.includes("николоз")) {
           return;
         }
 

@@ -530,6 +530,35 @@ function ensureSchema(dbFilePath: string) {
       console.warn("[Database] Investor cash accounts cleanup notice:", invErr);
     }
 
+    // 6.3 Ensure executive & administration cash accounts exist (Andrey Kolesnikov, Руководство)
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS "_MigrationFlags" ("id" TEXT PRIMARY KEY, "executedAt" DATETIME DEFAULT CURRENT_TIMESTAMP);`);
+      const execCashFlag = db.prepare(`SELECT id FROM "_MigrationFlags" WHERE id = 'ensure_exec_and_admin_cash_v1'`).get();
+      if (!execCashFlag) {
+        console.log("[Database] Ensuring executive & admin cash accounts exist...");
+
+        const batumiCity = db.prepare(`SELECT id FROM City WHERE code = 'BUS' LIMIT 1`).get();
+
+        // 1. Андрей Колесников (Руководство / Администратор автопроката в Батуми)
+        const andreyUser = db.prepare(`SELECT id, fullName, cityId FROM "User" WHERE fullName LIKE '%Колесников%' LIMIT 1`).get();
+        const andreyAcc = db.prepare(`SELECT id FROM FinancialAccount WHERE name LIKE '%Колесников%' OR managerResponsible LIKE '%Колесников%' LIMIT 1`).get();
+
+        if (!andreyAcc) {
+          const newAndreyAccId = "acc_andrey_" + Date.now();
+          db.prepare(`
+            INSERT INTO FinancialAccount (id, name, type, bankName, currency, cityId, initialBalance, currentBalance, managerResponsible, userId, isManagerCash, createdAt, updatedAt)
+            VALUES (?, 'Касса нал: Андрей Колесников (Батуми)', 'CASH', 'NONE', 'GEL', ?, 0, 0, 'Андрей Колесников', ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          `).run(newAndreyAccId, andreyUser?.cityId || batumiCity?.id || null, andreyUser ? andreyUser.id : null);
+          console.log("[Database] Created FinancialAccount for Андрей Колесников");
+        }
+
+        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('ensure_exec_and_admin_cash_v1')`).run();
+        console.log("[Database] Executive and admin cash accounts migration completed successfully!");
+      }
+    } catch (execErr) {
+      console.warn("[Database] Executive cash accounts notice:", execErr);
+    }
+
     // 7. Auto-sync: Any User with role = 'OWNER' who is missing a CarOwner record
     try {
       const unlinkedOwnerUsers = db.prepare(`
