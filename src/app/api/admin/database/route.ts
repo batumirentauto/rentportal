@@ -38,11 +38,24 @@ export async function GET(request: Request) {
       prisma.expense.count(),
     ]);
 
+    let diskSpace: any = null;
+    try {
+      const statfs = fs.statfsSync("/data");
+      diskSpace = {
+        totalMB: Math.round((statfs.blocks * statfs.bsize) / (1024 * 1024)),
+        freeMB: Math.round((statfs.bfree * statfs.bsize) / (1024 * 1024)),
+        availableMB: Math.round((statfs.bavail * statfs.bsize) / (1024 * 1024)),
+      };
+    } catch (e: any) {
+      diskSpace = { error: e.message };
+    }
+
     return NextResponse.json({
       success: true,
       storage: {
         isPersistent: storageInfo.isVolume,
         path: storageInfo.path,
+        diskSpace,
       },
       counts: {
         cars: carsCount,
