@@ -54,7 +54,11 @@ export async function GET(request: Request) {
               },
               handoverReport: true,
               returnReport: true,
-              payments: true,
+              payments: {
+                include: {
+                  account: true,
+                },
+              },
               additionalDrivers: true,
               refunds: true,
               extensions: true,
@@ -100,7 +104,11 @@ export async function GET(request: Request) {
               },
               handoverReport: true,
               returnReport: true,
-              payments: true,
+              payments: {
+                include: {
+                  account: true,
+                },
+              },
               extras: true,
             },
             orderBy: {

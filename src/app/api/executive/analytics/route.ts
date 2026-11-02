@@ -26,6 +26,17 @@ export async function GET() {
       },
     });
 
+    // Автоматическая актуализация счёта Credo Bank для ответственного Андрея Колесникова
+    const credoAcc = accounts.find((a) => a.name.includes("Credo") || a.bankName === "CREDO");
+    if (credoAcc && (!credoAcc.name.includes("Андрей") || credoAcc.managerResponsible !== "Андрей Колесников")) {
+      await prisma.financialAccount.update({
+        where: { id: credoAcc.id },
+        data: { name: "Credo Bank GEL (Андрей)", managerResponsible: "Андрей Колесников" },
+      }).catch(() => {});
+      credoAcc.name = "Credo Bank GEL (Андрей)";
+      credoAcc.managerResponsible = "Андрей Колесников";
+    }
+
     // 1.1 Получаем инвесторов (владельцев авто), у которых НЕ должно быть касс
     const carOwners = await prisma.carOwner.findMany({ select: { fullName: true } });
     const investorNames = new Set(carOwners.map((o) => o.fullName.trim().toLowerCase()));

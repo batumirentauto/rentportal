@@ -20,9 +20,12 @@ import {
   Filter,
   Clock,
   ArrowRightLeft,
+  Search,
+  Wallet,
 } from "lucide-react";
 import { RecordExpenseModal } from "./RecordExpenseModal";
 import { TransferCashModal } from "./TransferCashModal";
+import { AccountLedgerModal } from "./AccountLedgerModal";
 import { GoogleSheetsBackupBanner } from "./GoogleSheetsBackupBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -36,9 +39,13 @@ export const FinanceView: React.FC = () => {
   const [allAccounts, setAllAccounts] = useState<any[]>([]);
   const [managerCashAccounts, setManagerCashAccounts] = useState<any[]>([]);
   const [managerCashByCity, setManagerCashByCity] = useState<any>({});
+  const [companyBankAccounts, setCompanyBankAccounts] = useState<any[]>([]);
   const [transfers, setTransfers] = useState<any[]>([]);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState<boolean>(false);
   const [transferInitialFromAccountId, setTransferInitialFromAccountId] = useState<string | undefined>(undefined);
+  const [isLedgerModalOpen, setIsLedgerModalOpen] = useState<boolean>(false);
+  const [selectedLedgerAccountId, setSelectedLedgerAccountId] = useState<string | null>(null);
+  const [selectedLedgerAccountName, setSelectedLedgerAccountName] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
   const [expenseInitialCategory, setExpenseInitialCategory] = useState<string | undefined>(undefined);
@@ -77,11 +84,33 @@ export const FinanceView: React.FC = () => {
         setAllAccounts(execJson.accounts || []);
         setManagerCashAccounts(execJson.managerCashAccounts || []);
         setManagerCashByCity(execJson.managerCashByCity || {});
+        setCompanyBankAccounts(execJson.companyBankAccounts || []);
       }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openLedgerForMethod = (methodKey: string) => {
+    let targetAcc = null;
+    if (methodKey === "CREDO_BANK") {
+      targetAcc = allAccounts.find((a) => a.name?.includes("Credo") || a.bankName === "CREDO");
+    } else if (methodKey === "TBC_BANK") {
+      targetAcc = allAccounts.find((a) => a.name?.includes("TBC") || a.bankName === "TBC");
+    } else if (methodKey === "BOG_BANK" || methodKey === "CARD_POS") {
+      targetAcc = allAccounts.find((a) => a.name?.includes("Georgia") || a.bankName === "BOG");
+    } else if (methodKey === "CRYPTO") {
+      targetAcc = allAccounts.find((a) => a.type === "CRYPTO_WALLET");
+    } else if (methodKey === "CASH") {
+      setActiveFinanceTab("manager_cash");
+      return;
+    }
+    if (targetAcc) {
+      setSelectedLedgerAccountId(targetAcc.id);
+      setSelectedLedgerAccountName(targetAcc.name);
+      setIsLedgerModalOpen(true);
     }
   };
 
@@ -748,46 +777,94 @@ export const FinanceView: React.FC = () => {
               Разбивка поступлений по каналам оплат:
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 block mb-1">💵 Наличные</span>
-                <span className="text-base font-bold text-white font-mono">
+              <div
+                onClick={() => openLedgerForMethod("CASH")}
+                className="bg-slate-950/60 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition active:scale-95 group relative shadow-sm"
+                title="Нажмите, чтобы открыть кассы менеджеров и выписки"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-slate-400">💵 Наличные</span>
+                  <span className="text-[10px] text-emerald-400 font-bold opacity-0 group-hover:opacity-100 transition">Кассы ↗</span>
+                </div>
+                <span className="text-base font-bold text-white font-mono block">
                   {summary.byMethod?.CASH || 0} ₾
                 </span>
+                <span className="text-[9px] text-slate-500 block mt-0.5">Все кассы смены</span>
               </div>
 
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 block mb-1">💳 Терминал</span>
-                <span className="text-base font-bold text-white font-mono">
+              <div
+                onClick={() => openLedgerForMethod("CARD_POS")}
+                className="bg-slate-950/60 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-purple-500/50 cursor-pointer transition active:scale-95 group relative shadow-sm"
+                title="Нажмите, чтобы открыть выписку по терминалу"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-slate-400">💳 Терминал</span>
+                  <span className="text-[10px] text-purple-400 font-bold opacity-0 group-hover:opacity-100 transition">Выписка ↗</span>
+                </div>
+                <span className="text-base font-bold text-white font-mono block">
                   {summary.byMethod?.CARD_POS || 0} ₾
                 </span>
+                <span className="text-[9px] text-slate-500 block mt-0.5">POS-терминалы</span>
               </div>
 
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 block mb-1">🏦 Bank of Georgia</span>
-                <span className="text-base font-bold text-amber-400 font-mono">
+              <div
+                onClick={() => openLedgerForMethod("BOG_BANK")}
+                className="bg-slate-950/60 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-amber-500/50 cursor-pointer transition active:scale-95 group relative shadow-sm"
+                title="Нажмите, чтобы открыть выписку Bank of Georgia"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-slate-400">🏦 Bank of Georgia</span>
+                  <span className="text-[10px] text-amber-400 font-bold opacity-0 group-hover:opacity-100 transition">Выписка ↗</span>
+                </div>
+                <span className="text-base font-bold text-amber-400 font-mono block">
                   {summary.byMethod?.BOG_BANK || 0} ₾
                 </span>
+                <span className="text-[9px] text-slate-500 block mt-0.5">Расчётный BOG</span>
               </div>
 
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 block mb-1">🏦 TBC Bank</span>
-                <span className="text-base font-bold text-blue-400 font-mono">
+              <div
+                onClick={() => openLedgerForMethod("TBC_BANK")}
+                className="bg-slate-950/60 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-blue-500/50 cursor-pointer transition active:scale-95 group relative shadow-sm"
+                title="Нажмите, чтобы открыть выписку TBC Bank"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-slate-400">🏦 TBC Bank</span>
+                  <span className="text-[10px] text-blue-400 font-bold opacity-0 group-hover:opacity-100 transition">Выписка ↗</span>
+                </div>
+                <span className="text-base font-bold text-blue-400 font-mono block">
                   {summary.byMethod?.TBC_BANK || 0} ₾
                 </span>
+                <span className="text-[9px] text-slate-500 block mt-0.5">TBC USD/GEL</span>
               </div>
 
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 block mb-1">🏦 Credo Bank</span>
-                <span className="text-base font-bold text-rose-400 font-mono">
+              <div
+                onClick={() => openLedgerForMethod("CREDO_BANK")}
+                className="bg-slate-950/60 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-rose-500/50 cursor-pointer transition active:scale-95 group relative shadow-sm"
+                title="Нажмите, чтобы открыть выписку Credo Bank (Андрей)"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-slate-400">🏦 Credo (Андрей)</span>
+                  <span className="text-[10px] text-rose-400 font-bold opacity-0 group-hover:opacity-100 transition">Выписка ↗</span>
+                </div>
+                <span className="text-base font-bold text-rose-400 font-mono block">
                   {summary.byMethod?.CREDO_BANK || 0} ₾
                 </span>
+                <span className="text-[9px] text-rose-400/80 block mt-0.5">Счёт Андрей</span>
               </div>
 
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 block mb-1">💎 Крипто (USDT)</span>
-                <span className="text-base font-bold text-emerald-400 font-mono">
+              <div
+                onClick={() => openLedgerForMethod("CRYPTO")}
+                className="bg-slate-950/60 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition active:scale-95 group relative shadow-sm"
+                title="Нажмите, чтобы открыть выписку по криптовалюте USDT"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-slate-400">💎 Крипто (USDT)</span>
+                  <span className="text-[10px] text-emerald-400 font-bold opacity-0 group-hover:opacity-100 transition">Выписка ↗</span>
+                </div>
+                <span className="text-base font-bold text-emerald-400 font-mono block">
                   ${summary.byMethod?.CRYPTO || 0}
                 </span>
+                <span className="text-[9px] text-slate-500 block mt-0.5">TRC20 кошелек</span>
               </div>
             </div>
 
@@ -1218,18 +1295,32 @@ export const FinanceView: React.FC = () => {
                                 </div>
                               )}
 
-                              {/* Быстрая кнопка сдачи / перевода средств */}
-                              <div className="pt-2 border-t border-slate-800/60">
+                              {/* Кнопки выписки и перевода */}
+                              <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-800/60">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedLedgerAccountId(acc.id);
+                                    setSelectedLedgerAccountName(acc.name);
+                                    setIsLedgerModalOpen(true);
+                                  }}
+                                  className="py-1.5 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center justify-center space-x-1 transition active:scale-95"
+                                  title="Посмотреть полную выписку: за какие авто и брони поступили деньги, штрафы, инвесторы, расходы и остаток"
+                                >
+                                  <Search className="w-3 h-3" />
+                                  <span>Выписка</span>
+                                </button>
+
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setTransferInitialFromAccountId(acc.id);
                                     setIsTransferModalOpen(true);
                                   }}
-                                  className="w-full py-1.5 px-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold flex items-center justify-center space-x-1.5 transition active:scale-95"
+                                  className="py-1.5 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center justify-center space-x-1 transition active:scale-95"
                                 >
                                   <ArrowRightLeft className="w-3 h-3" />
-                                  <span>{language === "ka" ? "სალაროს გადაცემა" : "Сдать / Перевести"}</span>
+                                  <span>{language === "ka" ? "გადაცემა" : "Перевести"}</span>
                                 </button>
                               </div>
                             </div>
@@ -1241,6 +1332,86 @@ export const FinanceView: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* Company Bank & Crypto Accounts (Банковские счета компании и криптокошелек) */}
+            {companyBankAccounts.length > 0 && (
+              <div className="pt-4 border-t border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-white flex items-center space-x-2">
+                      <Landmark className="w-4 h-4 text-cyan-400" />
+                      <span>Банковские счета и кошельки компании</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      Счета BOG, Credo (Андрей), TBC и USDT с возможностью просмотра детальной выписки
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {companyBankAccounts.map((bAcc: any) => (
+                    <div
+                      key={bAcc.id}
+                      className="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 space-y-2.5 transition shadow"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white flex items-center space-x-1.5 truncate">
+                          {bAcc.type === "CRYPTO_WALLET" ? (
+                            <Wallet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          ) : (
+                            <Landmark className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          )}
+                          <span className="truncate">{bAcc.name}</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                          {bAcc.currency}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-baseline pt-1">
+                        <span className="text-[10px] text-slate-400">Остаток на счёте:</span>
+                        <span className="font-mono font-black text-white text-base">
+                          {bAcc.currentBalance.toLocaleString()} {bAcc.currency === "USD" ? "$" : "₾"}
+                        </span>
+                      </div>
+
+                      {bAcc.managerResponsible && (
+                        <span className="text-[10px] text-slate-500 block truncate">
+                          Ответственный: <strong className="text-slate-300">{bAcc.managerResponsible}</strong>
+                        </span>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-800/80">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedLedgerAccountId(bAcc.id);
+                            setSelectedLedgerAccountName(bAcc.name);
+                            setIsLedgerModalOpen(true);
+                          }}
+                          className="py-1.5 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center justify-center space-x-1 transition active:scale-95"
+                        >
+                          <Search className="w-3 h-3" />
+                          <span>Выписка</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTransferInitialFromAccountId(bAcc.id);
+                            setIsTransferModalOpen(true);
+                          }}
+                          className="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-bold flex items-center justify-center space-x-1 transition active:scale-95"
+                        >
+                          <ArrowRightLeft className="w-3 h-3" />
+                          <span>Перевод</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Cash Transfers Journal (История межкассовых проводок и инкассаций) */}
             <div className="pt-4 border-t border-slate-800 space-y-3">
@@ -1326,6 +1497,18 @@ export const FinanceView: React.FC = () => {
         onTransferSuccess={fetchData}
         initialFromAccountId={transferInitialFromAccountId}
         accounts={allAccounts.length > 0 ? allAccounts : managerCashAccounts}
+      />
+
+      {/* Account Ledger & Detailed Audit Modal */}
+      <AccountLedgerModal
+        isOpen={isLedgerModalOpen}
+        onClose={() => {
+          setIsLedgerModalOpen(false);
+          setSelectedLedgerAccountId(null);
+          setSelectedLedgerAccountName("");
+        }}
+        accountId={selectedLedgerAccountId}
+        accountName={selectedLedgerAccountName}
       />
     </div>
   );

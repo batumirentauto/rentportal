@@ -65,7 +65,11 @@ export async function GET(request: Request) {
         handoverReport: true,
         returnReport: true,
         trafficFines: true,
-        payments: true,
+        payments: {
+          include: {
+            account: true,
+          },
+        },
         additionalDrivers: true,
         refunds: { include: { account: true } },
         extensions: { include: { account: true } },

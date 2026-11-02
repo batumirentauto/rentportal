@@ -1919,6 +1919,116 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 </div>
               </div>
 
+              {/* Движение денежных средств при выдаче авто (куда ушли деньги) */}
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-200">
+                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                    <span>Куда поступили деньги:</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    {selectedBooking.payments?.length || 0} платеж(ей)
+                  </span>
+                </div>
+
+                {selectedBooking.payments && selectedBooking.payments.length > 0 ? (
+                  <div className="space-y-1.5 pt-1">
+                    {selectedBooking.payments.map((p: any, idx: number) => {
+                      const isCash = p.method === "CASH";
+                      const isCredo = p.method === "CREDO_BANK";
+                      const isTBC = p.method === "TBC_BANK";
+                      const isBOG = p.method === "BOG_BANK";
+                      const isCard = p.method === "CARD_POS";
+                      const isCrypto = p.method === "CRYPTO";
+
+                      const typeLabel =
+                        p.type === "RENTAL"
+                          ? "Аренда авто"
+                          : p.type === "DEPOSIT"
+                          ? "Залог / Депозит"
+                          : p.type === "DELIVERY"
+                          ? "Сбор за доставку"
+                          : "Доп. услуги";
+
+                      let destinationLabel = "";
+                      let destIcon = "💵";
+                      let badgeColor = "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
+
+                      if (isCash) {
+                        destIcon = "💵";
+                        const mgr = p.managerName || p.account?.managerResponsible || "Менеджер";
+                        destinationLabel = `Наличные в кассу: ${p.account?.name || `Касса: ${mgr}`}`;
+                        badgeColor = "bg-emerald-500/15 text-emerald-300 border-emerald-500/30";
+                      } else if (isCredo) {
+                        destIcon = "🏦";
+                        destinationLabel = p.account?.name || "Счёт: Credo Bank GEL (Андрей)";
+                        badgeColor = "bg-rose-500/15 text-rose-300 border-rose-500/30";
+                      } else if (isTBC) {
+                        destIcon = "🏦";
+                        destinationLabel = p.account?.name || "Счёт: TBC Bank USD";
+                        badgeColor = "bg-blue-500/15 text-blue-300 border-blue-500/30";
+                      } else if (isBOG) {
+                        destIcon = "🏦";
+                        destinationLabel = p.account?.name || "Счёт: Bank of Georgia GEL";
+                        badgeColor = "bg-amber-500/15 text-amber-300 border-amber-500/30";
+                      } else if (isCrypto) {
+                        destIcon = "🪙";
+                        destinationLabel = p.account?.name || "Криптокошелек USDT (TRC20)";
+                        badgeColor = "bg-teal-500/15 text-teal-300 border-teal-500/30";
+                      } else if (isCard) {
+                        destIcon = "💳";
+                        destinationLabel = "Оплата картой (POS-терминал)";
+                        badgeColor = "bg-purple-500/15 text-purple-300 border-purple-500/30";
+                      } else {
+                        destIcon = "🏛️";
+                        destinationLabel = p.account?.name || `Безналичный перевод (${p.method})`;
+                        badgeColor = "bg-indigo-500/15 text-indigo-300 border-indigo-500/30";
+                      }
+
+                      return (
+                        <div
+                          key={p.id || idx}
+                          className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1.5"
+                        >
+                          <div className="space-y-0.5 min-w-0">
+                            <div className="flex items-center space-x-1.5 flex-wrap">
+                              <span className="text-xs">{destIcon}</span>
+                              <span className="font-bold text-white truncate">{destinationLabel}</span>
+                              <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase border ${badgeColor}`}>
+                                {typeLabel}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 flex items-center space-x-1 font-mono">
+                              <span>Принял: <strong className="text-slate-300">{p.managerName || p.account?.managerResponsible || "Менеджер смены"}</strong></span>
+                              {p.createdAt && (
+                                <span>• {new Date(p.createdAt).toLocaleDateString("ru-RU")} {new Date(p.createdAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</span>
+                              )}
+                            </div>
+                            {p.notes && <p className="text-[10px] text-slate-500 truncate">{p.notes}</p>}
+                            {p.changeOnReturn > 0 && (
+                              <span className="text-[10px] text-amber-400 font-bold block">
+                                💡 Сдача при сдаче: {p.changeOnReturn} ₾ (будет возвращена клиенту)
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-right font-mono shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center">
+                            <span className="text-sm font-black text-emerald-400">
+                              +{p.amount} {p.currency === "USD" ? "$" : "₾"}
+                            </span>
+                            <span className="text-[9px] text-slate-500 uppercase">{p.currency}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-lg bg-slate-900/60 border border-dashed border-slate-800 text-[11px] text-slate-400">
+                    Оплата пока не проведена. Менеджер смены зафиксирует кассу или счёт при выдаче автомобиля по акту.
+                  </div>
+                )}
+              </div>
+
               {/* Additional Drivers Section (до 4х с фото прав) */}
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between">

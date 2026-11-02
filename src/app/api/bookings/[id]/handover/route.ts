@@ -173,6 +173,35 @@ export async function POST(
       });
     }
 
+    // Функция для сопоставления метода оплаты с финансовым счетом / кассой
+    const resolveAccountForMethod = async (method: string, fallbackCashAcc: any) => {
+      if (method === "CASH") return fallbackCashAcc;
+      if (method === "CREDO_BANK") {
+        return await prisma.financialAccount.findFirst({
+          where: { OR: [{ name: { contains: "Credo" } }, { bankName: { contains: "CREDO" } }] },
+        });
+      }
+      if (method === "TBC_BANK") {
+        return await prisma.financialAccount.findFirst({
+          where: { OR: [{ name: { contains: "TBC" } }, { bankName: { contains: "TBC" } }] },
+        });
+      }
+      if (method === "BOG_BANK" || method === "CARD_POS") {
+        return await prisma.financialAccount.findFirst({
+          where: { OR: [{ name: { contains: "Georgia" } }, { bankName: { contains: "BOG" } }] },
+        });
+      }
+      if (method === "CRYPTO") {
+        return await prisma.financialAccount.findFirst({
+          where: { type: "CRYPTO_WALLET" },
+        });
+      }
+      return null;
+    };
+
+    const targetRentalAcc = await resolveAccountForMethod(paymentMethod, managerCashAcc);
+    const targetDepositAcc = await resolveAccountForMethod(depositMethod, managerCashAcc);
+
     // 2. Создаем проводку за аренду и услуги
     const rentalPay = await prisma.payment.create({
       data: {
@@ -182,7 +211,7 @@ export async function POST(
         currency: rentalCurrency,
         method: paymentMethod,
         status: "PAID",
-        accountId: paymentMethod === "CASH" ? managerCashAcc?.id : undefined,
+        accountId: targetRentalAcc?.id || undefined,
         amountExpected: Number(amountExpected) || Number(rentalAmount) || booking.totalAmount,
         amountReceived: Number(amountReceived) || Number(rentalAmount) || booking.totalAmount,
         changeOnReturn: Number(changeOnReturn) || 0,
@@ -191,10 +220,10 @@ export async function POST(
       },
     });
 
-    // Если оплата наличными — пополняем баланс кассы менеджера
-    if (paymentMethod === "CASH" && managerCashAcc) {
+    // Пополняем баланс целевого счёта / кассы
+    if (targetRentalAcc) {
       await prisma.financialAccount.update({
-        where: { id: managerCashAcc.id },
+        where: { id: targetRentalAcc.id },
         data: { currentBalance: { increment: Number(rentalAmount) || booking.totalAmount } },
       });
     }
@@ -210,7 +239,7 @@ export async function POST(
           currency: depositCurrency,
           method: depositMethod,
           status: "PAID",
-          accountId: depositMethod === "CASH" ? managerCashAcc?.id : undefined,
+          accountId: targetDepositAcc?.id || undefined,
           amountExpected: Number(depositAmount),
           amountReceived: Number(depositAmount),
           managerName: effectiveManagerName,
@@ -218,9 +247,9 @@ export async function POST(
         },
       });
 
-      if (depositMethod === "CASH" && managerCashAcc) {
+      if (targetDepositAcc) {
         await prisma.financialAccount.update({
-          where: { id: managerCashAcc.id },
+          where: { id: targetDepositAcc.id },
           data: { currentBalance: { increment: Number(depositAmount) } },
         });
       }

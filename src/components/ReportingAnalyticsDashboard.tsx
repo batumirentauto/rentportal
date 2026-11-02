@@ -25,8 +25,10 @@ import {
   Activity,
   Layers,
   Fuel,
+  Search,
 } from "lucide-react";
 import { getCityTheme } from "./FleetTimelineGrid";
+import { AccountLedgerModal } from "./AccountLedgerModal";
 
 export const ReportingAnalyticsDashboard: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -44,6 +46,11 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<
     "overview" | "pnl" | "fleet" | "cities" | "cashflow" | "managers"
   >("overview");
+
+  // Account Ledger Modal
+  const [isLedgerModalOpen, setIsLedgerModalOpen] = useState(false);
+  const [selectedLedgerAccountId, setSelectedLedgerAccountId] = useState<string | null>(null);
+  const [selectedLedgerAccountName, setSelectedLedgerAccountName] = useState<string>("");
 
   const fetchReports = async () => {
     setLoading(true);
@@ -857,6 +864,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                     <th className="py-3 px-3 font-bold">Локация / Филиал</th>
                     <th className="py-3 px-3 font-bold text-right">Текущий остаток</th>
                     <th className="py-3 px-4 font-bold text-right">Эквивалент в ₾</th>
+                    <th className="py-3 px-3 font-bold text-center">Аудит & Выписка</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-medium">
@@ -885,6 +893,21 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-black text-amber-400">
                         {acc.balanceUSD.toLocaleString()} ₾
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedLedgerAccountId(acc.id);
+                            setSelectedLedgerAccountName(acc.name);
+                            setIsLedgerModalOpen(true);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[11px] font-bold transition active:scale-95 inline-flex items-center space-x-1"
+                          title="Посмотреть детальную выписку: поступления за авто и брони, штрафы, инвесторы, расходы"
+                        >
+                          <Search className="w-3 h-3" />
+                          <span>Выписка ↗</span>
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -950,6 +973,18 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Account Ledger & Detailed Audit Modal */}
+      <AccountLedgerModal
+        isOpen={isLedgerModalOpen}
+        onClose={() => {
+          setIsLedgerModalOpen(false);
+          setSelectedLedgerAccountId(null);
+          setSelectedLedgerAccountName("");
+        }}
+        accountId={selectedLedgerAccountId}
+        accountName={selectedLedgerAccountName}
+      />
     </div>
   );
 };
