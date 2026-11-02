@@ -7,16 +7,34 @@ export interface GoogleSheetsCredentials {
   private_key: string;
 }
 
+let memoryCachedCredentials: GoogleSheetsCredentials | null = null;
+
+export function setCachedGoogleSheetsCredentials(creds: GoogleSheetsCredentials) {
+  memoryCachedCredentials = creds;
+}
+
 export function getGoogleSheetsCredentials(): GoogleSheetsCredentials | null {
+  // 0. In-memory cached credentials
+  if (memoryCachedCredentials) {
+    return memoryCachedCredentials;
+  }
+
   // 1. Environment variable with raw JSON content
   if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     try {
-      const parsed = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+      let raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
+      if (!raw.startsWith("{") && raw.length > 50) {
+        try {
+          raw = Buffer.from(raw, "base64").toString("utf-8");
+        } catch {}
+      }
+      const parsed = JSON.parse(raw);
       if (parsed.client_email && parsed.private_key) {
-        return {
+        memoryCachedCredentials = {
           client_email: parsed.client_email,
           private_key: parsed.private_key,
         };
+        return memoryCachedCredentials;
       }
     } catch (e) {
       console.warn("Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON env var:", e);
@@ -29,18 +47,22 @@ export function getGoogleSheetsCredentials(): GoogleSheetsCredentials | null {
       const content = fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, "utf8");
       const parsed = JSON.parse(content);
       if (parsed.client_email && parsed.private_key) {
-        return {
+        memoryCachedCredentials = {
           client_email: parsed.client_email,
           private_key: parsed.private_key,
         };
+        return memoryCachedCredentials;
       }
     } catch (e) {
       console.warn("Failed to read GOOGLE_APPLICATION_CREDENTIALS file:", e);
     }
   }
 
-  // 3. Local known paths
+  // 3. Persistent storage files (Railway Volume, /data, public/uploads)
   const localCandidates = [
+    "/data/service-account.json",
+    "/data/uploads/service-account.json",
+    path.resolve(process.cwd(), "public/uploads/service-account.json"),
     path.resolve(process.cwd(), "service-account.json"),
     "/Users/workpc/Downloads/vsl-car-rental-3fbffe7e9494.json",
     "/Users/workpc/Downloads/Telegram Desktop/vsl-car-rental-3fbffe7e9494.json",

@@ -79,6 +79,14 @@ async function ensureStandardSheets(client: JWT, spreadsheetId: string) {
     }
   }
 
+  if (addRequests.length === 0) {
+    const sheetMap: Record<string, number> = {};
+    for (const s of currentSheets) {
+      sheetMap[s.title] = s.sheetId;
+    }
+    return sheetMap;
+  }
+
   if (addRequests.length > 0) {
     await client.request({
       url: `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,

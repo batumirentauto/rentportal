@@ -220,6 +220,19 @@ export async function POST(req: Request) {
     const cities = await prisma.city.findMany();
     const defaultCityId = cities[0]?.id || "BUS";
 
+    // Pre-fetch all cars and owners for blazing fast in-memory matching (avoids timeouts)
+    const existingCars = await prisma.car.findMany();
+    const carByPlate = new Map<string, any>();
+    for (const c of existingCars) {
+      carByPlate.set(c.plateNumber.toUpperCase().replace(/\s+/g, ""), c);
+    }
+
+    const existingOwners = await prisma.carOwner.findMany();
+    const ownerByName = new Map<string, any>();
+    for (const o of existingOwners) {
+      ownerByName.set(o.fullName.toLowerCase(), o);
+    }
+
     const syncedCars: any[] = [];
     let createdCount = 0;
     let updatedCount = 0;
@@ -263,9 +276,7 @@ export async function POST(req: Request) {
       // Handle owner relation
       let ownerId: string | null = null;
       if (ownerName) {
-        let owner = await prisma.carOwner.findFirst({
-          where: { fullName: ownerName },
-        });
+        let owner = ownerByName.get(ownerName.toLowerCase());
         if (!owner) {
           owner = await prisma.carOwner.create({
             data: {
@@ -274,6 +285,7 @@ export async function POST(req: Request) {
               payoutCurrency: "USD",
             },
           });
+          ownerByName.set(ownerName.toLowerCase(), owner);
         }
         ownerId = owner.id;
       }
@@ -292,14 +304,8 @@ export async function POST(req: Request) {
       }
 
       // Upsert car in database
-      const existing = await prisma.car.findFirst({
-        where: {
-          OR: [
-            { plateNumber },
-            { plateNumber: rawPlate.toUpperCase().replace(/\s+/g, "") },
-          ],
-        },
-      });
+      const normalizedPlateKey = plateNumber.toUpperCase().replace(/\s+/g, "");
+      const existing = carByPlate.get(normalizedPlateKey);
 
       if (existing) {
         const updated = await prisma.car.update({
@@ -323,6 +329,7 @@ export async function POST(req: Request) {
             pricingNotes: rawTitle !== `${brand} ${model}` ? rawTitle : existing.pricingNotes,
           },
         });
+        carByPlate.set(normalizedPlateKey, updated);
         updatedCount++;
         syncedCars.push(updated);
       } else {
@@ -349,6 +356,7 @@ export async function POST(req: Request) {
             pricingNotes: rawTitle,
           },
         });
+        carByPlate.set(normalizedPlateKey, created);
         createdCount++;
         syncedCars.push(created);
       }

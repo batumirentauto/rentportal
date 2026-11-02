@@ -391,7 +391,7 @@ function ensureSchema(dbFilePath: string) {
           DELETE FROM Payment;
         `);
 
-        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('clean_mock_data_v1')`).run();
+        db.prepare(`INSERT OR IGNORE INTO "_MigrationFlags" (id) VALUES ('clean_mock_data_v1')`).run();
         console.log("[Database] Mock data cleanup successfully executed!");
       }
     } catch (cleanErr) {
@@ -486,7 +486,7 @@ function ensureSchema(dbFilePath: string) {
           `);
         } catch {}
 
-        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('transfer_nikoloz_revenue_to_evgeny_v2')`).run();
+        db.prepare(`INSERT OR IGNORE INTO "_MigrationFlags" (id) VALUES ('transfer_nikoloz_revenue_to_evgeny_v2')`).run();
         console.log("[Database] Migration transfer_nikoloz_revenue_to_evgeny_v2 successfully executed!");
       }
     } catch (migErr) {
@@ -529,7 +529,7 @@ function ensureSchema(dbFilePath: string) {
           `).run();
         } catch {}
 
-        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('cleanup_investors_cash_accounts_v3')`).run();
+        db.prepare(`INSERT OR IGNORE INTO "_MigrationFlags" (id) VALUES ('cleanup_investors_cash_accounts_v3')`).run();
         console.log("[Database] Investor cash accounts cleanup completed successfully!");
       }
     } catch (invErr) {
@@ -571,7 +571,7 @@ function ensureSchema(dbFilePath: string) {
           console.log("[Database] Created FinancialAccount for Руководство");
         }
 
-        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('ensure_exec_and_admin_cash_v1')`).run();
+        db.prepare(`INSERT OR IGNORE INTO "_MigrationFlags" (id) VALUES ('ensure_exec_and_admin_cash_v1')`).run();
         console.log("[Database] Executive and admin cash accounts migration completed successfully!");
       }
     } catch (execErr) {
@@ -641,7 +641,7 @@ function ensureSchema(dbFilePath: string) {
           }
         }
 
-        db.prepare(`INSERT INTO "_MigrationFlags" (id) VALUES ('ensure_all_executives_cash_accounts_v6')`).run();
+        db.prepare(`INSERT OR IGNORE INTO "_MigrationFlags" (id) VALUES ('ensure_all_executives_cash_accounts_v6')`).run();
         console.log("[Database] All executive cash accounts ensured successfully!");
       }
     } catch (allExecErr) {

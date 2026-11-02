@@ -56,11 +56,17 @@ export const FleetPricingRegistry: React.FC = () => {
     setSheetsSyncError(null);
     setSheetsSyncResult(null);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+
       const res = await fetch("/api/fleet/sync-sheets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       const json = await res.json();
       if (json.success) {
         setSheetsSyncResult(json);
@@ -70,7 +76,11 @@ export const FleetPricingRegistry: React.FC = () => {
         setSheetsSyncError(json.error || "Ошибка синхронизации");
       }
     } catch (e: any) {
-      setSheetsSyncError(e.message || "Сетевая ошибка при синхронизации");
+      if (e.name === "AbortError") {
+        setSheetsSyncError("Таймаут синхронизации с Google Таблицей. Попробуйте еще раз.");
+      } else {
+        setSheetsSyncError(e.message || "Сетевая ошибка при синхронизации");
+      }
     } finally {
       setIsSyncingSheets(false);
     }
