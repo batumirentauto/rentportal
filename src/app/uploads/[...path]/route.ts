@@ -19,8 +19,17 @@ export async function GET(
       return new NextResponse("File Not Found", { status: 404 });
     }
 
-    const stat = fs.statSync(resolved.filePath);
-    const fileSize = stat.size;
+    if (resolved.fileSize === 0) {
+      return new NextResponse("File Empty (0 bytes). Upload may have failed due to storage limits.", {
+        status: 404,
+        headers: {
+          "X-File-Status": "EMPTY_ZERO_BYTES",
+          "Content-Type": "text/plain; charset=utf-8",
+        },
+      });
+    }
+
+    const fileSize = resolved.fileSize;
     const range = request.headers.get("range");
 
     const url = new URL(request.url);

@@ -57,24 +57,58 @@ export function getUploadTargetDirs(folder: string): string[] {
 
 /**
  * Save an uploaded file buffer to all target directories.
+ * Ensures data integrity, prevents zero-byte file writes, and cleans up on failure.
  */
 export async function saveUploadedFile(
   buffer: Buffer,
   folder: string,
   fileName: string
 ): Promise<string> {
+  if (!buffer || buffer.length === 0) {
+    throw new Error("Невозможно сохранить пустой файл (размер 0 байт)");
+  }
+
   const targetDirs = getUploadTargetDirs(folder);
+  let savedCount = 0;
+  let lastError: Error | null = null;
 
   for (const dir of targetDirs) {
+    let fullPath: string | null = null;
     try {
       if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
         fs.mkdirSync(/*turbopackIgnore: true*/ dir, { recursive: true });
       }
-      const fullPath = path.join(/*turbopackIgnore: true*/ dir, fileName);
+      fullPath = path.join(/*turbopackIgnore: true*/ dir, fileName);
       fs.writeFileSync(/*turbopackIgnore: true*/ fullPath, buffer);
-    } catch (e) {
+
+      const stat = fs.statSync(/*turbopackIgnore: true*/ fullPath);
+      if (stat.size !== buffer.length || stat.size === 0) {
+        try { fs.unlinkSync(fullPath); } catch {}
+        throw new Error(`Ошибка записи на диск: ожидалось ${buffer.length} байт, записано ${stat.size} байт (возможно, диск переполнен)`);
+      }
+
+      savedCount++;
+    } catch (e: any) {
+      if (fullPath && fs.existsSync(/*turbopackIgnore: true*/ fullPath)) {
+        try {
+          const stat = fs.statSync(/*turbopackIgnore: true*/ fullPath);
+          if (stat.size === 0) {
+            fs.unlinkSync(/*turbopackIgnore: true*/ fullPath); // Clean up corrupted 0-byte file immediately!
+          }
+        } catch {}
+      }
+      lastError = e;
       console.error(`[Storage] Failed to save file to ${dir}:`, e);
     }
+  }
+
+  if (savedCount === 0) {
+    const isNoSpace = lastError?.message?.includes("ENOSPC");
+    throw new Error(
+      isNoSpace
+        ? "Недостаточно свободного места на сервере (диск переполнен). Освободите место в разделе Управление -> База данных."
+        : `Не удалось сохранить файл на диск: ${lastError?.message || "Неизвестная ошибка записи"}`
+    );
   }
 
   return `/uploads/${folder}/${fileName}`;
@@ -124,7 +158,7 @@ export function getMimeType(fileName: string): string {
  * Safely resolves an uploaded file by path segments across all candidate storage locations.
  * Includes directory traversal protection.
  */
-export function resolveUploadedFile(pathSegments: string[]): { filePath: string; mimeType: string } | null {
+export function resolveUploadedFile(pathSegments: string[]): { filePath: string; mimeType: string; fileSize: number } | null {
   // Sanitize path segments to prevent directory traversal
   const sanitizedSegments = pathSegments.map((s) => s.replace(/[^a-zA-Z0-9._-]/g, "_")).filter((s) => s && s !== ".." && s !== ".");
 
@@ -150,7 +184,8 @@ export function resolveUploadedFile(pathSegments: string[]): { filePath: string;
       if (!candidatePath.startsWith(resolvedBase)) continue;
 
       if (fs.existsSync(/*turbopackIgnore: true*/ candidatePath) && fs.statSync(/*turbopackIgnore: true*/ candidatePath).isFile()) {
-        return { filePath: candidatePath, mimeType };
+        const stat = fs.statSync(/*turbopackIgnore: true*/ candidatePath);
+        return { filePath: candidatePath, mimeType, fileSize: stat.size };
       }
     } catch {
       // Continue searching
@@ -158,4 +193,50 @@ export function resolveUploadedFile(pathSegments: string[]): { filePath: string;
   }
 
   return null;
+}
+
+/**
+ * Scans storage directories and purges empty (0-byte) files.
+ */
+export function cleanCorruptedZeroByteFiles(): { scannedCount: number; purgedCount: number; purgedFiles: string[] } {
+  const candidateBases = [
+    getPersistentUploadBase(),
+    path.join(process.cwd(), "public", "uploads"),
+    path.join(process.cwd(), "uploads"),
+    "/data/uploads",
+  ];
+
+  let scannedCount = 0;
+  let purgedCount = 0;
+  const purgedFiles: string[] = [];
+
+  for (const base of candidateBases) {
+    if (!fs.existsSync(/*turbopackIgnore: true*/ base)) continue;
+
+    function walkDir(dir: string) {
+      try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            walkDir(fullPath);
+          } else if (entry.isFile()) {
+            scannedCount++;
+            try {
+              const stat = fs.statSync(fullPath);
+              if (stat.size === 0) {
+                fs.unlinkSync(fullPath);
+                purgedCount++;
+                purgedFiles.push(entry.name);
+              }
+            } catch {}
+          }
+        }
+      } catch {}
+    }
+
+    walkDir(base);
+  }
+
+  return { scannedCount, purgedCount, purgedFiles };
 }

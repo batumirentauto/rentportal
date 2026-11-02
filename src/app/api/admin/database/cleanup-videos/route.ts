@@ -6,14 +6,22 @@ export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
     let days = 120;
+    let cleanCompletedBookings = false;
+    let cleanZeroByteFilesOnly = false;
+
     try {
       const body = await request.json();
-      if (body.days) days = Number(body.days);
+      if (body.days !== undefined) days = Number(body.days);
+      if (body.cleanCompletedBookings) cleanCompletedBookings = true;
+      if (body.cleanZeroByteFilesOnly) cleanZeroByteFilesOnly = true;
     } catch {
-      // no body, use default 120 days
+      // no body, use default
     }
 
-    const result = await cleanupExpiredVideos(days);
+    const result = await cleanupExpiredVideos(days, {
+      cleanCompletedBookings,
+      cleanZeroByteFilesOnly,
+    });
     return NextResponse.json(result);
   } catch (error: any) {
     console.error("[Cleanup Videos API] Error:", error);

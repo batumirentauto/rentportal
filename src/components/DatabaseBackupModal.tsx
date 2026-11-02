@@ -7,6 +7,7 @@ import {
   Upload,
   CheckCircle2,
   AlertTriangle,
+  AlertCircle,
   HardDrive,
   RefreshCw,
   X,
@@ -63,14 +64,19 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
     }
   };
 
-  const handleCleanVideos = async () => {
+  const handleCleanVideos = async (options?: { cleanCompletedBookings?: boolean }) => {
     try {
       setIsCleaningVideos(true);
       setCleanupVideosResult(null);
-      const res = await fetch("/api/admin/database/cleanup-videos", { method: "POST" });
+      const res = await fetch("/api/admin/database/cleanup-videos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(options || {}),
+      });
       const data = await res.json();
       if (data.success) {
         setCleanupVideosResult(data);
+        fetchStatus();
       } else {
         setErrorMessage(data.error || "Ошибка очистки видео");
       }
@@ -267,27 +273,46 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
             </div>
           )}
 
-          {/* Video Retention Policy (4 Months) */}
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5">
+          {/* Video Retention Policy & Disk Space */}
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-1.5">
                 <Video className="w-3.5 h-3.5 text-purple-400" />
-                <span>Автоочистка видео фиксации авто (&gt; 4 месяцев):</span>
+                <span>Очистка диска и видео осмотров авто:</span>
               </h4>
-              <span className="text-[10px] bg-purple-950/60 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full font-bold">
-                120 дней
-              </span>
+              {statusData?.storage?.diskSpace && (
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                    statusData.storage.diskSpace.freeMB < 200
+                      ? "bg-rose-950/80 text-rose-300 border-rose-500/50"
+                      : "bg-purple-950/60 text-purple-300 border-purple-500/40"
+                  }`}
+                >
+                  Свободно: {statusData.storage.diskSpace.freeMB} МБ / {statusData.storage.diskSpace.totalMB} МБ
+                </span>
+              )}
             </div>
+
+            {statusData?.storage?.diskSpace?.freeMB < 200 && (
+              <div className="p-2.5 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs flex items-start space-x-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Внимание: свободное место на диске сервера почти закончилось!</strong> Из-за этого новые видео и фото могут не сохраняться. Нажмите «Освободить диск (видео завершенных аренд)» ниже.
+                </span>
+              </div>
+            )}
+
             <p className="text-[11px] text-slate-400">
-              Видеозаписи кругового осмотра при выдаче и возврате авто автоматически удаляются через 4 месяца, предотвращая перегрузку диска сервера.
+              Видеозаписи кругового осмотра при выдаче и возврате весят до 250 МБ каждая. Видео завершенных аренд можно безопасно удалить, освободив до 4 ГБ диска.
             </p>
 
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex flex-wrap items-center gap-2 pt-1">
               <button
                 type="button"
-                onClick={handleCleanVideos}
+                onClick={() => handleCleanVideos({ cleanCompletedBookings: true })}
                 disabled={isCleaningVideos}
-                className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-bold text-xs rounded-xl flex items-center space-x-1.5 transition active:scale-95 disabled:opacity-50"
+                className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl flex items-center space-x-1.5 transition active:scale-95 disabled:opacity-50 shadow"
+                title="Удалить тяжелые видеофайлы завершенных аренд и пустые битые файлы"
               >
                 {isCleaningVideos ? (
                   <>
@@ -296,15 +321,24 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <Trash2 className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Проверить и удалить видео старше 4 мес.</span>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Освободить диск (видео завершенных аренд)</span>
                   </>
                 )}
               </button>
 
+              <button
+                type="button"
+                onClick={() => handleCleanVideos()}
+                disabled={isCleaningVideos}
+                className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl flex items-center space-x-1 transition active:scale-95 disabled:opacity-50 border border-slate-700"
+              >
+                <span>Удалить старше 4 мес.</span>
+              </button>
+
               {cleanupVideosResult && (
-                <span className="text-[11px] text-emerald-400 font-semibold">
-                  ✓ Удалено файлов: {cleanupVideosResult.deletedFilesCount} (освобождено: {cleanupVideosResult.freedMB} МБ)
+                <span className="text-[11px] text-emerald-400 font-semibold w-full sm:w-auto">
+                  ✓ Удалено файлов: {cleanupVideosResult.deletedFilesCount} (освобождено: {cleanupVideosResult.freedMB} МБ, очищено 0-КБ: {cleanupVideosResult.purgedZeroByteFilesCount || 0})
                 </span>
               )}
             </div>

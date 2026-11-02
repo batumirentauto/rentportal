@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { MileageInput } from "./MileageInput";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { compressImageClient } from "@/lib/image-compression";
 import {
   X,
   Camera,
@@ -136,10 +137,23 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
   ) => {
     try {
       setUploadError(null);
+
+      if (!file || file.size === 0) {
+        throw new Error(
+          "Файл пустой (0 байт). Если файл в iCloud, откройте его сначала в галерее телефона для загрузки из облака."
+        );
+      }
+
       setUploadingSlots((prev) => ({ ...prev, [type]: true }));
 
+      // Automatically compress photos client-side to save server storage and speed up uploads
+      let fileToUpload = file;
+      if (type !== "video") {
+        fileToUpload = await compressImageClient(file, 1600, 0.82);
+      }
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fileToUpload);
       formData.append("folder", type === "video" ? "inspections_video" : "inspections");
 
       const res = await fetch("/api/upload", {

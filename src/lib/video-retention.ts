@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { prisma } from "@/lib/prisma";
-import { getUploadTargetDirs, getPersistentUploadBase } from "@/lib/storage";
+import { getUploadTargetDirs, getPersistentUploadBase, cleanCorruptedZeroByteFiles } from "@/lib/storage";
 
 export interface CleanupResult {
   success: boolean;
@@ -10,6 +10,7 @@ export interface CleanupResult {
   freedMB: number;
   scannedFilesCount: number;
   reportsUpdatedCount: number;
+  purgedZeroByteFilesCount: number;
   cutoffDate: string;
   errors: string[];
 }
@@ -17,11 +18,19 @@ export interface CleanupResult {
 export const VIDEO_RETENTION_DAYS = 120; // 4 months (~120 days)
 const VIDEO_EXTENSIONS = new Set([".mp4", ".mov", ".webm", ".m4v", ".3gp", ".avi"]);
 
+export interface CleanupOptions {
+  cleanCompletedBookings?: boolean;
+  cleanZeroByteFilesOnly?: boolean;
+}
+
 /**
- * Automatically cleans up car condition inspection videos older than 120 days (4 months)
- * to save server disk space and prevent storage overload.
+ * Automatically cleans up car condition inspection videos older than threshold,
+ * completed bookings videos (if requested), and purges empty (0-byte) corrupted files.
  */
-export async function cleanupExpiredVideos(daysThreshold = VIDEO_RETENTION_DAYS): Promise<CleanupResult> {
+export async function cleanupExpiredVideos(
+  daysThreshold = VIDEO_RETENTION_DAYS,
+  options?: CleanupOptions
+): Promise<CleanupResult> {
   const cutoffTime = Date.now() - daysThreshold * 24 * 60 * 60 * 1000;
   const cutoffDate = new Date(cutoffTime);
 
@@ -32,13 +41,61 @@ export async function cleanupExpiredVideos(daysThreshold = VIDEO_RETENTION_DAYS)
     freedMB: 0,
     scannedFilesCount: 0,
     reportsUpdatedCount: 0,
+    purgedZeroByteFilesCount: 0,
     cutoffDate: cutoffDate.toISOString(),
     errors: [],
   };
 
-  // 1. Clean up from database reports older than 4 months
+  // 0. Always purge all 0-byte corrupted files first
   try {
-    // Find HandoverReports created > 120 days ago with carBodyVideoUrl
+    const zeroByteRes = cleanCorruptedZeroByteFiles();
+    result.purgedZeroByteFilesCount = zeroByteRes.purgedCount;
+    result.scannedFilesCount += zeroByteRes.scannedCount;
+  } catch (err: any) {
+    result.errors.push(`Zero-byte cleanup error: ${err.message}`);
+  }
+
+  if (options?.cleanZeroByteFilesOnly) {
+    result.freedMB = 0;
+    return result;
+  }
+
+  // 1. Clean up from database reports
+  try {
+    // A. Completed bookings videos (if requested to urgently free up disk space)
+    if (options?.cleanCompletedBookings) {
+      const completedHandover = await prisma.handoverReport.findMany({
+        where: {
+          carBodyVideoUrl: { not: null },
+          booking: { status: "COMPLETED" },
+        },
+        select: { id: true, carBodyVideoUrl: true },
+      });
+
+      for (const report of completedHandover) {
+        if (report.carBodyVideoUrl) {
+          deletePhysicalVideoFile(report.carBodyVideoUrl, result);
+          result.reportsUpdatedCount++;
+        }
+      }
+
+      const completedReturn = await prisma.returnReport.findMany({
+        where: {
+          returnVideoUrl: { not: null },
+          booking: { status: "COMPLETED" },
+        },
+        select: { id: true, returnVideoUrl: true },
+      });
+
+      for (const report of completedReturn) {
+        if (report.returnVideoUrl) {
+          deletePhysicalVideoFile(report.returnVideoUrl, result);
+          result.reportsUpdatedCount++;
+        }
+      }
+    }
+
+    // B. Find HandoverReports created > daysThreshold ago with carBodyVideoUrl
     const expiredHandoverReports = await prisma.handoverReport.findMany({
       where: {
         createdAt: { lt: cutoffDate },
@@ -54,18 +111,7 @@ export async function cleanupExpiredVideos(daysThreshold = VIDEO_RETENTION_DAYS)
       }
     }
 
-    if (expiredHandoverReports.length > 0) {
-      await prisma.handoverReport.updateMany({
-        where: {
-          id: { in: expiredHandoverReports.map((r) => r.id) },
-        },
-        data: {
-          carBodyVideoUrl: null,
-        },
-      });
-    }
-
-    // Find ReturnReports created > 120 days ago with returnVideoUrl
+    // C. Find ReturnReports created > daysThreshold ago with returnVideoUrl
     const expiredReturnReports = await prisma.returnReport.findMany({
       where: {
         returnedAt: { lt: cutoffDate },
@@ -79,17 +125,6 @@ export async function cleanupExpiredVideos(daysThreshold = VIDEO_RETENTION_DAYS)
         deletePhysicalVideoFile(report.returnVideoUrl, result);
         result.reportsUpdatedCount++;
       }
-    }
-
-    if (expiredReturnReports.length > 0) {
-      await prisma.returnReport.updateMany({
-        where: {
-          id: { in: expiredReturnReports.map((r) => r.id) },
-        },
-        data: {
-          returnVideoUrl: null,
-        },
-      });
     }
   } catch (err: any) {
     result.errors.push(`Database cleanup error: ${err.message}`);

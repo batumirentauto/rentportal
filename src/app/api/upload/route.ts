@@ -18,7 +18,27 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: "Файл не предоставлен" }, { status: 400 });
       }
 
+      if (file.size === 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Выбранный файл пустой (0 байт). Если фото/видео хранится в iCloud, откройте его в галерее телефона, чтобы оно загрузилось на устройство, затем повторите.",
+          },
+          { status: 400 }
+        );
+      }
+
       const bytes = await file.arrayBuffer();
+      if (bytes.byteLength === 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Передано пустое содержимое файла (0 байт). Попробуйте сделать фото/видео снова.",
+          },
+          { status: 400 }
+        );
+      }
+
       const buffer = Buffer.from(bytes);
 
       const cleanFileName = file.name ? file.name.replace(/[^a-zA-Z0-9.-]/g, "_") : "document.jpg";

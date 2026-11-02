@@ -3,6 +3,7 @@ import { calculateExtraHoursFee } from "@/lib/extra-hours";
 import { getCarTankVolume, FUEL_PRICE_95_GEL, getFuelRate, calculateFuelShortage } from "@/lib/fuelSpecs";
 import { MileageInput } from "./MileageInput";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { compressImageClient } from "@/lib/image-compression";
 import {
   X,
   CheckCircle2,
@@ -99,6 +100,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   // 3. Осмотр повреждений и сверка с видео выдачи
   const [videoVerified, setVideoVerified] = useState<boolean>(true);
   const [showVideoModal, setShowVideoModal] = useState<boolean>(false);
+  const [videoPlayError, setVideoPlayError] = useState<boolean>(false);
   const [returnVideoUrl, setReturnVideoUrl] = useState<string>("");
   const [isUploadingReturnVideo, setIsUploadingReturnVideo] = useState<boolean>(false);
   const [hasNewDamages, setHasNewDamages] = useState<boolean>(false);
@@ -109,6 +111,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
   const handleReturnVideoUpload = async (file: File) => {
     try {
+      if (!file || file.size === 0) {
+        alert("Выбранный видеофайл пустой (0 байт). Если видео в iCloud, откройте его в галерее для загрузки на устройство.");
+        return;
+      }
+
       setIsUploadingReturnVideo(true);
       const fd = new FormData();
       fd.append("file", file);
@@ -132,9 +139,18 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
 
   const handleDamagePhotoUpload = async (file: File) => {
     try {
+      if (!file || file.size === 0) {
+        alert("Выбранное фото пустое (0 байт). Если фото в iCloud, откройте его в галерее для загрузки на устройство.");
+        return;
+      }
+
       setIsUploadingDamagePhoto(true);
+
+      // Client-side image compression
+      const fileToUpload = await compressImageClient(file, 1600, 0.82);
+
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", fileToUpload);
       fd.append("folder", "damages");
 
       const res = await fetch("/api/upload", {
@@ -2320,23 +2336,28 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 </button>
               </div>
 
-              <div className="aspect-video bg-black rounded-xl overflow-hidden flex items-center justify-center border border-slate-800">
-                {handoverReport?.carBodyVideoUrl ? (
+              <div className="aspect-video bg-black rounded-xl overflow-hidden flex items-center justify-center border border-slate-800 relative">
+                {handoverReport?.carBodyVideoUrl && !videoPlayError ? (
                   <video
                     src={handoverReport.carBodyVideoUrl}
                     controls
                     playsInline
                     autoPlay
+                    onError={() => setVideoPlayError(true)}
                     className="w-full h-full object-contain"
                   />
                 ) : (
                   <div className="p-6 text-center text-slate-400 space-y-2">
-                    <Video className="w-10 h-10 mx-auto text-purple-400" />
-                    <p className="text-xs">
-                      Видеофиксация кузова не найдена
+                    <Video className="w-10 h-10 mx-auto text-amber-400" />
+                    <p className="text-xs font-bold text-slate-200">
+                      {videoPlayError
+                        ? "Видеозапись выдачи пустая или повреждена (0 КБ)"
+                        : "Видеофиксация кузова не найдена"}
                     </p>
-                    <p className="text-[11px] text-slate-500">
-                      Видеофайл отсутствует или был удалён по истечении срока хранения (4 мес.)
+                    <p className="text-[11px] text-slate-400">
+                      {videoPlayError
+                        ? "Файл не сохранился на сервере при выдаче (диск был переполнен)."
+                        : "Видеофайл отсутствует или был удалён по истечении срока хранения."}
                     </p>
                   </div>
                 )}
