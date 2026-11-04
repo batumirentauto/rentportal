@@ -22,6 +22,7 @@ import {
   ArrowRightLeft,
   Search,
   Wallet,
+  Briefcase,
 } from "lucide-react";
 import { RecordExpenseModal } from "./RecordExpenseModal";
 import { TransferCashModal } from "./TransferCashModal";
@@ -379,6 +380,12 @@ export const FinanceView: React.FC = () => {
       .reduce((acc, e) => acc + (e.amount || 0), 0);
   }, [filteredExpenses]);
 
+  const salaryExpenses = useMemo(() => {
+    return filteredExpenses
+      .filter((e) => e.category === "SALARY")
+      .reduce((acc, e) => acc + (e.amount || 0), 0);
+  }, [filteredExpenses]);
+
   // ВАЖНО: ранний return только ПОСЛЕ всех хуков (правила React Hooks)
   if (loading) {
     return (
@@ -418,6 +425,8 @@ export const FinanceView: React.FC = () => {
         return { label: "Мойка / Химчистка", icon: Sparkles, color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/30" };
       case "MAINTENANCE":
         return { label: "ТО / Ремонт", icon: Wrench, color: "text-rose-400 bg-rose-500/10 border-rose-500/30" };
+      case "SALARY":
+        return { label: "Зарплата персонала", icon: Briefcase, color: "text-violet-400 bg-violet-500/10 border-violet-500/30" };
       case "OWNER_PAYOUT":
         return { label: "Выплата инвестору", icon: Landmark, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" };
       case "PARKING_FINES":
@@ -977,7 +986,7 @@ export const FinanceView: React.FC = () => {
       {activeFinanceTab === "expenses" && (
         <div className="space-y-6">
           {/* Expenses KPI Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
             <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
               <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">
                 Всего расходов:
@@ -987,6 +996,18 @@ export const FinanceView: React.FC = () => {
               </div>
               <span className="text-[10px] text-slate-500 mt-0.5 block">
                 + ${totalExpensesUSD} USD
+              </span>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">
+                Заработная плата:
+              </span>
+              <div className="text-2xl font-black text-violet-400 font-mono mt-1">
+                {salaryExpenses} ₾
+              </div>
+              <span className="text-[10px] text-slate-500 mt-0.5 block">
+                Выплаты персоналу
               </span>
             </div>
 

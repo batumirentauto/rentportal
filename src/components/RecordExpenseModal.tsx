@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   X,
   DollarSign,
@@ -19,6 +19,7 @@ import {
   Receipt,
   User,
   Landmark,
+  Briefcase,
 } from "lucide-react";
 
 interface RecordExpenseModalProps {
@@ -36,6 +37,7 @@ const EXPENSE_CATEGORIES = [
   { id: "FUEL", label: "Заправка / Топливо", icon: Fuel, color: "text-amber-400 bg-amber-500/10 border-amber-500/30" },
   { id: "WASHING", label: "Мойка / Химчистка", icon: Sparkles, color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/30" },
   { id: "MAINTENANCE", label: "ТО / Масло / Шины", icon: Wrench, color: "text-rose-400 bg-rose-500/10 border-rose-500/30" },
+  { id: "SALARY", label: "Заработная плата", icon: Briefcase, color: "text-violet-400 bg-violet-500/10 border-violet-500/30" },
   { id: "OWNER_PAYOUT", label: "Выплата инвестору", icon: Landmark, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" },
   { id: "PARKING_FINES", label: "Парковка / Аэропорт", icon: ParkingMeter, color: "text-blue-400 bg-blue-500/10 border-blue-500/30" },
   { id: "OFFICE_RENT", label: "Офис / Связь / Быт", icon: Building2, color: "text-purple-400 bg-purple-500/10 border-purple-500/30" },
@@ -69,11 +71,14 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
     return "Менеджер смены";
   });
   const [cityId, setCityId] = useState<string>(preselectedCityId || "");
+  const [recipientUserId, setRecipientUserId] = useState<string>("");
+  const [salaryType, setSalaryType] = useState<string>("MONTHLY");
 
   const [accounts, setAccounts] = useState<any[]>([]);
   const [cars, setCars] = useState<any[]>([]);
   const [cities, setCities] = useState<any[]>([]);
   const [owners, setOwners] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
 
   const [carSearch, setCarSearch] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -110,6 +115,9 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
       if (teamData.owners) {
         setOwners(teamData.owners);
       }
+      if (teamData.users) {
+        setUsers(teamData.users);
+      }
       if (initialCategory) {
         setCategory(initialCategory);
       }
@@ -134,6 +142,18 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
     }
   };
 
+  const eligibleEmployees = useMemo(() => {
+    return users.filter(
+      (u) =>
+        u.role === "MANAGER" ||
+        u.role === "EXECUTIVE" ||
+        u.role === "ADMIN" ||
+        u.role === "SUPER_ADMIN" ||
+        Boolean(u.cashAccountId) ||
+        !u.ownerId
+    );
+  }, [users]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -145,6 +165,10 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
     }
     if (category === "OWNER_PAYOUT" && !ownerId) {
       setErrorMsg("Пожалуйста, выберите инвестора (владельца авто), которому производится выплата");
+      return;
+    }
+    if (category === "SALARY" && !recipientUserId) {
+      setErrorMsg("Пожалуйста, выберите менеджера или сотрудника, которому выплачивается заработная плата");
       return;
     }
     if (!description.trim()) {
@@ -159,6 +183,8 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
     setSubmitting(true);
     setErrorMsg(null);
 
+    const selectedRecipient = users.find((u) => u.id === recipientUserId);
+
     try {
       const res = await fetch("/api/expenses", {
         method: "POST",
@@ -171,7 +197,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
           accountId,
           ownerId: ownerId || undefined,
           isOwnerExpense: Boolean(ownerId || carId),
-          paymentMethod: category === "OWNER_PAYOUT" ? paymentMethod : undefined,
+          paymentMethod: (category === "OWNER_PAYOUT" || category === "SALARY") ? paymentMethod : undefined,
           carId: carId || undefined,
           cityId: cityId || undefined,
           managerName: managerName.trim() || "Менеджер",
@@ -300,7 +326,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
             <label className="text-[11px] font-bold text-slate-300 block uppercase tracking-wider">
               Категория расхода *
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {EXPENSE_CATEGORIES.map((cat) => {
                 const Icon = cat.icon;
                 const isSelected = category === cat.id;
@@ -315,6 +341,14 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
                         if (!amount) setAmount("20");
                         setCurrency("GEL");
                         if (!description) setDescription("Полная мойка авто");
+                      }
+                      if (cat.id === "SALARY") {
+                        const u = users.find((x) => x.id === recipientUserId);
+                        if (u) {
+                          setDescription(`Заработная плата: ${u.fullName}`);
+                        } else if (!description) {
+                          setDescription("Заработная плата сотрудника");
+                        }
                       }
                       if (cat.id === "OWNER_PAYOUT") {
                         if (!description) setDescription("Выплата дохода инвестору");
@@ -375,6 +409,106 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
                   <span className="block text-xs font-semibold">💺 Салон</span>
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Dedicated Staff Salary selection block if category is SALARY */}
+          {category === "SALARY" && (
+            <div className="bg-violet-950/40 border border-violet-500/40 rounded-xl p-3 sm:p-3.5 space-y-3 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-violet-300 flex items-center space-x-1.5 uppercase tracking-wider">
+                  <Briefcase className="w-4 h-4 text-violet-400" />
+                  <span>Кому выплата (Менеджер / Сотрудник) *</span>
+                </span>
+                <span className="text-[10px] bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded font-mono font-bold">
+                  Зарплата & Бонусы
+                </span>
+              </div>
+
+              <select
+                value={recipientUserId}
+                onChange={(e) => {
+                  const uid = e.target.value;
+                  setRecipientUserId(uid);
+                  const u = users.find((x) => x.id === uid);
+                  if (u) {
+                    const typeLabel =
+                      salaryType === "ADVANCE" ? "Аванс" :
+                      salaryType === "BONUS" ? "Премия" :
+                      salaryType === "COMMISSION" ? "Процент от выдач" : "Заработная плата";
+                    setDescription(`${typeLabel}: ${u.fullName}`);
+                  }
+                }}
+                required
+                className="w-full bg-slate-900 border border-violet-500/50 rounded-xl p-2.5 text-xs text-white font-bold focus:outline-none focus:border-violet-400"
+              >
+                <option value="">-- Выберите сотрудника / менеджера из списка ({eligibleEmployees.length}) --</option>
+                {eligibleEmployees.map((emp: any) => {
+                  const roleBadge =
+                    emp.role === "EXECUTIVE" ? "Руководство" :
+                    emp.role === "ADMIN" ? "Администратор" : "Менеджер";
+                  return (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.fullName} • {roleBadge} ({emp.cityName || "Все филиалы"}) {emp.phone ? `• ${emp.phone}` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+
+              <div>
+                <label className="text-[10px] text-slate-300 font-bold block mb-1 uppercase tracking-wider">
+                  Тип начисления:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  {[
+                    { id: "MONTHLY", label: "Зарплата", icon: "💼" },
+                    { id: "ADVANCE", label: "Аванс", icon: "🪙" },
+                    { id: "BONUS", label: "Премия", icon: "⭐" },
+                    { id: "COMMISSION", label: "% от выдач", icon: "📈" },
+                  ].map((t) => (
+                    <button
+                      type="button"
+                      key={t.id}
+                      onClick={() => {
+                        setSalaryType(t.id);
+                        const u = users.find((x) => x.id === recipientUserId);
+                        const name = u ? u.fullName : "";
+                        const typeLabel =
+                          t.id === "ADVANCE" ? "Аванс" :
+                          t.id === "BONUS" ? "Премия" :
+                          t.id === "COMMISSION" ? "Процент от выдач" : "Заработная плата";
+                        setDescription(name ? `${typeLabel}: ${name}` : typeLabel);
+                      }}
+                      className={`py-1.5 px-2 rounded-lg text-center font-bold text-[11px] border transition ${
+                        salaryType === t.id
+                          ? "bg-violet-600 text-white border-violet-400 shadow"
+                          : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800"
+                      }`}
+                    >
+                      <span>{t.icon} {t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-300 font-bold block mb-1 uppercase tracking-wider">
+                  Способ выплаты сотруднику:
+                </label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-violet-500"
+                >
+                  <option value="CASH">💵 Выдача наличных из кассы</option>
+                  <option value="BANK_TRANSFER">🏦 Перевод на банковскую карту (BOG / TBC / Credo)</option>
+                  <option value="CRYPTO">🪙 Криптовалютный перевод (USDT)</option>
+                </select>
+              </div>
+
+              <p className="text-[10px] text-violet-300/80">
+                ✅ Сумма спишется с выбранной кассы или счёта компании и отобразится в журнале и финансовом отчете как выплата заработной платы.
+              </p>
             </div>
           )}
 
