@@ -239,12 +239,15 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
                 !booking.overdueDecision &&
                 startDate.getTime() <= threeHoursAgoMs;
 
-              const actualHandoverTime = booking.actualHandoverAt || booking.handoverReport?.handedOverAt
-                ? new Date(booking.actualHandoverAt || booking.handoverReport?.handedOverAt).toLocaleTimeString("ru-RU", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : null;
+              const actualHandoverTime = booking.handoverReport?.actualHandoverTime || (
+                booking.actualHandoverAt || booking.handoverReport?.handedOverAt
+                  ? new Date(booking.actualHandoverAt || booking.handoverReport?.handedOverAt).toLocaleTimeString("ru-RU", {
+                      timeZone: "Asia/Tbilisi",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : null
+              );
               const isNeedsWash = booking.car.washStatus === "NEEDS_WASH";
               const isWashing = booking.car.washStatus === "WASHING";
 

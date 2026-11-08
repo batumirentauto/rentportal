@@ -30,6 +30,7 @@ import {
   Droplets,
   Download,
   User,
+  Zap,
 } from "lucide-react";
 
 interface HandoverWizardModalProps {
@@ -73,34 +74,108 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
   const [washCost, setWashCost] = useState<number>(0);
   const [washAccount, setWashAccount] = useState<string>("CASH_BATUMI");
 
-  // Time & Date of Handover & Return (опциональные поля с умными значениями по умолчанию)
+  // Time & Date of Handover & Return (ручной выбор с умными значениями по умолчанию)
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const bookingStartDate = useMemo(() => {
+    return booking?.startDate ? new Date(booking.startDate) : null;
+  }, [booking]);
+
   const bookingReturnDate = useMemo(() => {
     return booking?.endDate ? new Date(booking.endDate) : null;
   }, [booking]);
 
+  const plannedPickupTime = useMemo(() => {
+    if (!bookingStartDate) return null;
+    return `${pad(bookingStartDate.getHours())}:${pad(bookingStartDate.getMinutes())}`;
+  }, [bookingStartDate]);
+
+  const plannedReturnTime = useMemo(() => {
+    if (!bookingReturnDate) return null;
+    return `${pad(bookingReturnDate.getHours())}:${pad(bookingReturnDate.getMinutes())}`;
+  }, [bookingReturnDate]);
+
   const defaultHandoverTime = useMemo(() => {
+    if (booking?.handoverReport?.actualHandoverTime) {
+      return booking.handoverReport.actualHandoverTime;
+    }
     const now = new Date();
-    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  }, []);
+    return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }, [booking]);
 
   const defaultHandoverDate = useMemo(() => {
-    return new Date().toISOString().split("T")[0];
-  }, []);
+    if (booking?.handoverReport?.handedOverAt) {
+      const d = new Date(booking.handoverReport.handedOverAt);
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+    const now = new Date();
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  }, [booking]);
 
   const defaultReturnTime = useMemo(() => {
-    if (!bookingReturnDate) return "12:00";
-    return `${String(bookingReturnDate.getHours()).padStart(2, "0")}:${String(bookingReturnDate.getMinutes()).padStart(2, "0")}`;
-  }, [bookingReturnDate]);
+    if (booking?.handoverReport?.expectedReturnTime) {
+      return booking.handoverReport.expectedReturnTime;
+    }
+    if (bookingReturnDate) {
+      return `${pad(bookingReturnDate.getHours())}:${pad(bookingReturnDate.getMinutes())}`;
+    }
+    return "12:00";
+  }, [booking, bookingReturnDate]);
 
   const defaultReturnDate = useMemo(() => {
-    if (!bookingReturnDate) return "";
-    return bookingReturnDate.toISOString().split("T")[0];
-  }, [bookingReturnDate]);
+    if (booking?.handoverReport?.expectedReturnDate) {
+      const d = new Date(booking.handoverReport.expectedReturnDate);
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+    if (bookingReturnDate) {
+      return `${bookingReturnDate.getFullYear()}-${pad(bookingReturnDate.getMonth() + 1)}-${pad(bookingReturnDate.getDate())}`;
+    }
+    return "";
+  }, [booking, bookingReturnDate]);
 
   const [actualHandoverTime, setActualHandoverTime] = useState<string>(defaultHandoverTime);
   const [actualHandoverDate, setActualHandoverDate] = useState<string>(defaultHandoverDate);
   const [expectedReturnTime, setExpectedReturnTime] = useState<string>(defaultReturnTime);
   const [expectedReturnDate, setExpectedReturnDate] = useState<string>(defaultReturnDate);
+
+  const currentClockTime = useMemo(() => {
+    const now = new Date();
+    return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }, []);
+
+  const setTimeToNow = () => {
+    const now = new Date();
+    setActualHandoverDate(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
+    setActualHandoverTime(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
+  };
+
+  const setTimeToPlanned = () => {
+    if (!bookingStartDate) return;
+    setActualHandoverDate(`${bookingStartDate.getFullYear()}-${pad(bookingStartDate.getMonth() + 1)}-${pad(bookingStartDate.getDate())}`);
+    setActualHandoverTime(`${pad(bookingStartDate.getHours())}:${pad(bookingStartDate.getMinutes())}`);
+  };
+
+  const adjustHandoverMinutes = (deltaMinutes: number) => {
+    const [h, m] = (actualHandoverTime || "12:00").split(":").map(Number);
+    const dateObj = new Date();
+    dateObj.setHours(isNaN(h) ? 12 : h, isNaN(m) ? 0 : m, 0, 0);
+    dateObj.setMinutes(dateObj.getMinutes() + deltaMinutes);
+    setActualHandoverTime(`${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`);
+  };
+
+  const setReturnTimeToPlanned = () => {
+    if (!bookingReturnDate) return;
+    setExpectedReturnDate(`${bookingReturnDate.getFullYear()}-${pad(bookingReturnDate.getMonth() + 1)}-${pad(bookingReturnDate.getDate())}`);
+    setExpectedReturnTime(`${pad(bookingReturnDate.getHours())}:${pad(bookingReturnDate.getMinutes())}`);
+  };
+
+  const adjustReturnHours = (deltaHours: number) => {
+    const [h, m] = (expectedReturnTime || "12:00").split(":").map(Number);
+    const dateObj = new Date();
+    dateObj.setHours(isNaN(h) ? 12 : h, isNaN(m) ? 0 : m, 0, 0);
+    dateObj.setHours(dateObj.getHours() + deltaHours);
+    setExpectedReturnTime(`${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`);
+  };
 
   const [dashboardPhoto, setDashboardPhoto] = useState<string | null>(
     booking?.handoverReport?.dashboardPhotoUrl || null
@@ -214,6 +289,22 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
+      let actualHandoverIso: string | undefined = undefined;
+      if (actualHandoverDate && actualHandoverTime) {
+        const localHandoverDate = new Date(`${actualHandoverDate}T${actualHandoverTime}:00`);
+        if (!isNaN(localHandoverDate.getTime())) {
+          actualHandoverIso = localHandoverDate.toISOString();
+        }
+      }
+
+      let expectedReturnIso: string | undefined = undefined;
+      if (expectedReturnDate && expectedReturnTime) {
+        const localReturnDate = new Date(`${expectedReturnDate}T${expectedReturnTime}:00`);
+        if (!isNaN(localReturnDate.getTime())) {
+          expectedReturnIso = localReturnDate.toISOString();
+        }
+      }
+
       const res = await fetch(`/api/bookings/${booking.id}/handover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -229,11 +320,13 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
           contractPhotoUrl: contractPhoto,
           carBodyVideoUrl: carBodyVideo,
           notes,
-          // Фиксация времени выдачи и возврата (необязательно)
+          // Фиксация времени выдачи и возврата
           actualHandoverTime,
           actualHandoverDate,
+          actualHandoverIso,
           expectedReturnTime,
           expectedReturnDate,
+          expectedReturnIso,
           // Учет мойки перед выдачей
           washOption,
           washCost,
@@ -559,73 +652,160 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                 </div>
               </div>
 
-              {/* Optional Handover & Return Time Capture */}
-              <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/80 space-y-3">
-                <div className="flex items-center justify-between">
+              {/* Выбор времени фактической выдачи автомобиля и согласованного возврата */}
+              <div className="bg-slate-900/90 p-4 rounded-xl border border-amber-500/50 shadow-sm space-y-3.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-amber-400" />
+                    <Clock className="w-4 h-4 text-amber-400 shrink-0" />
                     <span className="font-bold text-white text-xs uppercase tracking-wider">
-                      Фиксация времени выдачи и возврата (Необязательно)
+                      {language === "ka" ? "ავტომობილის ფაქტიური გაცემის დრო" : "Фактическое время выдачи автомобиля"}
                     </span>
                   </div>
-                  <span className="text-[10px] bg-slate-900 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">
-                    по умолчанию текущее
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/40 font-bold font-mono">
+                    {language === "ka" ? "არჩეულია: " : "Выдача: "} {actualHandoverTime || "—"}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   {/* Actual Handover Time */}
-                  <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-300 font-semibold flex items-center space-x-1">
-                        <span>🚗 Автомобиль выдан в:</span>
+                  <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-700/80 space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="text-slate-200 font-bold flex items-center space-x-1.5">
+                        <span>🚗 Автомобиль выдан клиенту:</span>
                       </span>
-                      <span className="text-[10px] text-amber-400 font-medium">факт</span>
+                      <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 px-1.5 py-0.5 rounded font-mono font-bold">
+                        факт передачи
+                      </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <input
-                        type="date"
-                        value={actualHandoverDate}
-                        onChange={(e) => setActualHandoverDate(e.target.value)}
-                        className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
-                      />
-                      <input
-                        type="time"
-                        value={actualHandoverTime}
-                        onChange={(e) => setActualHandoverTime(e.target.value)}
-                        className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs focus:outline-none focus:border-amber-500"
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block mb-1">Дата выдачи:</span>
+                        <input
+                          type="date"
+                          value={actualHandoverDate}
+                          onChange={(e) => setActualHandoverDate(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block mb-1">Точное время:</span>
+                        <input
+                          type="time"
+                          value={actualHandoverTime}
+                          onChange={(e) => setActualHandoverTime(e.target.value)}
+                          className="w-full bg-slate-900 border border-amber-500/60 rounded-lg px-2.5 py-2 text-amber-300 font-mono font-black text-sm focus:outline-none focus:border-amber-400 shadow-inner"
+                        />
+                      </div>
                     </div>
-                    <span className="text-[10px] text-slate-400 block">
-                      Точное время передачи ключей клиенту
-                    </span>
+
+                    {/* Быстрые пресеты для менеджера */}
+                    <div className="flex items-center flex-wrap gap-1 pt-1.5 border-t border-slate-800">
+                      <button
+                        type="button"
+                        onClick={setTimeToNow}
+                        className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-[10px] font-bold transition active:scale-95 flex items-center space-x-1"
+                      >
+                        <Zap className="w-3 h-3 text-amber-400" />
+                        <span>Сейчас ({currentClockTime})</span>
+                      </button>
+                      {plannedPickupTime && (
+                        <button
+                          type="button"
+                          onClick={setTimeToPlanned}
+                          className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-[10px] font-medium transition active:scale-95"
+                        >
+                          📅 По брони ({plannedPickupTime})
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => adjustHandoverMinutes(-15)}
+                        className="px-1.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                      >
+                        -15м
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => adjustHandoverMinutes(-30)}
+                        className="px-1.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                      >
+                        -30м
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => adjustHandoverMinutes(-60)}
+                        className="px-1.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                      >
+                        -1ч
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => adjustHandoverMinutes(15)}
+                        className="px-1.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                      >
+                        +15м
+                      </button>
+                    </div>
                   </div>
 
                   {/* Agreed Return Time */}
-                  <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-300 font-semibold flex items-center space-x-1">
-                        <span>🏁 Время возврата:</span>
+                  <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-700/80 space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="text-slate-200 font-bold flex items-center space-x-1.5">
+                        <span>🏁 Согласованное время сдачи:</span>
                       </span>
-                      <span className="text-[10px] text-emerald-400 font-medium">план сдачи</span>
+                      <span className="text-[10px] bg-slate-900 text-slate-400 border border-slate-800 px-1.5 py-0.5 rounded font-mono">
+                        план возврата
+                      </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <input
-                        type="date"
-                        value={expectedReturnDate}
-                        onChange={(e) => setExpectedReturnDate(e.target.value)}
-                        className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
-                      />
-                      <input
-                        type="time"
-                        value={expectedReturnTime}
-                        onChange={(e) => setExpectedReturnTime(e.target.value)}
-                        className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs focus:outline-none focus:border-amber-500"
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block mb-1">Дата возврата:</span>
+                        <input
+                          type="date"
+                          value={expectedReturnDate}
+                          onChange={(e) => setExpectedReturnDate(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block mb-1">Время возврата:</span>
+                        <input
+                          type="time"
+                          value={expectedReturnTime}
+                          onChange={(e) => setExpectedReturnTime(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-emerald-300 font-mono font-bold text-sm focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
                     </div>
-                    <span className="text-[10px] text-slate-400 block">
-                      Согласованное время сдачи авто при завершении
-                    </span>
+
+                    <div className="flex items-center flex-wrap gap-1 pt-1.5 border-t border-slate-800">
+                      {plannedReturnTime && (
+                        <button
+                          type="button"
+                          onClick={setReturnTimeToPlanned}
+                          className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-[10px] font-medium transition active:scale-95"
+                        >
+                          📅 По брони ({plannedReturnTime})
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => adjustReturnHours(1)}
+                        className="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                      >
+                        +1 час
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => adjustReturnHours(2)}
+                        className="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                      >
+                        +2 часа
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1621,6 +1801,89 @@ export const HandoverWizardModal: React.FC<HandoverWizardModalProps> = ({
                       <span>0 ₾ (Без залога)</span>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Фактическое время выдачи автомобиля (на шаге закрытия акта) */}
+              <div className="bg-slate-950/80 border border-amber-500/40 rounded-xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center space-x-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Фактическое время выдачи авто клиенту:</span>
+                  </label>
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/70 border border-emerald-800/60 px-2 py-0.5 rounded">
+                    Фиксируется в акте
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mb-1">Дата выдачи:</span>
+                    <input
+                      type="date"
+                      value={actualHandoverDate}
+                      onChange={(e) => setActualHandoverDate(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white focus:outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mb-1">Фактическое время:</span>
+                    <input
+                      type="time"
+                      value={actualHandoverTime}
+                      onChange={(e) => setActualHandoverTime(e.target.value)}
+                      className="w-full bg-slate-900 border border-amber-500/60 focus:border-amber-400 rounded-xl px-3 py-2 text-sm font-mono font-black text-amber-300 focus:outline-none transition shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                {/* Быстрые пресеты */}
+                <div className="flex items-center flex-wrap gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={setTimeToNow}
+                    className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-[11px] font-bold transition active:scale-95 flex items-center space-x-1"
+                  >
+                    <Zap className="w-3 h-3 text-amber-400" />
+                    <span>Сейчас ({currentClockTime})</span>
+                  </button>
+                  {plannedPickupTime && (
+                    <button
+                      type="button"
+                      onClick={setTimeToPlanned}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded-lg text-[11px] font-medium transition active:scale-95"
+                    >
+                      📅 По брони ({plannedPickupTime})
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => adjustHandoverMinutes(-15)}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/80 rounded-lg text-[11px] font-mono transition active:scale-95"
+                  >
+                    -15 м
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => adjustHandoverMinutes(-30)}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/80 rounded-lg text-[11px] font-mono transition active:scale-95"
+                  >
+                    -30 м
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => adjustHandoverMinutes(-60)}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/80 rounded-lg text-[11px] font-mono transition active:scale-95"
+                  >
+                    -1 ч
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => adjustHandoverMinutes(15)}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/80 rounded-lg text-[11px] font-mono transition active:scale-95"
+                  >
+                    +15 м
+                  </button>
                 </div>
               </div>
 

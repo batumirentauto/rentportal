@@ -1884,7 +1884,15 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                       <span>Фактическая выдача:</span>
                     </span>
                     <span className="font-mono">
-                      {new Date(selectedBooking.actualHandoverAt || selectedBooking.handoverReport?.handedOverAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                      {selectedBooking.handoverReport?.actualHandoverTime || (
+                        (selectedBooking.actualHandoverAt || selectedBooking.handoverReport?.handedOverAt)
+                          ? new Date(selectedBooking.actualHandoverAt || selectedBooking.handoverReport?.handedOverAt).toLocaleTimeString("ru-RU", {
+                              timeZone: "Asia/Tbilisi",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"
+                      )}
                     </span>
                   </div>
                   {selectedBooking.handoverReport?.expectedReturnTime && (

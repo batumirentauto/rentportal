@@ -25,8 +25,10 @@ export async function POST(
       // Время выдачи и возврата:
       actualHandoverTime,
       actualHandoverDate,
+      actualHandoverIso,
       expectedReturnTime,
       expectedReturnDate,
+      expectedReturnIso,
       // Мойка авто перед выдачей:
       washOption = "NONE", // "NONE", "FULL" (20 GEL), "BODY" (10 GEL), "INTERIOR" (10 GEL)
       washCost = 0,
@@ -56,13 +58,28 @@ export async function POST(
       );
     }
 
-    const calculatedHandoverAt = actualHandoverDate && actualHandoverTime
-      ? new Date(`${actualHandoverDate}T${actualHandoverTime}:00`)
-      : new Date();
+    let calculatedHandoverAt: Date;
+    if (actualHandoverIso && !isNaN(new Date(actualHandoverIso).getTime())) {
+      calculatedHandoverAt = new Date(actualHandoverIso);
+    } else if (actualHandoverDate && actualHandoverTime) {
+      // Default to Georgia timezone (+04:00) if no explicit ISO offset provided
+      calculatedHandoverAt = new Date(`${actualHandoverDate}T${actualHandoverTime}:00+04:00`);
+      if (isNaN(calculatedHandoverAt.getTime())) {
+        calculatedHandoverAt = new Date(`${actualHandoverDate}T${actualHandoverTime}:00`);
+      }
+    } else {
+      calculatedHandoverAt = new Date();
+    }
 
-    const calculatedReturnAt = expectedReturnDate && expectedReturnTime
-      ? new Date(`${expectedReturnDate}T${expectedReturnTime}:00`)
-      : undefined;
+    let calculatedReturnAt: Date | undefined;
+    if (expectedReturnIso && !isNaN(new Date(expectedReturnIso).getTime())) {
+      calculatedReturnAt = new Date(expectedReturnIso);
+    } else if (expectedReturnDate && expectedReturnTime) {
+      calculatedReturnAt = new Date(`${expectedReturnDate}T${expectedReturnTime}:00+04:00`);
+      if (isNaN(calculatedReturnAt.getTime())) {
+        calculatedReturnAt = new Date(`${expectedReturnDate}T${expectedReturnTime}:00`);
+      }
+    }
 
     const effectiveManagerName = (managerName && managerName.trim() !== "Менеджер смены" && managerName.trim() !== "Менеджер смены (Грузия)")
       ? managerName.trim()
