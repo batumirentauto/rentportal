@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import { isR2Configured, uploadToR2 } from "./r2-storage";
 
 /**
  * Returns candidate persistent upload directories.
@@ -66,6 +67,18 @@ export async function saveUploadedFile(
 ): Promise<string> {
   if (!buffer || buffer.length === 0) {
     throw new Error("Невозможно сохранить пустой файл (размер 0 байт)");
+  }
+
+  // 1. Try uploading to Cloudflare R2 if configured
+  if (isR2Configured()) {
+    try {
+      const mimeType = getMimeType(fileName);
+      const r2Url = await uploadToR2(buffer, folder, fileName, mimeType);
+      console.log(`[Storage] Uploaded ${fileName} to Cloudflare R2: ${r2Url}`);
+      return r2Url;
+    } catch (r2Error) {
+      console.error("[Storage] Failed to upload to Cloudflare R2, falling back to local storage:", r2Error);
+    }
   }
 
   const targetDirs = getUploadTargetDirs(folder);
