@@ -51,12 +51,12 @@ export async function POST() {
             });
           }
           // 2. Move availability blocks
-          await prisma.availabilityBlock.updateMany({
+          await prisma.carAvailabilityBlock.updateMany({
             where: { carId: dup.id },
             data: { carId: primary.id },
           }).catch(() => {});
-          // 3. Move maintenance logs
-          await prisma.maintenanceLog.updateMany({
+          // 3. Move mileage logs
+          await prisma.mileageLog.updateMany({
             where: { carId: dup.id },
             data: { carId: primary.id },
           }).catch(() => {});
@@ -66,7 +66,7 @@ export async function POST() {
             data: { carId: primary.id },
           }).catch(() => {});
           // 5. Move fines
-          await prisma.fine.updateMany({
+          await prisma.trafficFine.updateMany({
             where: { carId: dup.id },
             data: { carId: primary.id },
           }).catch(() => {});
