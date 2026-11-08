@@ -23,6 +23,7 @@ import {
   Download,
   FileText,
   Printer,
+  RotateCcw,
 } from "lucide-react";
 import { downloadDocument, downloadAllCustomerDocuments } from "@/lib/downloadDocument";
 import { ContractModal } from "./ContractModal";
@@ -131,6 +132,31 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     booking?.overdueDecisionNotes || ""
   );
 
+  // Return Report fields (для завершенных аренд)
+  const [returnMileage, setReturnMileage] = useState<number | "">(
+    booking?.returnReport?.mileageAtReturn ?? ""
+  );
+  const [returnFuelLevel, setReturnFuelLevel] = useState<number | "">(
+    booking?.returnReport?.fuelLevelPercent ?? ""
+  );
+  const [actualReturnedAtDate, setActualReturnedAtDate] = useState<string>(() => {
+    if (booking?.returnReport?.returnedAt) {
+      const d = new Date(booking.returnReport.returnedAt);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    return "";
+  });
+  const [actualReturnedAtTime, setActualReturnedAtTime] = useState<string>(() => {
+    if (booking?.returnReport?.returnedAt) {
+      const d = new Date(booking.returnReport.returnedAt);
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
+    return "";
+  });
+  const [returnNotes, setReturnNotes] = useState<string>(
+    booking?.returnReport?.notes || ""
+  );
+
   // All available locations list from API
   const [allLocations, setAllLocations] = useState<any[]>([]);
 
@@ -183,6 +209,26 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     setBookingSource(booking.source || "WHATSAPP");
     setStatus(booking.status || "CONFIRMED");
     setManagerNotes(booking.overdueDecisionNotes || "");
+
+    if (booking.returnReport) {
+      setReturnMileage(booking.returnReport.mileageAtReturn ?? "");
+      setReturnFuelLevel(booking.returnReport.fuelLevelPercent ?? "");
+      if (booking.returnReport.returnedAt) {
+        const d = new Date(booking.returnReport.returnedAt);
+        setActualReturnedAtDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+        setActualReturnedAtTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+      } else {
+        setActualReturnedAtDate("");
+        setActualReturnedAtTime("");
+      }
+      setReturnNotes(booking.returnReport.notes || "");
+    } else {
+      setReturnMileage("");
+      setReturnFuelLevel("");
+      setActualReturnedAtDate("");
+      setActualReturnedAtTime("");
+      setReturnNotes("");
+    }
   }, [booking, isOpen]);
 
   // When startDate or rentalDays change, auto update endDate
@@ -325,6 +371,14 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
       const fullStart = new Date(`${startDateStr}T${startTimeStr}:00`);
       const fullEnd = new Date(`${endDateStr}T${returnTimeStr}:00`);
 
+      let actualReturnIso: string | undefined = undefined;
+      if (actualReturnedAtDate && actualReturnedAtTime) {
+        const localReturnDate = new Date(`${actualReturnedAtDate}T${actualReturnedAtTime}:00`);
+        if (!isNaN(localReturnDate.getTime())) {
+          actualReturnIso = localReturnDate.toISOString();
+        }
+      }
+
       const payload = {
         carId: selectedCarId,
         startDate: fullStart.toISOString(),
@@ -348,6 +402,10 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         ownerTotalPayout: ownerDailyRate * rentalDays,
         status,
         overdueDecisionNotes: managerNotes || null,
+        returnedAt: actualReturnIso,
+        returnMileage: returnMileage !== "" ? Number(returnMileage) : undefined,
+        returnFuelLevel: returnFuelLevel !== "" ? Number(returnFuelLevel) : undefined,
+        returnNotes: returnNotes || undefined,
       };
 
       const res = await fetch(`/api/bookings/${booking.id}`, {
@@ -407,6 +465,24 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           
+          {/* Информационный баннер для завершенной аренды */}
+          {status === "COMPLETED" && (
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-emerald-500/40 text-xs space-y-2 shadow-sm">
+              <div className="flex items-center justify-between flex-wrap gap-1.5">
+                <span className="font-bold text-emerald-400 flex items-center space-x-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Завершённая аренда (COMPLETED)</span>
+                </span>
+                <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-800/60">
+                  Возврат принят
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Вы можете вносить любые изменения в эту завершённую аренду: скорректировать суммы оплаты, депозит, даты аренды, пробег и топливо при возврате, или переключить статус (например, вернуть в <strong className="text-blue-300">«В аренде / Выдана (ACTIVE)»</strong>, если бронь закрыли по ошибке).
+              </p>
+            </div>
+          )}
+
           {/* 0. CUSTOMER & SOURCE (Клиент и канал обращения) */}
           <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1289,6 +1365,100 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               />
             </div>
           </div>
+
+          {/* 6. RETURN REPORT DETAILS (Для завершённых аренд или при наличии акта возврата) */}
+          {(status === "COMPLETED" || booking?.returnReport) && (
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-emerald-500/30 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <span className="font-bold text-emerald-400 flex items-center space-x-1.5">
+                  <RotateCcw className="w-4 h-4 text-emerald-400" />
+                  <span>6. Данные возврата автомобиля (Акт приёма)</span>
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  Корректировка показателей возврата
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">
+                    Пробег при возврате (км):
+                  </label>
+                  <input
+                    type="number"
+                    value={returnMileage}
+                    onChange={(e) => setReturnMileage(e.target.value === "" ? "" : Number(e.target.value))}
+                    placeholder="Например: 145200"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono"
+                  />
+                  {booking?.handoverReport?.mileageAtHandover ? (
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      При выдаче: {booking.handoverReport.mileageAtHandover.toLocaleString("ru-RU")} км
+                      {returnMileage !== "" && Number(returnMileage) >= booking.handoverReport.mileageAtHandover && (
+                        <span className="text-emerald-400 ml-1">
+                          (+{(Number(returnMileage) - booking.handoverReport.mileageAtHandover).toLocaleString("ru-RU")} км)
+                        </span>
+                      )}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">
+                    Уровень топлива при возврате (%):
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={returnFuelLevel}
+                    onChange={(e) => setReturnFuelLevel(e.target.value === "" ? "" : Number(e.target.value))}
+                    placeholder="0 - 100%"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">
+                    Фактическая дата возврата:
+                  </label>
+                  <input
+                    type="date"
+                    value={actualReturnedAtDate}
+                    onChange={(e) => setActualReturnedAtDate(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">
+                    Фактическое время возврата:
+                  </label>
+                  <input
+                    type="time"
+                    value={actualReturnedAtTime}
+                    onChange={(e) => setActualReturnedAtTime(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-400 block mb-1 font-semibold">
+                  Заметки при приёме / состояние авто:
+                </label>
+                <textarea
+                  value={returnNotes}
+                  onChange={(e) => setReturnNotes(e.target.value)}
+                  placeholder="Чистота, повреждения, замечания менеджера..."
+                  rows={2}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="pt-2 flex items-center justify-between border-t border-slate-800">

@@ -1911,6 +1911,84 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 </div>
               )}
 
+              {/* Completed Return Details (Акт возврата автомобиля) */}
+              {(selectedBooking.returnReport || selectedBooking.status === "COMPLETED") && (
+                <div className="bg-teal-950/40 border border-teal-500/40 rounded-xl p-2.5 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between text-teal-300 font-bold">
+                    <span className="flex items-center space-x-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-teal-400" />
+                      <span>Акт возврата (Завершена):</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-teal-200">
+                      {selectedBooking.returnReport?.returnedAt
+                        ? new Date(selectedBooking.returnReport.returnedAt).toLocaleDateString("ru-RU", {
+                            timeZone: "Asia/Tbilisi",
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : new Date(selectedBooking.endDate).toLocaleDateString("ru-RU", {
+                            timeZone: "Asia/Tbilisi",
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300 pt-0.5">
+                    {selectedBooking.returnReport?.mileageAtReturn !== undefined && (
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">Пробег при приёме:</span>
+                        <span className="font-mono font-bold text-white">
+                          {selectedBooking.returnReport.mileageAtReturn.toLocaleString("ru-RU")} км
+                        </span>
+                        {selectedBooking.returnReport.tripMileage > 0 && (
+                          <span className="text-teal-400 font-mono text-[10px] block">
+                            (пробег: +{selectedBooking.returnReport.tripMileage} км)
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedBooking.returnReport?.fuelLevelPercent !== undefined && (
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">Топливо при сдаче:</span>
+                        <span className="font-mono font-bold text-white">
+                          {selectedBooking.returnReport.fuelLevelPercent}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedBooking.returnReport?.hasNewDamages && (
+                    <div className="p-1.5 rounded-lg bg-rose-950/80 border border-rose-500/50 text-[11px] text-rose-200 space-y-0.5">
+                      <span className="font-bold block text-rose-300">⚠️ Зафиксированы новые повреждения:</span>
+                      <p className="text-[10px] text-slate-300">{selectedBooking.returnReport.damagesDescription || "Без описания"}</p>
+                      {selectedBooking.returnReport.damageChargeAmount > 0 && (
+                        <span className="text-[10px] font-bold text-amber-300 block">
+                          Удержано за ущерб: {selectedBooking.returnReport.damageChargeAmount} ₾
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedBooking.returnReport?.needsWash && (
+                    <div className="text-[10px] text-amber-300 flex items-center space-x-1">
+                      <span>🚿 Требуется мойка (удержано {selectedBooking.returnReport.damageChargeAmount ? "" : "согласно тарифу"})</span>
+                    </div>
+                  )}
+
+                  {selectedBooking.returnReport?.notes && (
+                    <div className="text-[10px] text-slate-400 italic">
+                      Заметка: {selectedBooking.returnReport.notes}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Price summary */}
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
                 <div>
@@ -2278,7 +2356,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                 </button>
               )}
 
-              {onOpenReturn && (selectedBooking.status === "ACTIVE" || selectedBooking.handoverReport) && (
+              {onOpenReturn && (selectedBooking.status === "ACTIVE" || selectedBooking.status === "COMPLETED" || selectedBooking.handoverReport) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -2289,18 +2367,27 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                         brand: "Автомобиль",
                         model: "",
                         plateNumber: "",
-                        currentMileage: 50000,
-                        currentFuelPerc: 100,
+                        currentMileage: selectedBooking.returnReport?.mileageAtReturn || 50000,
+                        currentFuelPerc: selectedBooking.returnReport?.fuelLevelPercent || 100,
                       },
                       extras: selectedBooking.extras || [],
+                      returnReport: selectedBooking.returnReport,
                     };
                     onOpenReturn(bookingWithCar);
                     setSelectedBooking(null);
                   }}
-                  className="w-full flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 text-slate-950 font-black rounded-xl text-sm shadow-lg shadow-emerald-950/40 transition active:scale-95"
+                  className={
+                    selectedBooking.status === "COMPLETED"
+                      ? "w-full flex items-center justify-center space-x-2 py-2.5 bg-slate-900 border border-teal-500/50 hover:bg-teal-950/40 text-teal-300 font-bold rounded-xl text-xs transition active:scale-95"
+                      : "w-full flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 text-slate-950 font-black rounded-xl text-sm shadow-lg shadow-emerald-950/40 transition active:scale-95"
+                  }
                 >
-                  <RotateCcw className="w-4 h-4 text-slate-950" />
-                  <span>Принять возврат автомобиля</span>
+                  <RotateCcw className="w-4 h-4" />
+                  <span>
+                    {selectedBooking.status === "COMPLETED"
+                      ? "📋 Чек-лист возврата (Просмотр и корректировка)"
+                      : "Принять возврат автомобиля"}
+                  </span>
                 </button>
               )}
 

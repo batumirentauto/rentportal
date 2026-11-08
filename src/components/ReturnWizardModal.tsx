@@ -54,12 +54,15 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const { language, t } = useLanguage();
   const car = booking.car;
   const handoverReport = booking.handoverReport;
+  const existingReport = booking.returnReport;
+  const isAlreadyCompleted = booking.status === "COMPLETED" || Boolean(existingReport);
 
   // 1. Пробег: исходный пробег при выдаче и текущий одометр
   const initialMileage = handoverReport?.mileageAtHandover || car.currentMileage || 50000;
-  const [returnMileage, setReturnMileage] = useState<number>(
-    Math.max(car.currentMileage, initialMileage + Math.round(Math.random() * 300 + 150))
-  );
+  const [returnMileage, setReturnMileage] = useState<number>(() => {
+    if (existingReport?.mileageAtReturn) return existingReport.mileageAtReturn;
+    return Math.max(car.currentMileage || initialMileage, initialMileage);
+  });
   const tripDistance = Math.max(0, returnMileage - initialMileage);
 
   // Контроль межсервисного интервала замены масла (СТОП по ТО)
@@ -71,8 +74,8 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const oilOverdueKm = Math.abs(kmRemainingToOilChange);
 
   // Чистота авто и необходимость мойки: "Не всегда авто возвращается грязным, поэтому мойка тоже не всегда нужна"
-  const [needsWash, setNeedsWash] = useState<boolean>(false);
-  const [cleanlinessState, setCleanlinessState] = useState<string>("CLEAN"); // "CLEAN" | "DIRTY_BODY" | "DIRTY_INTERIOR"
+  const [needsWash, setNeedsWash] = useState<boolean>(() => existingReport?.needsWash ?? false);
+  const [cleanlinessState, setCleanlinessState] = useState<string>(() => existingReport?.cleanlinessState || "CLEAN"); // "CLEAN" | "DIRTY_BODY" | "DIRTY_INTERIOR"
 
   // 2. Уровень топлива и расчет недостачи по фактическому объему бака
   const tankCapacity = getCarTankVolume(car);
@@ -81,7 +84,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const fuelRate = getFuelRate(car);
   const fuelTypeLabel = isDiesel ? "Дизель" : "95-й бензин";
   const fuelAtHandover = handoverReport?.fuelLevelPercent ?? 100;
-  const [returnFuelLevel, setReturnFuelLevel] = useState<number>(fuelAtHandover);
+  const [returnFuelLevel, setReturnFuelLevel] = useState<number>(() => existingReport?.fuelLevelPercent ?? fuelAtHandover);
   const fuelShortagePercent = Math.max(0, fuelAtHandover - returnFuelLevel);
 
   // Расчет недостачи на основе реального объема бака автомобиля
@@ -101,11 +104,11 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const [videoVerified, setVideoVerified] = useState<boolean>(true);
   const [showVideoModal, setShowVideoModal] = useState<boolean>(false);
   const [videoPlayError, setVideoPlayError] = useState<boolean>(false);
-  const [returnVideoUrl, setReturnVideoUrl] = useState<string>("");
+  const [returnVideoUrl, setReturnVideoUrl] = useState<string>(() => existingReport?.returnVideoUrl || "");
   const [isUploadingReturnVideo, setIsUploadingReturnVideo] = useState<boolean>(false);
-  const [hasNewDamages, setHasNewDamages] = useState<boolean>(false);
-  const [damagesDescription, setDamagesDescription] = useState<string>("");
-  const [damageChargeAmount, setDamageChargeAmount] = useState<number>(0);
+  const [hasNewDamages, setHasNewDamages] = useState<boolean>(() => existingReport?.hasNewDamages ?? false);
+  const [damagesDescription, setDamagesDescription] = useState<string>(() => existingReport?.damagesDescription || "");
+  const [damageChargeAmount, setDamageChargeAmount] = useState<number>(() => existingReport?.damageChargeAmount || 0);
   const [damagePhotoUrl, setDamagePhotoUrl] = useState<string>("");
   const [isUploadingDamagePhoto, setIsUploadingDamagePhoto] = useState<boolean>(false);
 
@@ -338,7 +341,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   });
   const [settlementMethod, setSettlementMethod] = useState<string>("CASH");
   const [extraWashFee, setExtraWashFee] = useState<number>(0);
-  const [conditionNotes, setConditionNotes] = useState<string>("");
+  const [conditionNotes, setConditionNotes] = useState<string>(() => existingReport?.notes || "");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [returnResult, setReturnResult] = useState<any | null>(null);
 
@@ -2312,6 +2315,8 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                   <span>
                     {isSubmitting
                       ? (language === "ka" ? "შენახვა..." : "Сохранение...")
+                      : isAlreadyCompleted
+                      ? (language === "ka" ? "ცვლილებების შენახვა მიღების აქტში" : "💾 Сохранить изменения в акте возврата")
                       : recordAsDebt
                       ? (language === "ka" ? `დაბრუნების დასრულება ვალის დაფიქსირებით (${debtAmount !== "" ? debtAmount : finalBalanceAmount} ₾)` : `Завершить возврат с навешиванием долга (${debtAmount !== "" ? debtAmount : finalBalanceAmount} ₾)`)
                       : (language === "ka" ? "დაბრუნების დასრულება და ჯავშნის დახურვა" : "Завершить возврат и закрыть бронь")}

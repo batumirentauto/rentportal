@@ -232,9 +232,11 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
                 month: "short",
               });
 
+              const isCompleted = booking.status === "COMPLETED";
               const isHandedOver = booking.status === "ACTIVE";
               const isOverdueNoShow =
                 !isHandedOver &&
+                !isCompleted &&
                 booking.status !== "CANCELLED" &&
                 !booking.overdueDecision &&
                 startDate.getTime() <= threeHoursAgoMs;
@@ -303,7 +305,14 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
                           </span>
                         )}
 
-                        {isHandedOver ? (
+                        {isCompleted ? (
+                          <span className="bg-teal-500/20 text-teal-300 border border-teal-500/40 text-xs px-2.5 py-1 rounded-lg font-bold flex items-center space-x-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-teal-400" />
+                            <span>
+                              {language === "ka" ? "დასრულებულია" : "Завершена (Аренда окончена)"}
+                            </span>
+                          </span>
+                        ) : isHandedOver ? (
                           <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs px-2.5 py-1 rounded-lg font-bold flex items-center space-x-1">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                             <span>
@@ -592,8 +601,22 @@ export const MorningSchedule: React.FC<MorningScheduleProps> = ({
                           </span>
                         </button>
 
-                        {/* Handover Wizard Button */}
-                        {!isHandedOver ? (
+                        {/* Handover & Return Wizard Buttons */}
+                        {isCompleted ? (
+                          <div className="space-y-2">
+                            <div className="w-full py-1.5 px-3 bg-teal-950/40 border border-teal-500/40 rounded-xl text-center text-xs font-bold text-teal-400 flex items-center justify-center space-x-1.5">
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>{language === "ka" ? "დასრულებულია" : "Завершена"}</span>
+                            </div>
+                            <button
+                              onClick={() => setSelectedReturnBooking(booking)}
+                              className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-teal-300 border border-teal-500/40 rounded-xl text-xs font-bold transition active:scale-95"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                              <span>{language === "ka" ? "აქტის კორექტირება" : "Акт возврата (Корректировка)"}</span>
+                            </button>
+                          </div>
+                        ) : !isHandedOver ? (
                           <button
                             onClick={() => onOpenHandover(booking)}
                             className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 transition active:scale-95"
