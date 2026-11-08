@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir, readFile } from "fs/promises";
 import path from "path";
+import { normalizePlateKey, formatGeorgianPlate } from "@/lib/car-utils";
 
 const AI_MODELS = [
   "gemini-3.5-flash-lite",
@@ -230,12 +231,12 @@ export async function POST(request: Request) {
       }
     }
 
-    // Clean extracted values
+    // Clean and normalize extracted values
     if (extractedData.vin) {
       extractedData.vin = String(extractedData.vin).toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, "").trim();
     }
     if (extractedData.plateNumber) {
-      extractedData.plateNumber = String(extractedData.plateNumber).toUpperCase().trim();
+      extractedData.plateNumber = formatGeorgianPlate(extractedData.plateNumber);
     }
     if (extractedData.techPassportNumber) {
       extractedData.techPassportNumber = String(extractedData.techPassportNumber).toUpperCase().trim();
@@ -244,57 +245,99 @@ export async function POST(request: Request) {
       extractedData.year = Number(extractedData.year);
     }
 
-    // Auto-save to Car in database if carId is given and autoSave is requested
+    // Auto-save to Car in database: updates the target car directly without creating duplicates
     let updatedCar: any = null;
-    if (autoSave && carId) {
-      const existingCar = await prisma.car.findUnique({ where: { id: carId } });
-      const updateData: any = {};
-      if (extractedData.vin) updateData.vin = extractedData.vin;
-      if (extractedData.year && !isNaN(extractedData.year)) updateData.year = extractedData.year;
-      if (extractedData.plateNumber) updateData.plateNumber = extractedData.plateNumber;
-      if (extractedData.techPassportNumber) updateData.techPassportNumber = extractedData.techPassportNumber;
+    if (autoSave) {
+      let targetCarId = carId;
 
-      // Brand: preserve existing car brand name and casing!
-      if (extractedData.brand) {
-        const rawBrand = String(extractedData.brand).trim();
-        if (!existingCar?.brand) {
-          let b = rawBrand;
-          if (b.length > 3 && b === b.toUpperCase()) {
-            b = b.charAt(0).toUpperCase() + b.slice(1).toLowerCase();
-          }
-          updateData.brand = b;
-        } else if (existingCar.brand.trim().toLowerCase() !== rawBrand.toLowerCase()) {
-          let b = rawBrand;
-          if (b.length > 3 && b === b.toUpperCase()) {
-            b = b.charAt(0).toUpperCase() + b.slice(1).toLowerCase();
-          }
-          updateData.brand = b;
-        }
-        // If brand matches existing car case-insensitively, keep existingCar.brand unchanged
-      }
-
-      // Model: preserve existing car model name and casing!
-      if (extractedData.model) {
-        const rawModel = String(extractedData.model).trim();
-        if (!existingCar?.model) {
-          updateData.model = rawModel;
-        } else if (existingCar.model.trim().toLowerCase() !== rawModel.toLowerCase()) {
-          updateData.model = rawModel;
+      // If carId was not provided, look up matching car by normalized plate or VIN
+      if (!targetCarId && (extractedData.plateNumber || extractedData.vin)) {
+        const cleanPlate = normalizePlateKey(extractedData.plateNumber);
+        const cleanVin = extractedData.vin ? extractedData.vin.trim().toUpperCase() : null;
+        const allCars = await prisma.car.findMany();
+        const found = allCars.find(
+          (c) =>
+            (cleanPlate && normalizePlateKey(c.plateNumber) === cleanPlate) ||
+            (cleanVin && c.vin && c.vin.trim().toUpperCase() === cleanVin)
+        );
+        if (found) {
+          targetCarId = found.id;
         }
       }
 
-      if (extractedData.color && !existingCar?.color) {
-        updateData.color = extractedData.color;
+      if (targetCarId) {
+        const existingCar = await prisma.car.findUnique({ where: { id: targetCarId } });
+        if (existingCar) {
+          const updateData: any = {};
+          if (extractedData.vin) updateData.vin = extractedData.vin;
+          if (extractedData.year && !isNaN(extractedData.year)) updateData.year = extractedData.year;
+          if (extractedData.plateNumber) updateData.plateNumber = extractedData.plateNumber;
+          if (extractedData.techPassportNumber) updateData.techPassportNumber = extractedData.techPassportNumber;
+          updateData.hasTechPassport = true;
+
+          // Brand: preserve existing car brand name and casing!
+          if (extractedData.brand) {
+            const rawBrand = String(extractedData.brand).trim();
+            if (!existingCar.brand) {
+              let b = rawBrand;
+              if (b.length > 3 && b === b.toUpperCase()) {
+                b = b.charAt(0).toUpperCase() + b.slice(1).toLowerCase();
+              }
+              updateData.brand = b;
+            } else if (existingCar.brand.trim().toLowerCase() !== rawBrand.toLowerCase()) {
+              let b = rawBrand;
+              if (b.length > 3 && b === b.toUpperCase()) {
+                b = b.charAt(0).toUpperCase() + b.slice(1).toLowerCase();
+              }
+              updateData.brand = b;
+            }
+          }
+
+          // Model: preserve existing car model name and casing!
+          if (extractedData.model) {
+            const rawModel = String(extractedData.model).trim();
+            if (!existingCar.model) {
+              updateData.model = rawModel;
+            } else if (existingCar.model.trim().toLowerCase() !== rawModel.toLowerCase()) {
+              updateData.model = rawModel;
+            }
+          }
+
+          if (extractedData.color && !existingCar.color) {
+            updateData.color = extractedData.color;
+          }
+
+          if (techPassportFrontUrl) updateData.techPassportFrontUrl = techPassportFrontUrl;
+          if (techPassportBackUrl) updateData.techPassportBackUrl = techPassportBackUrl;
+
+          // Check if there is an empty/duplicate car with the same plate/VIN in the database
+          const cleanPlate = normalizePlateKey(extractedData.plateNumber || existingCar.plateNumber);
+          const cleanVin = extractedData.vin ? extractedData.vin.trim().toUpperCase() : null;
+          const allCars = await prisma.car.findMany();
+          const duplicate = allCars.find(
+            (c) =>
+              c.id !== existingCar.id &&
+              ((cleanPlate && normalizePlateKey(c.plateNumber) === cleanPlate) ||
+                (cleanVin && c.vin && c.vin.trim().toUpperCase() === cleanVin))
+          );
+
+          if (duplicate) {
+            const dupBookings = await prisma.booking.count({ where: { carId: duplicate.id } });
+            if (dupBookings === 0) {
+              // Merge missing values from duplicate before deleting
+              if (!existingCar.ownerId && duplicate.ownerId) updateData.ownerId = duplicate.ownerId;
+              if (!existingCar.imageUrl && duplicate.imageUrl) updateData.imageUrl = duplicate.imageUrl;
+              await prisma.car.delete({ where: { id: duplicate.id } }).catch(console.warn);
+            }
+          }
+
+          updatedCar = await prisma.car.update({
+            where: { id: targetCarId },
+            data: updateData,
+            include: { city: true, owner: true },
+          });
+        }
       }
-
-      if (techPassportFrontUrl) updateData.techPassportFrontUrl = techPassportFrontUrl;
-      if (techPassportBackUrl) updateData.techPassportBackUrl = techPassportBackUrl;
-
-      updatedCar = await prisma.car.update({
-        where: { id: carId },
-        data: updateData,
-        include: { city: true, owner: true },
-      });
     }
 
     return NextResponse.json({

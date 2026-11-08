@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCarTankVolume } from "@/lib/fuelSpecs";
+import { normalizePlateKey, formatGeorgianPlate } from "@/lib/car-utils";
 
 export async function GET(request: Request) {
   try {
@@ -87,21 +88,69 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if plateNumber already exists
-    const existing = await prisma.car.findUnique({
-      where: { plateNumber: plateNumber.trim().toUpperCase() },
-    });
+    const cleanPlateKey = normalizePlateKey(plateNumber);
+    const cleanVin = vin ? vin.trim().toUpperCase() : null;
+
+    // Check if car already exists by normalized plate or VIN
+    const allCars = await prisma.car.findMany();
+    const existing = allCars.find(
+      (c) =>
+        normalizePlateKey(c.plateNumber) === cleanPlateKey ||
+        (cleanVin && c.vin && c.vin.trim().toUpperCase() === cleanVin)
+    );
+
     if (existing) {
-      return NextResponse.json(
-        { success: false, error: `Автомобиль с госномером ${plateNumber} уже зарегистрирован` },
-        { status: 400 }
-      );
+      // Direct update of existing car card - no duplication!
+      const updateData: any = {};
+      if (plateNumber) updateData.plateNumber = formatGeorgianPlate(plateNumber);
+      if (cleanVin) updateData.vin = cleanVin;
+      if (brand?.trim()) updateData.brand = brand.trim();
+      if (model?.trim()) updateData.model = model.trim();
+      if (year) updateData.year = Number(year);
+      if (color) updateData.color = color;
+      if (transmission) updateData.transmission = transmission;
+      if (fuelType) updateData.fuelType = fuelType;
+      if (cityId) updateData.cityId = cityId;
+      if (ownerId !== undefined) updateData.ownerId = ownerId || null;
+      if (carClass) updateData.carClass = carClass;
+      if (clientMinDailyRate) updateData.clientMinDailyRate = Number(clientMinDailyRate);
+      if (clientStandardDailyRate) updateData.clientStandardDailyRate = Number(clientStandardDailyRate);
+      if (clientMaxDailyRate) updateData.clientMaxDailyRate = Number(clientMaxDailyRate);
+      if (defaultOwnerDailyRate) updateData.defaultOwnerDailyRate = Number(defaultOwnerDailyRate);
+      if (currentMileage) updateData.currentMileage = Number(currentMileage);
+      if (pricingNotes) updateData.pricingNotes = pricingNotes;
+      if (hasBatumiParking !== undefined) updateData.hasBatumiParking = Boolean(hasBatumiParking);
+      if (batumiParkingPermitNumber !== undefined) updateData.batumiParkingPermitNumber = batumiParkingPermitNumber;
+      if (batumiParkingExpiresAt) updateData.batumiParkingExpiresAt = new Date(batumiParkingExpiresAt);
+      if (body.techPassportNumber) updateData.techPassportNumber = body.techPassportNumber;
+      if (body.techPassportFrontUrl) updateData.techPassportFrontUrl = body.techPassportFrontUrl;
+      if (body.techPassportBackUrl) updateData.techPassportBackUrl = body.techPassportBackUrl;
+      if (body.techPassportFrontUrl || body.techPassportNumber || existing.hasTechPassport) {
+        updateData.hasTechPassport = true;
+      }
+
+      const updatedCar = await prisma.car.update({
+        where: { id: existing.id },
+        data: updateData,
+        include: {
+          city: true,
+          owner: true,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        updated: true,
+        car: updatedCar,
+        message: `Карточка автомобиля ${updatedCar.brand} ${updatedCar.model} (${updatedCar.plateNumber}) успешно скорректирована данными техпаспорта!`,
+      });
     }
 
+    const formattedPlate = formatGeorgianPlate(plateNumber);
     const car = await prisma.car.create({
       data: {
-        plateNumber: plateNumber.trim().toUpperCase(),
-        vin: vin?.trim() || null,
+        plateNumber: formattedPlate,
+        vin: cleanVin || null,
         brand: brand.trim(),
         model: model.trim(),
         year: Number(year) || new Date().getFullYear(),
@@ -129,6 +178,7 @@ export async function POST(request: Request) {
         techPassportNumber: body.techPassportNumber || null,
         techPassportFrontUrl: body.techPassportFrontUrl || null,
         techPassportBackUrl: body.techPassportBackUrl || null,
+        hasTechPassport: Boolean(body.techPassportFrontUrl || body.techPassportNumber),
         status: "AVAILABLE",
       },
       include: {

@@ -674,6 +674,109 @@ function ensureSchema(dbFilePath: string) {
       console.warn("[Database] Owner auto-sync notice:", autoSyncErr);
     }
 
+    // 8. Auto-merge duplicate cars caused by plate hyphenation / OCR mismatches
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS "_MigrationFlags" ("id" TEXT PRIMARY KEY, "executedAt" DATETIME DEFAULT CURRENT_TIMESTAMP);`);
+      const mergeFlag = db.prepare(`SELECT id FROM "_MigrationFlags" WHERE id = 'merge_duplicate_cars_v1'`).get();
+      if (!mergeFlag) {
+        console.log("[Database] Checking and merging duplicate cars caused by plate format differences...");
+        const allCars = db.prepare(`
+          SELECT id, plateNumber, vin, brand, model, year, color, imageUrl, ownerId, 
+                 techPassportNumber, techPassportFrontUrl, techPassportBackUrl, hasTechPassport, createdAt
+          FROM Car
+          ORDER BY createdAt ASC
+        `).all() as any[];
+
+        const norm = (p: string | null) => (p || "").toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+        const formatGeo = (p: string | null) => {
+          const clean = norm(p);
+          if (/^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(clean)) {
+            return `${clean.slice(0, 2)}-${clean.slice(2, 5)}-${clean.slice(5, 7)}`;
+          }
+          return p ? p.trim().toUpperCase() : "";
+        };
+
+        const groups = new Map<string, any[]>();
+        for (const car of allCars) {
+          const key = norm(car.plateNumber);
+          if (!key) continue;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key)!.push(car);
+        }
+
+        let mergedCount = 0;
+        for (const [key, carList] of groups.entries()) {
+          if (carList.length > 1) {
+            // Find primary car: preference to the one with bookings, tech passport, or photos
+            let primary = carList[0];
+            let maxScore = -1;
+
+            for (const c of carList) {
+              const bookingsCount = (db.prepare(`SELECT COUNT(*) as cnt FROM Booking WHERE carId = ?`).get(c.id) as any)?.cnt || 0;
+              let score = bookingsCount * 100;
+              if (c.techPassportFrontUrl) score += 20;
+              if (c.vin) score += 10;
+              if (c.imageUrl) score += 5;
+              if (c.ownerId) score += 5;
+              if (score > maxScore) {
+                maxScore = score;
+                primary = c;
+              }
+            }
+
+            const duplicates = carList.filter((c) => c.id !== primary.id);
+            for (const dup of duplicates) {
+              try {
+                // 1. Reassign relations safely
+                db.prepare(`UPDATE Booking SET carId = ? WHERE carId = ?`).run(primary.id, dup.id);
+                db.prepare(`UPDATE AvailabilityBlock SET carId = ? WHERE carId = ?`).run(primary.id, dup.id);
+                db.prepare(`UPDATE MaintenanceLog SET carId = ? WHERE carId = ?`).run(primary.id, dup.id);
+                db.prepare(`UPDATE Expense SET carId = ? WHERE carId = ?`).run(primary.id, dup.id);
+                db.prepare(`UPDATE Fine SET carId = ? WHERE carId = ?`).run(primary.id, dup.id);
+
+                // 2. Merge missing info onto primary
+                if (!primary.ownerId && dup.ownerId) {
+                  db.prepare(`UPDATE Car SET ownerId = ? WHERE id = ?`).run(dup.ownerId, primary.id);
+                  primary.ownerId = dup.ownerId;
+                }
+                if (!primary.imageUrl && dup.imageUrl) {
+                  db.prepare(`UPDATE Car SET imageUrl = ? WHERE id = ?`).run(dup.imageUrl, primary.id);
+                  primary.imageUrl = dup.imageUrl;
+                }
+                if (!primary.techPassportFrontUrl && dup.techPassportFrontUrl) {
+                  db.prepare(`UPDATE Car SET techPassportFrontUrl = ?, hasTechPassport = 1 WHERE id = ?`).run(dup.techPassportFrontUrl, primary.id);
+                  primary.techPassportFrontUrl = dup.techPassportFrontUrl;
+                }
+                if (!primary.vin && dup.vin) {
+                  db.prepare(`UPDATE Car SET vin = ? WHERE id = ?`).run(dup.vin, primary.id);
+                  primary.vin = dup.vin;
+                }
+
+                // 3. Delete duplicate car
+                db.prepare(`DELETE FROM Car WHERE id = ?`).run(dup.id);
+                mergedCount++;
+              } catch (delErr) {
+                console.warn(`[Database] Could not merge duplicate car ${dup.id}:`, delErr);
+              }
+            }
+
+            // 4. Standardize primary plate format
+            const stdPlate = formatGeo(primary.plateNumber);
+            if (stdPlate && stdPlate !== primary.plateNumber) {
+              try {
+                db.prepare(`UPDATE Car SET plateNumber = ? WHERE id = ?`).run(stdPlate, primary.id);
+              } catch {}
+            }
+          }
+        }
+
+        db.prepare(`INSERT OR IGNORE INTO "_MigrationFlags" (id) VALUES ('merge_duplicate_cars_v1')`).run();
+        console.log(`[Database] Merged and cleaned up ${mergedCount} duplicate cars successfully!`);
+      }
+    } catch (mergeErr) {
+      console.warn("[Database] Duplicate cars merge migration notice:", mergeErr);
+    }
+
     db.close();
   } catch (e) {
     console.warn("[Database] Schema check/migration notice:", e);

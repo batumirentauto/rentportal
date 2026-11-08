@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchSpreadsheetRows } from "@/lib/google-sheets";
+import { normalizePlateKey, formatGeorgianPlate } from "@/lib/car-utils";
 
 const DEFAULT_SPREADSHEET_ID = "1ubi7CJ4PvUyN4rnZda5UfAiVJaVriOcLrqBMtwF-MNA";
 
@@ -224,7 +225,7 @@ export async function POST(req: Request) {
     const existingCars = await prisma.car.findMany();
     const carByPlate = new Map<string, any>();
     for (const c of existingCars) {
-      carByPlate.set(c.plateNumber.toUpperCase().replace(/\s+/g, ""), c);
+      carByPlate.set(normalizePlateKey(c.plateNumber), c);
     }
 
     const existingOwners = await prisma.carOwner.findMany();
@@ -303,21 +304,22 @@ export async function POST(req: Request) {
         if (found) cityId = found.id;
       }
 
-      // Upsert car in database
-      const normalizedPlateKey = plateNumber.toUpperCase().replace(/\s+/g, "");
+      // Upsert car in database (strict normalization without hyphens or spaces prevents duplicates)
+      const formattedPlate = formatGeorgianPlate(plateNumber);
+      const normalizedPlateKey = normalizePlateKey(plateNumber);
       const existing = carByPlate.get(normalizedPlateKey);
 
       if (existing) {
         const updated = await prisma.car.update({
           where: { id: existing.id },
           data: {
-            plateNumber, // normalize
+            plateNumber: existing.plateNumber || formattedPlate, // keep existing format or standardize
             brand,
             model,
             year,
             color,
             carClass,
-            hasTechPassport: !!techPassportNumber,
+            hasTechPassport: !!techPassportNumber || existing.hasTechPassport,
             ...(techPassportNumber ? { techPassportNumber } : {}),
             ...(vin ? { vin } : {}),
             ...(rawMileage ? { currentMileage } : {}),
@@ -335,7 +337,7 @@ export async function POST(req: Request) {
       } else {
         const created = await prisma.car.create({
           data: {
-            plateNumber,
+            plateNumber: formattedPlate,
             brand,
             model,
             year,

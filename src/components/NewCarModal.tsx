@@ -108,7 +108,34 @@ export const NewCarModal: React.FC<NewCarModalProps> = ({
       }
       if (d.color) setColor(d.color);
 
-      setTpOcrNotice(`✓ Распознано ИИ: ${d.brand || ""} ${d.model || ""} (${d.plateNumber || ""}), VIN: ${d.vin || "—"}, Год: ${d.year || "—"}`);
+      // Check if car already exists in fleet to inform the user
+      let isExistingMatch = false;
+      if (d.plateNumber || d.vin) {
+        try {
+          const fleetRes = await fetch("/api/fleet/cars");
+          const fleetData = await fleetRes.json();
+          const cleanOcr = (d.plateNumber || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+          const cleanVin = d.vin ? d.vin.toUpperCase().replace(/[^A-Z0-9]/g, "") : "";
+          const match = fleetData.cars?.find(
+            (c: any) =>
+              (cleanOcr && c.plateNumber.toUpperCase().replace(/[^A-Z0-9]/g, "") === cleanOcr) ||
+              (cleanVin && c.vin && c.vin.toUpperCase().replace(/[^A-Z0-9]/g, "") === cleanVin)
+          );
+          if (match) {
+            isExistingMatch = true;
+            if (match.cityId) setCityId(match.cityId);
+            if (match.ownerId) setOwnerId(match.ownerId);
+            if (match.carClass) setCarClass(match.carClass);
+            setTpOcrNotice(
+              `✓ Автомобиль найден в автопарке: ${match.brand} ${match.model} (${match.plateNumber}). Данные техпаспорта скорректируют его карточку (без задвоения)!`
+            );
+          }
+        } catch {}
+      }
+
+      if (!isExistingMatch) {
+        setTpOcrNotice(`✓ Распознано ИИ: ${d.brand || ""} ${d.model || ""} (${d.plateNumber || ""}), VIN: ${d.vin || "—"}, Год: ${d.year || "—"}`);
+      }
     } catch (e: any) {
       setErrorMsg("Ошибка считывания: " + e.message);
     } finally {
