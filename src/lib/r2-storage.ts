@@ -19,13 +19,13 @@ export function getR2Config(): R2Config | null {
   const accessKeyId = (
     process.env.R2_ACCESS_KEY_ID ||
     process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ||
-    ""
+    "6ad788299703240b71f44a01c8ea9e6b"
   ).trim();
 
   const secretAccessKey = (
     process.env.R2_SECRET_ACCESS_KEY ||
     process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY ||
-    ""
+    "dd99bfeea375101d57879ed33c62c46b64ea874e1996750d80f2d27b456d6044"
   ).trim();
 
   const bucketName = (
@@ -37,7 +37,7 @@ export function getR2Config(): R2Config | null {
   const publicUrl = (
     process.env.R2_PUBLIC_URL ||
     process.env.CLOUDFLARE_R2_PUBLIC_URL ||
-    ""
+    "https://pub-47404ccc042d427ba59fe020462acd9d.r2.dev"
   ).trim().replace(/\/$/, "");
 
   if (!accessKeyId || !secretAccessKey) {
