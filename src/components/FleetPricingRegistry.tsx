@@ -25,6 +25,146 @@ import {
 } from "lucide-react";
 import { getCityTheme } from "./FleetTimelineGrid";
 
+interface InlinePriceInputProps {
+  value: number;
+  onSave: (newVal: number) => Promise<void>;
+  colorClass?: string;
+  focusRingClass?: string;
+  label?: string;
+  labelColorClass?: string;
+  containerClass?: string;
+  suffix?: string;
+  subLabel?: string;
+  align?: "center" | "right";
+  textSize?: string;
+  inputWidth?: string;
+  title?: string;
+}
+
+const InlinePriceInput: React.FC<InlinePriceInputProps> = ({
+  value,
+  onSave,
+  colorClass = "text-amber-400",
+  focusRingClass = "hover:border-amber-400/50 focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400/50",
+  label,
+  labelColorClass = "text-slate-400",
+  containerClass = "bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-center min-w-[64px]",
+  suffix = "₾",
+  subLabel,
+  align = "center",
+  textSize = "text-xs font-bold",
+  inputWidth = "w-11 sm:w-12",
+  title = "Кликните, чтобы сразу изменить цену",
+}) => {
+  const [val, setVal] = useState<string>(String(value ?? 0));
+  const [isFocused, setIsFocused] = useState<boolean>(false);
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  // Sync with value prop when not actively being typed into
+  useEffect(() => {
+    if (!isFocused) {
+      setVal(String(value ?? 0));
+    }
+  }, [value, isFocused]);
+
+  const commitSave = async (rawVal: string) => {
+    const cleaned = rawVal.replace(/[^0-9.]/g, "").trim();
+    const num = Math.round(parseFloat(cleaned));
+
+    if (isNaN(num) || num < 0) {
+      // Revert if invalid
+      setVal(String(value ?? 0));
+      return;
+    }
+
+    if (num === value) {
+      // Unchanged
+      setVal(String(value ?? 0));
+      return;
+    }
+
+    try {
+      setStatus("saving");
+      await onSave(num);
+      setStatus("saved");
+      setTimeout(() => setStatus("idle"), 1800);
+    } catch (e) {
+      console.error(e);
+      setStatus("error");
+      setVal(String(value ?? 0));
+      setTimeout(() => setStatus("idle"), 2500);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    commitSave(val);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    } else if (e.key === "Escape") {
+      setVal(String(value ?? 0));
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <div
+      onClick={() => inputRef.current?.focus()}
+      className={`cursor-text transition-all select-none ${containerClass} ${focusRingClass} ${
+        status === "saved"
+          ? "border-emerald-500/80 bg-emerald-950/40 shadow-sm shadow-emerald-950"
+          : status === "error"
+          ? "border-rose-500/80 bg-rose-950/40"
+          : ""
+      }`}
+      title={title}
+    >
+      {label && (
+        <span className={`text-[9px] block leading-tight ${labelColorClass}`}>
+          {label}
+        </span>
+      )}
+      <div className={`flex items-center ${align === "right" ? "justify-end" : "justify-center"} space-x-0.5 mt-0.5`}>
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onFocus={(e) => {
+            setIsFocused(true);
+            e.target.select();
+          }}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className={`${inputWidth} bg-transparent font-mono ${textSize} ${colorClass} ${
+            align === "right" ? "text-right" : "text-center"
+          } focus:outline-none focus:bg-slate-900/90 rounded px-0.5 transition`}
+        />
+        <span className={`font-mono ${textSize} ${colorClass} opacity-80`}>
+          {suffix}
+        </span>
+        {status === "saved" && (
+          <Check className="w-2.5 h-2.5 text-emerald-400 shrink-0 animate-in fade-in ml-0.5" />
+        )}
+        {status === "saving" && (
+          <RefreshCw className="w-2.5 h-2.5 text-amber-400 shrink-0 animate-spin ml-0.5" />
+        )}
+      </div>
+      {subLabel && (
+        <span className="text-[10px] text-emerald-500/70 block mt-0.5">
+          {subLabel}
+        </span>
+      )}
+    </div>
+  );
+};
+
 export const FleetPricingRegistry: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -162,6 +302,82 @@ export const FleetPricingRegistry: React.FC = () => {
       alert("Ошибка при сохранении");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleInlinePriceUpdate = async (
+    carId: string,
+    field: "ownerDailyRate" | "clientMinRate" | "clientStandardRate" | "clientMaxRate",
+    newValue: number
+  ) => {
+    // 1. Optimistic update in state
+    setData((prevData: any) => {
+      if (!prevData?.cars) return prevData;
+      const updatedCars = prevData.cars.map((c: any) => {
+        if (c.id !== carId) return c;
+        const updatedRates = { ...c.rates };
+        if (field === "ownerDailyRate") updatedRates.ownerDailyRate = newValue;
+        if (field === "clientMinRate") updatedRates.clientMinRate = newValue;
+        if (field === "clientStandardRate") updatedRates.clientStandardRate = newValue;
+        if (field === "clientMaxRate") updatedRates.clientMaxRate = newValue;
+
+        const ownerRate = updatedRates.ownerDailyRate || 0;
+        const stdRate = updatedRates.clientStandardRate || 0;
+        const dailyMargin = Math.max(0, stdRate - ownerRate);
+        const marginPercent = stdRate > 0 ? Math.round((dailyMargin / stdRate) * 100) : 0;
+        updatedRates.dailyMargin = dailyMargin;
+        updatedRates.marginPercent = marginPercent;
+
+        return {
+          ...c,
+          rates: updatedRates,
+        };
+      });
+
+      const total = updatedCars.length;
+      const avgOwnerRate =
+        total > 0
+          ? Math.round(
+              updatedCars.reduce(
+                (acc: number, c: any) => acc + (c.rates?.ownerDailyRate || 0),
+                0
+              ) / total
+            )
+          : 0;
+      const avgStdClientRate =
+        total > 0
+          ? Math.round(
+              updatedCars.reduce(
+                (acc: number, c: any) => acc + (c.rates?.clientStandardRate || 0),
+                0
+              ) / total
+            )
+          : 0;
+      const avgMargin = avgStdClientRate - avgOwnerRate;
+
+      return {
+        ...prevData,
+        cars: updatedCars,
+        summary: {
+          avgOwnerRate,
+          avgStdClientRate,
+          avgMargin,
+        },
+      };
+    });
+
+    // 2. Persist to API
+    const res = await fetch("/api/pricing", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        carId,
+        [field]: newValue,
+      }),
+    });
+    const resJson = await res.json();
+    if (!resJson.success) {
+      throw new Error(resJson.error || "Ошибка при сохранении тарифа");
     }
   };
 
@@ -437,14 +653,23 @@ export const FleetPricingRegistry: React.FC = () => {
                 <th
                   onClick={() => toggleSort("ownerRate")}
                   className="py-3.5 px-3 cursor-pointer hover:text-white transition text-right"
+                  title="Кликните на сумму в ячейке, чтобы изменить выплату напрямую"
                 >
                   <div className="flex items-center justify-end space-x-1">
                     <span>Выплата владельцу</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
-                <th className="py-3.5 px-4 text-center">
-                  Вилка цен клиентам (Мин — Стандарт — Макс)
+                <th
+                  className="py-3.5 px-4 text-center"
+                  title="Кликните в любое окошко с ценой, чтобы изменить её напрямую без нажатия лишних кнопок"
+                >
+                  <div className="flex items-center justify-center space-x-1.5">
+                    <span>Вилка цен клиентам (Мин — Стандарт — Макс)</span>
+                    <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 lowercase tracking-normal">
+                      быстрый ввод
+                    </span>
+                  </div>
                 </th>
                 <th
                   onClick={() => toggleSort("margin")}
@@ -549,42 +774,67 @@ export const FleetPricingRegistry: React.FC = () => {
 
                       {/* Owner daily rate */}
                       <td className="py-3.5 px-3 text-right">
-                        <div className="font-mono font-bold text-sm text-emerald-400">
-                          {car.rates.ownerDailyRate} ₾
+                        <div className="flex justify-end">
+                          <InlinePriceInput
+                            value={car.rates.ownerDailyRate}
+                            onSave={(newVal) => handleInlinePriceUpdate(car.id, "ownerDailyRate", newVal)}
+                            colorClass="text-emerald-400 font-bold"
+                            focusRingClass="hover:border-emerald-500/50 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/40"
+                            containerClass="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-right min-w-[70px]"
+                            align="right"
+                            textSize="text-sm font-bold"
+                            inputWidth="w-12 sm:w-14"
+                            subLabel="/ день"
+                            title="Кликните, чтобы изменить выплату владельцу напрямую"
+                          />
                         </div>
-                        <div className="text-[10px] text-emerald-500/70">/ день</div>
                       </td>
 
                       {/* Price Fork: Min - Standard - Max */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center justify-center space-x-2">
+                        <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
                           {/* Min */}
-                          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 text-center min-w-[62px]">
-                            <span className="text-[9px] text-slate-400 block leading-tight">Мин (15+ дн.)</span>
-                            <span className="font-mono font-bold text-xs text-blue-400">
-                              {car.rates.clientMinRate} ₾
-                            </span>
-                          </div>
+                          <InlinePriceInput
+                            value={car.rates.clientMinRate}
+                            onSave={(newVal) => handleInlinePriceUpdate(car.id, "clientMinRate", newVal)}
+                            label="Мин (15+ дн.)"
+                            labelColorClass="text-slate-400"
+                            colorClass="text-blue-400 font-bold"
+                            focusRingClass="hover:border-blue-500/50 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/40"
+                            containerClass="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-center min-w-[64px]"
+                            inputWidth="w-11 sm:w-12"
+                            title="Кликните, чтобы сразу изменить мин. цену (15+ дней)"
+                          />
 
-                          <span className="text-slate-600 font-bold">—</span>
+                          <span className="text-slate-600 font-bold select-none">—</span>
 
                           {/* Standard (Recommended) */}
-                          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1 text-center min-w-[70px] shadow-sm">
-                            <span className="text-[9px] text-amber-300 block font-bold leading-tight">Стандарт</span>
-                            <span className="font-mono font-black text-xs text-amber-400">
-                              {car.rates.clientStandardRate} ₾
-                            </span>
-                          </div>
+                          <InlinePriceInput
+                            value={car.rates.clientStandardRate}
+                            onSave={(newVal) => handleInlinePriceUpdate(car.id, "clientStandardRate", newVal)}
+                            label="Стандарт"
+                            labelColorClass="text-amber-300 font-bold"
+                            colorClass="text-amber-400 font-black"
+                            focusRingClass="hover:border-amber-400/60 focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400/50 shadow-sm"
+                            containerClass="bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1 text-center min-w-[72px]"
+                            inputWidth="w-12 sm:w-13"
+                            title="Кликните, чтобы сразу изменить стандартную цену авто"
+                          />
 
-                          <span className="text-slate-600 font-bold">—</span>
+                          <span className="text-slate-600 font-bold select-none">—</span>
 
                           {/* Max */}
-                          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 text-center min-w-[62px]">
-                            <span className="text-[9px] text-slate-400 block leading-tight">Макс (1-3 дн.)</span>
-                            <span className="font-mono font-bold text-xs text-orange-400">
-                              {car.rates.clientMaxRate} ₾
-                            </span>
-                          </div>
+                          <InlinePriceInput
+                            value={car.rates.clientMaxRate}
+                            onSave={(newVal) => handleInlinePriceUpdate(car.id, "clientMaxRate", newVal)}
+                            label="Макс (1-3 дн.)"
+                            labelColorClass="text-slate-400"
+                            colorClass="text-orange-400 font-bold"
+                            focusRingClass="hover:border-orange-500/50 focus-within:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500/40"
+                            containerClass="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-center min-w-[64px]"
+                            inputWidth="w-11 sm:w-12"
+                            title="Кликните, чтобы сразу изменить макс. цену (1-3 дня)"
+                          />
                         </div>
                       </td>
 
