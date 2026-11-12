@@ -23,11 +23,13 @@ import {
   Search,
   Wallet,
   Briefcase,
+  FileDown,
 } from "lucide-react";
 import { RecordExpenseModal } from "./RecordExpenseModal";
 import { TransferCashModal } from "./TransferCashModal";
 import { AccountLedgerModal } from "./AccountLedgerModal";
 import { GoogleSheetsBackupBanner } from "./GoogleSheetsBackupBanner";
+import { FinancialReportPdfModal } from "./FinancialReportPdfModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 type PeriodPreset = "today" | "yesterday" | "day_before" | "week" | "month" | "all" | "custom";
@@ -50,6 +52,7 @@ export const FinanceView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
   const [expenseInitialCategory, setExpenseInitialCategory] = useState<string | undefined>(undefined);
+  const [isPdfReportModalOpen, setIsPdfReportModalOpen] = useState<boolean>(false);
 
   // Фильтр по дате / периоду - по умолчанию "all", чтобы пользователь сразу видел всю кассу и разбивку
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("all");
@@ -452,7 +455,17 @@ export const FinanceView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Action: PDF Report Button */}
+          <button
+            onClick={() => setIsPdfReportModalOpen(true)}
+            className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-black transition active:scale-95 flex items-center space-x-1.5"
+            title="Сформировать и скачать отчёт в PDF для печати"
+          >
+            <FileDown className="w-4 h-4" />
+            <span>{language === "ka" ? "PDF ანგარიში" : "PDF Отчёт"}</span>
+          </button>
+
           {/* Action: Record Owner Payout Button */}
           <button
             onClick={() => {
@@ -1530,6 +1543,14 @@ export const FinanceView: React.FC = () => {
         }}
         accountId={selectedLedgerAccountId}
         accountName={selectedLedgerAccountName}
+      />
+
+      {/* PDF Report & Print Modal */}
+      <FinancialReportPdfModal
+        isOpen={isPdfReportModalOpen}
+        onClose={() => setIsPdfReportModalOpen(false)}
+        initialStartDate={customStartDate}
+        initialEndDate={customEndDate}
       />
     </div>
   );
