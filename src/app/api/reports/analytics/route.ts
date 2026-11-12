@@ -173,17 +173,17 @@ export async function GET(request: Request) {
       totalExpensesGEL += e.amount;
       const cat = expensesByCategory[e.category] ? e.category : "OTHER";
       expensesByCategory[cat].amountGEL += e.amount;
-      expensesByCategory[cat].amountUSD += Math.round(e.amount / GEL_USD_RATE);
+      expensesByCategory[cat].amountUSD += e.amount;
       expensesByCategory[cat].count += 1;
     });
 
-    const totalExpensesUSD = Math.round(totalExpensesGEL / GEL_USD_RATE);
+    const totalExpensesUSD = totalExpensesGEL;
 
     // Direct variable operational costs (Fuel + Wash + ТО)
     const directCostsUSD =
-      expensesByCategory.WASHING.amountUSD +
-      expensesByCategory.FUEL.amountUSD +
-      expensesByCategory.MAINTENANCE.amountUSD;
+      expensesByCategory.WASHING.amountGEL +
+      expensesByCategory.FUEL.amountGEL +
+      expensesByCategory.MAINTENANCE.amountGEL;
 
     const grossProfitUSD = Math.max(0, grossRevenueUSD - directCostsUSD);
     const netOperatingProfitUSD = grossRevenueUSD - totalExpensesUSD;
@@ -213,7 +213,7 @@ export async function GET(request: Request) {
       // Direct expenses for this car
       const carExpensesList = expenses.filter((e) => e.carId === car.id);
       const carExpensesGEL = carExpensesList.reduce((sum, e) => sum + e.amount, 0);
-      const carExpensesUSD = Math.round(carExpensesGEL / GEL_USD_RATE);
+      const carExpensesUSD = carExpensesGEL;
 
       const carNetProfit = carRevenue - carExpensesUSD;
       const carMargin = carRevenue > 0 ? Number(((carNetProfit / carRevenue) * 100).toFixed(1)) : 0;
@@ -271,7 +271,7 @@ export async function GET(request: Request) {
 
       const cityExpensesList = expenses.filter((e) => e.city?.code === c.code);
       const cityExpensesGEL = cityExpensesList.reduce((sum, e) => sum + e.amount, 0);
-      const cityExpensesUSD = Math.round(cityExpensesGEL / GEL_USD_RATE);
+      const cityExpensesUSD = cityExpensesGEL;
 
       // Inbound vs Outbound One-Way
       const outboundOneWay = bookings.filter(
@@ -314,8 +314,8 @@ export async function GET(request: Request) {
 
     const formattedAccounts = financialAccounts.map((acc) => {
       let balanceUSD = acc.currentBalance;
-      if (acc.currency === "GEL") {
-        balanceUSD = Math.round(acc.currentBalance / GEL_USD_RATE);
+      if (acc.currency === "USD") {
+        balanceUSD = Math.round(acc.currentBalance * GEL_USD_RATE);
       }
 
       totalLiquidUSD += balanceUSD;
@@ -417,7 +417,7 @@ export async function GET(request: Request) {
     expenses.forEach((e) => {
       const k = new Date(e.date).toISOString().split("T")[0];
       if (dailyMap[k]) {
-        dailyMap[k].expensesUSD += Math.round(e.amount / GEL_USD_RATE);
+        dailyMap[k].expensesUSD += e.amount;
       }
     });
 

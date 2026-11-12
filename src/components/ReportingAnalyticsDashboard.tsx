@@ -268,12 +268,12 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
           </div>
           <div className="mt-2">
             <span className="text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
-              ${summary?.grossRevenueUSD.toLocaleString()} USD
+              {summary?.grossRevenueUSD.toLocaleString()} ₾
             </span>
-            <div className="text-[11px] text-slate-400 mt-1 flex items-center space-x-2">
-              <span>Аренда: ${summary?.rentalRevenueUSD}</span>
+            <div className="text-[11px] text-slate-400 mt-1 flex flex-wrap items-center gap-x-2">
+              <span>Аренда: {summary?.rentalRevenueUSD} ₾</span>
               <span>•</span>
-              <span className="text-purple-300 font-semibold">One-Way: ${summary?.oneWayRevenueUSD}</span>
+              <span className="text-purple-300 font-semibold">Доставка: {summary?.oneWayRevenueUSD} ₾</span>
             </div>
           </div>
         </div>
@@ -290,10 +290,10 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
           </div>
           <div className="mt-2">
             <span className="text-2xl sm:text-3xl font-black text-red-400 font-mono tracking-tight">
-              {summary?.totalExpensesGEL.toLocaleString()} GEL
+              {summary?.totalExpensesGEL.toLocaleString()} ₾
             </span>
             <div className="text-[11px] text-slate-400 mt-1">
-              ≈ ${summary?.totalExpensesUSD.toLocaleString()} USD (мойка, топливо, ТО, зарплаты)
+              мойка, топливо, ТО, зарплаты
             </div>
           </div>
         </div>
@@ -310,7 +310,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
           </div>
           <div className="mt-2">
             <span className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight">
-              ${summary?.netOperatingProfitUSD.toLocaleString()} USD
+              {summary?.netOperatingProfitUSD.toLocaleString()} ₾
             </span>
             <div className="text-[11px] text-emerald-400/90 font-bold mt-1 flex items-center space-x-1">
               <span>Маржинальность:</span>
@@ -349,7 +349,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
             RevPAC (Выручка на 1 авто)
           </span>
           <span className="text-lg font-black text-white font-mono mt-0.5 block">
-            ${summary?.revPAC} USD
+            {summary?.revPAC} ₾
           </span>
           <span className="text-[10px] text-slate-500">по всему парку ({summary?.totalFleetCount} авто)</span>
         </div>
@@ -359,7 +359,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
             ADR (Среднесуточный тариф)
           </span>
           <span className="text-lg font-black text-amber-300 font-mono mt-0.5 block">
-            ${summary?.adrUSD} USD/день
+            {summary?.adrUSD} ₾/день
           </span>
           <span className="text-[10px] text-slate-500">средний чек за 1 сутки</span>
         </div>
@@ -369,7 +369,7 @@ export const ReportingAnalyticsDashboard: React.FC = () => {
             AOV (Средний чек брони)
           </span>
           <span className="text-lg font-black text-white font-mono mt-0.5 block">
-            ${summary?.aovUSD} USD
+            {summary?.aovUSD} ₾
           </span>
           <span className="text-[10px] text-slate-500">срок: ~{summary?.alosDays} дн. на поездку</span>
         </div>
