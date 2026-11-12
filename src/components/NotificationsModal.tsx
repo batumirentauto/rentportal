@@ -447,7 +447,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                       )}
                     </div>
                     <span className="font-mono font-bold text-amber-400 text-xs">
-                      ${booking.totalAmount} USD
+                      {booking.totalAmount} ₾
                     </span>
                   </div>
 

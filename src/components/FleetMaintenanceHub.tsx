@@ -903,7 +903,7 @@ export const FleetMaintenanceHub: React.FC = () => {
                           {isResolved ? (
                             <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-lg font-bold flex items-center space-x-1">
                               <Check className="w-3 h-3 text-emerald-400" />
-                              <span>Устранено (${issue.repairCost} USD)</span>
+                              <span>Устранено ({issue.repairCost} ₾)</span>
                             </span>
                           ) : (
                             <button
