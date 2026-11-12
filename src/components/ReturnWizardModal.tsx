@@ -36,6 +36,7 @@ import {
   Trash2,
   Upload,
   Download,
+  Zap,
 } from "lucide-react";
 
 interface ReturnWizardModalProps {
@@ -266,16 +267,80 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   const depositAmount = booking.depositAmount ?? 0;
   const hasDeposit = depositAmount > 0;
 
-  // 6.5. Дополнительные часы (Extra hours) при задержке возврата
-  const scheduledEndDate = new Date(booking.endDate);
-  const delayMs = Date.now() - scheduledEndDate.getTime();
+  // 6.4. Фактические дата и время возврата автомобиля (выбираются вручную менеджером)
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const scheduledEndDate = useMemo(() => new Date(booking.endDate), [booking.endDate]);
+
+  const plannedReturnTimeStr = useMemo(() => {
+    if (isNaN(scheduledEndDate.getTime())) return null;
+    return `${pad(scheduledEndDate.getHours())}:${pad(scheduledEndDate.getMinutes())}`;
+  }, [scheduledEndDate]);
+
+  const [actualReturnDate, setActualReturnDate] = useState<string>(() => {
+    const src = existingReport?.returnedAt ? new Date(existingReport.returnedAt) : new Date();
+    return `${src.getFullYear()}-${pad(src.getMonth() + 1)}-${pad(src.getDate())}`;
+  });
+
+  const [actualReturnTime, setActualReturnTime] = useState<string>(() => {
+    const src = existingReport?.returnedAt ? new Date(existingReport.returnedAt) : new Date();
+    return `${pad(src.getHours())}:${pad(src.getMinutes())}`;
+  });
+
+  const currentClockTime = useMemo(() => {
+    const now = new Date();
+    return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }, []);
+
+  const setReturnTimeToNow = () => {
+    const now = new Date();
+    setActualReturnDate(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
+    setActualReturnTime(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
+  };
+
+  const setReturnTimeToPlanned = () => {
+    if (isNaN(scheduledEndDate.getTime())) return;
+    setActualReturnDate(
+      `${scheduledEndDate.getFullYear()}-${pad(scheduledEndDate.getMonth() + 1)}-${pad(scheduledEndDate.getDate())}`
+    );
+    setActualReturnTime(`${pad(scheduledEndDate.getHours())}:${pad(scheduledEndDate.getMinutes())}`);
+  };
+
+  const adjustReturnMinutes = (deltaMinutes: number) => {
+    const [y, mo, d] = (actualReturnDate || "").split("-").map(Number);
+    const [h, m] = (actualReturnTime || "12:00").split(":").map(Number);
+    const dt = new Date();
+    if (!isNaN(y) && !isNaN(mo) && !isNaN(d)) {
+      dt.setFullYear(y, mo - 1, d);
+    }
+    dt.setHours(isNaN(h) ? 12 : h, isNaN(m) ? 0 : m, 0, 0);
+    dt.setMinutes(dt.getMinutes() + deltaMinutes);
+    setActualReturnDate(`${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`);
+    setActualReturnTime(`${pad(dt.getHours())}:${pad(dt.getMinutes())}`);
+  };
+
+  const actualReturnDateTime = useMemo(() => {
+    if (!actualReturnDate || !actualReturnTime) return new Date();
+    const dt = new Date(`${actualReturnDate}T${actualReturnTime}:00`);
+    return isNaN(dt.getTime()) ? new Date() : dt;
+  }, [actualReturnDate, actualReturnTime]);
+
+  // 6.5. Дополнительные часы (Extra hours) при задержке возврата относительно выбранного фактического времени
+  const delayMs = actualReturnDateTime.getTime() - scheduledEndDate.getTime();
   const autoDetectedDelayHours = delayMs > 15 * 60 * 1000
     ? Math.ceil(delayMs / (60 * 60 * 1000))
     : 0;
 
+  const [extraHoursManuallyEdited, setExtraHoursManuallyEdited] = useState<boolean>(false);
   const [extraHours, setExtraHours] = useState<number>(
     booking.extraHoursCount || autoDetectedDelayHours
   );
+
+  useEffect(() => {
+    if (!isAlreadyCompleted && !booking.extraHoursCount && !extraHoursManuallyEdited) {
+      setExtraHours(autoDetectedDelayHours);
+    }
+  }, [autoDetectedDelayHours, isAlreadyCompleted, booking.extraHoursCount, extraHoursManuallyEdited]);
   const [isExtraHoursPaid, setIsExtraHoursPaid] = useState<boolean>(
     booking.isExtraHoursPaid || false
   );
@@ -383,11 +448,22 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
     setIsSubmitting(true);
 
     try {
+      let actualReturnIso: string | undefined = undefined;
+      if (actualReturnDate && actualReturnTime) {
+        const localReturnDt = new Date(`${actualReturnDate}T${actualReturnTime}:00`);
+        if (!isNaN(localReturnDt.getTime())) {
+          actualReturnIso = localReturnDt.toISOString();
+        }
+      }
+
       const res = await fetch(`/api/bookings/${booking.id}/return`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           managerName,
+          actualReturnDate,
+          actualReturnTime,
+          actualReturnIso,
           returnMileage,
           returnFuelLevel,
           fuelDiscrepancyPerc: fuelShortagePercent,
@@ -713,6 +789,104 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                 <div className="text-slate-500 text-[10px]">
                   Паспорт: {booking.customer?.passportNumber || "Не указан"}
                 </div>
+              </div>
+            </div>
+
+            {/* 🕒 Блок ручного выбора фактического времени возврата автомобиля */}
+            <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-cyan-500/40 space-y-2.5 shadow-sm">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Clock className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span className="font-bold text-white text-xs uppercase tracking-wider truncate">
+                    {language === "ka" ? "ავტომობილის ფაქტიური დაბრუნების დრო" : "Фактическое время возврата авто"}
+                  </span>
+                </div>
+                <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-500/40 font-bold font-mono">
+                  {language === "ka" ? "დაბრუნება: " : "Приём: "} {actualReturnTime || "—"}
+                </span>
+              </div>
+
+              <p className="text-[11px] text-slate-400 leading-snug">
+                {language === "ka"
+                  ? "თუ მანქანა ადრე მიიღეთ და აქტს ახლა ავსებთ, მიუთითეთ ფაქტიური ჩაბარების დრო."
+                  : "Если вы приняли автомобиль раньше, а оформляете акт позднее — выберите реальное время сдачи авто клиентом (от него считается задержка)."}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 block mb-1">Дата фактического возврата:</span>
+                  <input
+                    type="date"
+                    value={actualReturnDate}
+                    onChange={(e) => setActualReturnDate(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block mb-1">Точное время возврата:</span>
+                  <input
+                    type="time"
+                    value={actualReturnTime}
+                    onChange={(e) => setActualReturnTime(e.target.value)}
+                    className="w-full bg-slate-900 border border-cyan-500/60 rounded-lg px-2.5 py-2 text-cyan-300 font-mono font-black text-sm focus:outline-none focus:border-cyan-400 shadow-inner"
+                  />
+                </div>
+              </div>
+
+              {/* Быстрые пресеты времени возврата */}
+              <div className="flex items-center flex-wrap gap-1.5 pt-1.5 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={setReturnTimeToNow}
+                  className="px-2 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded-lg text-[10px] font-bold transition active:scale-95 flex items-center space-x-1"
+                >
+                  <Zap className="w-3 h-3 text-cyan-400" />
+                  <span>Сейчас ({currentClockTime})</span>
+                </button>
+                {plannedReturnTimeStr && (
+                  <button
+                    type="button"
+                    onClick={setReturnTimeToPlanned}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-[10px] font-medium transition active:scale-95"
+                  >
+                    📅 По брони ({plannedReturnTimeStr})
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => adjustReturnMinutes(-15)}
+                  className="px-1.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                >
+                  -15м
+                </button>
+                <button
+                  type="button"
+                  onClick={() => adjustReturnMinutes(-30)}
+                  className="px-1.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                >
+                  -30м
+                </button>
+                <button
+                  type="button"
+                  onClick={() => adjustReturnMinutes(-60)}
+                  className="px-1.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                >
+                  -1ч
+                </button>
+                <button
+                  type="button"
+                  onClick={() => adjustReturnMinutes(-120)}
+                  className="px-1.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                >
+                  -2ч
+                </button>
+                <button
+                  type="button"
+                  onClick={() => adjustReturnMinutes(15)}
+                  className="px-1.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 rounded-lg text-[10px] font-mono transition active:scale-95"
+                >
+                  +15м
+                </button>
               </div>
             </div>
 
@@ -1635,6 +1809,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                       type="button"
                       key={h}
                       onClick={() => {
+                        setExtraHoursManuallyEdited(true);
                         setExtraHours(h);
                         setCustomExtraHoursFee(null);
                       }}
@@ -1657,6 +1832,7 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
                     value={extraHours}
                     onChange={(e) => {
                       const val = Math.max(0, Number(e.target.value));
+                      setExtraHoursManuallyEdited(true);
                       setExtraHours(val);
                       setCustomExtraHoursFee(null);
                     }}

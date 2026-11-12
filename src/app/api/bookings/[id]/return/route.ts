@@ -53,6 +53,10 @@ export async function POST(
       debtDescription = "",
       debtDueDate = null,
       debtNotes = "",
+      // Фактическое время возврата автомобиля (выбирается вручную менеджером)
+      actualReturnDate,
+      actualReturnTime,
+      actualReturnIso,
     } = body;
 
     const booking = await prisma.booking.findUnique({
@@ -78,6 +82,18 @@ export async function POST(
     }
 
     const now = new Date();
+    let calculatedReturnAt: Date;
+    if (actualReturnIso && !isNaN(new Date(actualReturnIso).getTime())) {
+      calculatedReturnAt = new Date(actualReturnIso);
+    } else if (actualReturnDate && actualReturnTime) {
+      calculatedReturnAt = new Date(`${actualReturnDate}T${actualReturnTime}:00+04:00`);
+      if (isNaN(calculatedReturnAt.getTime())) {
+        calculatedReturnAt = new Date(`${actualReturnDate}T${actualReturnTime}:00`);
+      }
+    } else {
+      calculatedReturnAt = now;
+    }
+
     const car = booking.car;
     const handoverMileage = booking.handoverReport?.mileageAtHandover || car.currentMileage;
     const finalMileage = Number(returnMileage) || car.currentMileage;
@@ -130,7 +146,7 @@ export async function POST(
         finalBalanceAmount: Number(finalBalanceAmount) || 0,
         settlementMethod,
         notes: conditionNotes,
-        returnedAt: now,
+        returnedAt: calculatedReturnAt,
       },
       update: {
         managerName,
@@ -164,7 +180,7 @@ export async function POST(
         finalBalanceAmount: Number(finalBalanceAmount) || 0,
         settlementMethod,
         notes: conditionNotes,
-        returnedAt: now,
+        returnedAt: calculatedReturnAt,
       },
     });
 
@@ -173,7 +189,7 @@ export async function POST(
       where: { id },
       data: {
         status: "COMPLETED",
-        endDate: now,
+        endDate: calculatedReturnAt,
         extraHoursCount: Number(extraHoursCount) || 0,
         extraHoursFee: Number(extraHoursFee) || 0,
         isExtraHoursPaid: Boolean(isExtraHoursPaid),
