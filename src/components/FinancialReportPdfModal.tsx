@@ -153,31 +153,117 @@ export const FinancialReportPdfModal: React.FC<FinancialReportPdfModalProps> = (
   const handleDownloadPdf = async () => {
     if (!reportRef.current) return;
     setExportingPdf(true);
+    let wrapper: HTMLDivElement | null = null;
     try {
-      const html2pdf = (await import("html2pdf.js")).default;
+      const html2canvasPro = (await import("html2canvas-pro")).default;
+      const { jsPDF } = await import("jspdf");
+
       const fileName = isSingleDay
         ? `Otchet_Kassy_${startDate}.pdf`
         : `Otchet_Kassy_${startDate}_${endDate}.pdf`;
 
-      await html2pdf()
-        .set({
-          margin: [8, 8, 8, 8],
-          filename: fileName,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: "#ffffff",
-            logging: false,
-          },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        })
-        .from(reportRef.current)
-        .save();
+      // Clone into an isolated off-screen container so modal scroll / fixed positioning never clips canvas
+      wrapper = document.createElement("div");
+      wrapper.style.position = "fixed";
+      wrapper.style.left = "-10000px";
+      wrapper.style.top = "0";
+      wrapper.style.width = "794px";
+      wrapper.style.backgroundColor = "#ffffff";
+      wrapper.style.zIndex = "-1";
+
+      const clone = reportRef.current.cloneNode(true) as HTMLElement;
+      clone.style.width = "794px";
+      clone.style.maxWidth = "794px";
+      clone.style.margin = "0";
+      clone.style.borderRadius = "0";
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
+      const canvas = await html2canvasPro(clone, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        width: 794,
+        windowWidth: 900,
+      });
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      const marginMm = 8;
+      const contentWidthMm = 210 - marginMm * 2; // 194mm
+      const contentHeightMm = 297 - marginMm * 2; // 281mm
+
+      const pxPerMm = canvas.width / contentWidthMm;
+      const pageSliceHeightPx = Math.floor(contentHeightMm * pxPerMm);
+
+      let offsetY = 0;
+      let pageIndex = 0;
+
+      while (offsetY < canvas.height) {
+        const sliceHeightPx = Math.min(pageSliceHeightPx, canvas.height - offsetY);
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeightPx;
+
+        const ctx = pageCanvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(
+            canvas,
+            0,
+            offsetY,
+            canvas.width,
+            sliceHeightPx,
+            0,
+            0,
+            canvas.width,
+            sliceHeightPx
+          );
+        }
+
+        const imgData = pageCanvas.toDataURL("image/jpeg", 0.96);
+        const sliceHeightMm = sliceHeightPx / pxPerMm;
+
+        if (pageIndex > 0) pdf.addPage();
+        pdf.addImage(
+          imgData,
+          "JPEG",
+          marginMm,
+          marginMm,
+          contentWidthMm,
+          sliceHeightMm,
+          undefined,
+          "FAST"
+        );
+
+        offsetY += sliceHeightPx;
+        pageIndex += 1;
+      }
+
+      const pdfBlob = pdf.output("blob");
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
     } catch (err: any) {
       console.error("PDF export error:", err);
       alert("Не удалось сохранить PDF: " + (err?.message || "Ошибка"));
     } finally {
+      if (wrapper && wrapper.parentNode) {
+        wrapper.parentNode.removeChild(wrapper);
+      }
       setExportingPdf(false);
     }
   };
