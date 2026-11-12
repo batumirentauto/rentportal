@@ -27,6 +27,7 @@ import {
   Copy,
 } from "lucide-react";
 import { getCityTheme } from "./FleetTimelineGrid";
+import { calculateDefaultDeliveryFee } from "@/lib/delivery-fees";
 
 const DEFAULT_LOCATIONS = [
   // Tbilisi
@@ -202,6 +203,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [dailyRate, setDailyRate] = useState<number>(65);
   const [rentalTotal, setRentalTotal] = useState<number>(65);
   const [ownerDailyRate, setOwnerDailyRate] = useState<number>(25);
+  const [deliveryFee, setDeliveryFee] = useState<number>(0);
+  const [deliveryManuallySet, setDeliveryManuallySet] = useState<boolean>(false);
   const [copiedCustomerPhone, setCopiedCustomerPhone] = useState<boolean>(false);
 
   const handleCopyPhone = (text: string) => {
@@ -460,8 +463,24 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
   // One-way drop-off detection & Pricing calculations
   const isOneWay = pickupCityCode !== returnCityCode;
-  const oneWayFee = isOneWay ? 50 : 0;
-  const totalAmount = rentalTotal + oneWayFee;
+  const suggestedDeliveryFee = useMemo(() => {
+    return calculateDefaultDeliveryFee({
+      pickupCityCode,
+      pickupType,
+      pickupTime: startTime,
+      returnCityCode,
+      returnType,
+      returnTime,
+    });
+  }, [pickupCityCode, pickupType, startTime, returnCityCode, returnType, returnTime]);
+
+  useEffect(() => {
+    if (!deliveryManuallySet) {
+      setDeliveryFee(suggestedDeliveryFee);
+    }
+  }, [suggestedDeliveryFee, deliveryManuallySet]);
+
+  const totalAmount = rentalTotal + deliveryFee;
   const ownerTotalPayout = ownerDailyRate * rentalDays;
   const companyMargin = totalAmount - ownerTotalPayout;
   const marginPercent = totalAmount > 0 ? Math.round((companyMargin / totalAmount) * 100) : 0;
@@ -682,7 +701,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           returnAddress: returnAddress || undefined,
           dailyRate,
           rentalTotal,
-          deliveryFee: oneWayFee,
+          deliveryFee,
           extrasTotal: 0,
           totalAmount,
           depositAmount: Number(depositAmount),
@@ -1702,7 +1721,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 </div>
                 {isOneWay && (
                   <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1.5 py-0.5 rounded font-bold">
-                    ⇄ One-Way (+{oneWayFee} ₾)
+                    ⇄ Междугородняя (One-Way)
                   </span>
                 )}
               </div>
@@ -2045,6 +2064,89 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               </div>
             )}
 
+            {/* Delivery Fee Control */}
+            <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-slate-200 block">
+                    🚗 Стоимость доставки (₾)
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    Авторасчёт: Батуми 0 ₾ · Кутаиси а/п 0 ₾, город 30 ₾ · Тбилиси 30 ₾ днём / 50 ₾ ночью
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min="0"
+                    value={deliveryFee}
+                    onChange={(e) => {
+                      setDeliveryFee(Math.max(0, Number(e.target.value) || 0));
+                      setDeliveryManuallySet(true);
+                    }}
+                    className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-right text-sm font-mono font-bold text-amber-300 focus:outline-none focus:border-amber-500"
+                  />
+                  <span className="text-xs font-bold text-slate-400">₾</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeliveryFee(0);
+                    setDeliveryManuallySet(true);
+                  }}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition ${
+                    deliveryFee === 0
+                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/50"
+                      : "bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700"
+                  }`}
+                >
+                  Бесплатно (0 ₾)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeliveryFee(30);
+                    setDeliveryManuallySet(true);
+                  }}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition ${
+                    deliveryFee === 30
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                      : "bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700"
+                  }`}
+                >
+                  30 ₾ (День)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeliveryFee(50);
+                    setDeliveryManuallySet(true);
+                  }}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition ${
+                    deliveryFee === 50
+                      ? "bg-purple-500/20 text-purple-300 border-purple-500/50"
+                      : "bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700"
+                  }`}
+                >
+                  50 ₾ (Ночь)
+                </button>
+                {deliveryManuallySet && deliveryFee !== suggestedDeliveryFee && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeliveryManuallySet(false);
+                      setDeliveryFee(suggestedDeliveryFee);
+                    }}
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-800 text-sky-300 border border-sky-500/40 hover:bg-slate-700 transition"
+                  >
+                    Авто ({suggestedDeliveryFee} ₾)
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Live Financial Breakdown & Margin */}
             <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div>
@@ -2052,9 +2154,9 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <span className="font-mono text-lg font-black text-amber-400">
                   {totalAmount} ₾ (GEL)
                 </span>
-                {oneWayFee > 0 && (
+                {deliveryFee > 0 && (
                   <span className="text-[10px] text-purple-300 block">
-                    (включая One-Way: +{oneWayFee} ₾)
+                    (включая доставку: +{deliveryFee} ₾)
                   </span>
                 )}
               </div>

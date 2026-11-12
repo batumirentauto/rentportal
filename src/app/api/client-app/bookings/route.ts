@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { calculateDefaultDeliveryFee } from "@/lib/delivery-fees";
 
 export async function POST(request: Request) {
   try {
@@ -83,8 +84,14 @@ export async function POST(request: Request) {
       include: { city: true },
     });
 
-    const isOneWay = pickupLocation?.cityId !== returnLocation?.cityId;
-    const oneWayFee = isOneWay ? 50 : 0;
+    const deliveryFee = calculateDefaultDeliveryFee({
+      pickupCityCode: pickupLocation?.city?.code,
+      pickupType: pickupLocation?.type,
+      pickupTime: startTime,
+      returnCityCode: returnLocation?.city?.code,
+      returnType: returnLocation?.type,
+      returnTime: startTime,
+    });
 
     // Rates calculation
     const baseDailyRate = appliedDailyRate || car.clientStandardDailyRate || 60;
@@ -95,7 +102,7 @@ export async function POST(request: Request) {
 
     const rentalTotal = dailyRate * Number(rentalDays);
     const extrasTotal = selectedExtras.length * 10 * Number(rentalDays);
-    const totalAmount = rentalTotal + oneWayFee + extrasTotal;
+    const totalAmount = rentalTotal + deliveryFee + extrasTotal;
 
     // Dates
     const startDateTime = new Date(`${startDate}T${startTime}:00`);
@@ -121,7 +128,7 @@ export async function POST(request: Request) {
         returnType: "OFFICE",
         dailyRate,
         rentalTotal,
-        deliveryFee: oneWayFee,
+        deliveryFee,
         extrasTotal,
         totalAmount,
         depositAmount: 0, // 0 GEL deposit for loyal VIP clients

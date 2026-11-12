@@ -1537,7 +1537,7 @@ export const FleetTimelineGrid: React.FC<FleetTimelineGridProps> = ({
                     <span>Перемещение авто между филиалами:</span>
                   </span>
                   <span className="bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded font-mono text-[10px]">
-                    Сбор One-Way: {selectedBooking.deliveryFee} ₾
+                    {selectedBooking.deliveryFee > 0 ? `Доставка: ${selectedBooking.deliveryFee} ₾` : "Доставка: 0 ₾"}
                   </span>
                 </div>
                 <div className="flex items-center space-x-3 text-sm font-black text-white pt-1">

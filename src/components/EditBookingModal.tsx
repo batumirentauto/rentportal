@@ -360,8 +360,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
   // Recalculate all financials
   const handleRecalculateTotals = () => {
-    const autoOneWay = isOneWay ? 50 : 0;
-    const computedDelivery = deliveryFee > 0 ? deliveryFee : autoOneWay;
+    const computedDelivery = deliveryFee || 0;
     setDeliveryFee(computedDelivery);
     const rentTot = Math.round(rentalDays * dailyRate);
     setTotalAmount(rentTot + computedDelivery + extrasTotal);
@@ -1098,7 +1097,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
               <div>
                 <label className="text-[10px] text-slate-400 block mb-1">
-                  Сбор One-Way / Доставка (₾):
+                  Доставка (₾):
                 </label>
                 <input
                   type="number"
@@ -1113,7 +1112,27 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                   placeholder="0"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-mono"
                 />
-                <span className="text-[9px] text-slate-500 block mt-0.5">Доп. сбор</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {[0, 30, 50].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        setDeliveryFee(preset);
+                        setTotalAmount(Math.round(rentalDays * dailyRate) + preset + extrasTotal);
+                      }}
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition ${
+                        deliveryFee === preset
+                          ? preset === 0
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/50"
+                            : "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                          : "bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500"
+                      }`}
+                    >
+                      {preset === 0 ? "0 ₾ Бесплатно" : `${preset} ₾`}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
