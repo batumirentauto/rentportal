@@ -82,6 +82,7 @@ export async function POST(
     }
 
     const now = new Date();
+    const wasAlreadyCompleted = booking.status === "COMPLETED";
     let calculatedReturnAt: Date;
     if (actualReturnIso && !isNaN(new Date(actualReturnIso).getTime())) {
       calculatedReturnAt = new Date(actualReturnIso);
@@ -197,7 +198,7 @@ export async function POST(
     });
 
     // 2.5. Проводка оплаты доп. часов при сдаче авто, если не были оплачены ранее
-    if (Number(extraHoursFee) > 0 && !isExtraHoursPaid) {
+    if (!wasAlreadyCompleted && Number(extraHoursFee) > 0 && !isExtraHoursPaid) {
       await prisma.payment.create({
         data: {
           bookingId: id,

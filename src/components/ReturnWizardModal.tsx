@@ -278,13 +278,17 @@ export const ReturnWizardModal: React.FC<ReturnWizardModalProps> = ({
   }, [scheduledEndDate]);
 
   const [actualReturnDate, setActualReturnDate] = useState<string>(() => {
-    const src = existingReport?.returnedAt ? new Date(existingReport.returnedAt) : new Date();
-    return `${src.getFullYear()}-${pad(src.getMonth() + 1)}-${pad(src.getDate())}`;
+    const raw = existingReport?.returnedAt || (isAlreadyCompleted ? booking.endDate : null);
+    const src = raw ? new Date(raw) : new Date();
+    const validSrc = isNaN(src.getTime()) ? new Date() : src;
+    return `${validSrc.getFullYear()}-${pad(validSrc.getMonth() + 1)}-${pad(validSrc.getDate())}`;
   });
 
   const [actualReturnTime, setActualReturnTime] = useState<string>(() => {
-    const src = existingReport?.returnedAt ? new Date(existingReport.returnedAt) : new Date();
-    return `${pad(src.getHours())}:${pad(src.getMinutes())}`;
+    const raw = existingReport?.returnedAt || (isAlreadyCompleted ? booking.endDate : null);
+    const src = raw ? new Date(raw) : new Date();
+    const validSrc = isNaN(src.getTime()) ? new Date() : src;
+    return `${pad(validSrc.getHours())}:${pad(validSrc.getMinutes())}`;
   });
 
   const currentClockTime = useMemo(() => {

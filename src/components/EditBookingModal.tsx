@@ -140,16 +140,22 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     booking?.returnReport?.fuelLevelPercent ?? ""
   );
   const [actualReturnedAtDate, setActualReturnedAtDate] = useState<string>(() => {
-    if (booking?.returnReport?.returnedAt) {
-      const d = new Date(booking.returnReport.returnedAt);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const src = booking?.returnReport?.returnedAt || (booking?.status === "COMPLETED" ? booking?.endDate : null);
+    if (src) {
+      const d = new Date(src);
+      if (!isNaN(d.getTime())) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
     }
     return "";
   });
   const [actualReturnedAtTime, setActualReturnedAtTime] = useState<string>(() => {
-    if (booking?.returnReport?.returnedAt) {
-      const d = new Date(booking.returnReport.returnedAt);
-      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    const src = booking?.returnReport?.returnedAt || (booking?.status === "COMPLETED" ? booking?.endDate : null);
+    if (src) {
+      const d = new Date(src);
+      if (!isNaN(d.getTime())) {
+        return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      }
     }
     return "";
   });
@@ -210,23 +216,28 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     setStatus(booking.status || "CONFIRMED");
     setManagerNotes(booking.overdueDecisionNotes || "");
 
-    if (booking.returnReport) {
-      setReturnMileage(booking.returnReport.mileageAtReturn ?? "");
-      setReturnFuelLevel(booking.returnReport.fuelLevelPercent ?? "");
-      if (booking.returnReport.returnedAt) {
-        const d = new Date(booking.returnReport.returnedAt);
+    const returnSrc = booking.returnReport?.returnedAt || (booking.status === "COMPLETED" ? booking.endDate : null);
+    if (returnSrc) {
+      const d = new Date(returnSrc);
+      if (!isNaN(d.getTime())) {
         setActualReturnedAtDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
         setActualReturnedAtTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
       } else {
         setActualReturnedAtDate("");
         setActualReturnedAtTime("");
       }
+    } else {
+      setActualReturnedAtDate("");
+      setActualReturnedAtTime("");
+    }
+
+    if (booking.returnReport) {
+      setReturnMileage(booking.returnReport.mileageAtReturn ?? "");
+      setReturnFuelLevel(booking.returnReport.fuelLevelPercent ?? "");
       setReturnNotes(booking.returnReport.notes || "");
     } else {
       setReturnMileage("");
       setReturnFuelLevel("");
-      setActualReturnedAtDate("");
-      setActualReturnedAtTime("");
       setReturnNotes("");
     }
   }, [booking, isOpen]);
@@ -1419,29 +1430,61 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">
-                    Фактическая дата возврата:
-                  </label>
-                  <input
-                    type="date"
-                    value={actualReturnedAtDate}
-                    onChange={(e) => setActualReturnedAtDate(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
-                  />
+              <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-1 font-semibold">
+                      Фактическая дата возврата:
+                    </label>
+                    <input
+                      type="date"
+                      value={actualReturnedAtDate}
+                      onChange={(e) => setActualReturnedAtDate(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-1 font-semibold">
+                      Фактическое время возврата:
+                    </label>
+                    <input
+                      type="time"
+                      value={actualReturnedAtTime}
+                      onChange={(e) => setActualReturnedAtTime(e.target.value)}
+                      className="w-full bg-slate-900 border border-emerald-500/60 rounded-lg p-2 text-emerald-300 font-mono font-bold text-sm"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">
-                    Фактическое время возврата:
-                  </label>
-                  <input
-                    type="time"
-                    value={actualReturnedAtTime}
-                    onChange={(e) => setActualReturnedAtTime(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
-                  />
+                <div className="flex items-center flex-wrap gap-1.5">
+                  <span className="text-[10px] text-slate-500 mr-1">Быстрый сдвиг времени:</span>
+                  {[
+                    { label: "-2ч", mins: -120 },
+                    { label: "-1ч", mins: -60 },
+                    { label: "-30м", mins: -30 },
+                    { label: "+30м", mins: 30 },
+                    { label: "+1ч", mins: 60 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        const [y, mo, d] = (actualReturnedAtDate || "").split("-").map(Number);
+                        const [h, m] = (actualReturnedAtTime || "12:00").split(":").map(Number);
+                        const dt = new Date();
+                        if (!isNaN(y) && !isNaN(mo) && !isNaN(d)) dt.setFullYear(y, mo - 1, d);
+                        dt.setHours(isNaN(h) ? 12 : h, isNaN(m) ? 0 : m, 0, 0);
+                        dt.setMinutes(dt.getMinutes() + preset.mins);
+                        const p = (n: number) => String(n).padStart(2, "0");
+                        setActualReturnedAtDate(`${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`);
+                        setActualReturnedAtTime(`${p(dt.getHours())}:${p(dt.getMinutes())}`);
+                      }}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-[10px] font-mono transition active:scale-95"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
